@@ -1,6 +1,7 @@
 package evaluator
 
 import (
+	"bytes"
 	"silver/lexer"
 	"silver/object"
 	"silver/parser"
@@ -168,7 +169,7 @@ func TestArrayLiterals(t *testing.T) {
 	testIntegerObject(t, result.Elements[2], 6)
 }
 
-func TsetBuiltinFunctions(t *testing.T) {
+func TestBuiltinFunctions(t *testing.T) {
 	tests := []struct {
 		input    string
 		expected interface{}
@@ -176,8 +177,20 @@ func TsetBuiltinFunctions(t *testing.T) {
 		{`len("")`, 0},
 		{`len("four")`, 4},
 		{`len("hello world")`, 11},
+		{`len([1, 2, 3])`, 3},
 		{`len(1)`, "argument to `len` not supported, got INTEGER"},
 		{`len("one", "two")`, "wrong number of arguments. got=2, want=1"},
+		{`first([1, 2, 3])`, 1},
+		{`first([])`, nil},
+		{`first(1)`, "argument to `first` must be ARRAY, got INTEGER"},
+		{`last([1, 2, 3])`, 3},
+		{`last([])`, nil},
+		{`rest([1, 2, 3])`, []int64{2, 3}},
+		{`rest([1])`, []int64{}},
+		{`rest([])`, nil},
+		{`push([1, 2], 3)`, []int64{1, 2, 3}},
+		{`push(1, 2)`, "argument to `push` must be ARRAY, got INTEGER"},
+		{`push([1])`, "wrong number of arguments. got=1, want=2"},
 	}
 
 	for _, tt := range tests {
@@ -185,6 +198,19 @@ func TsetBuiltinFunctions(t *testing.T) {
 		switch expected := tt.expected.(type) {
 		case int:
 			testIntegerObject(t, evaluated, int64(expected))
+		case []int64:
+			array, ok := evaluated.(*object.Array)
+			if !ok {
+				t.Errorf("object is not Array. got=%T (%+v)", evaluated, evaluated)
+				continue
+			}
+			if len(array.Elements) != len(expected) {
+				t.Errorf("array has wrong length. got=%d, want=%d", len(array.Elements), len(expected))
+				continue
+			}
+			for i, value := range expected {
+				testIntegerObject(t, array.Elements[i], value)
+			}
 		case string:
 			errObj, ok := evaluated.(*object.Error)
 			if !ok {
@@ -196,7 +222,19 @@ func TsetBuiltinFunctions(t *testing.T) {
 				t.Errorf("wrong error message. expected=%q, got=%q",
 					expected, errObj.Message)
 			}
+		case nil:
+			testNullObject(t, evaluated)
 		}
+	}
+}
+
+func TestPrintBuiltinUsesEvaluatorOutput(t *testing.T) {
+	var out bytes.Buffer
+	result := evalInput(t, NewWithOutput(&out), object.NewEnvironment(), `print("hello", 42)`)
+
+	testNullObject(t, result)
+	if got, want := out.String(), "hello\n42\n"; got != want {
+		t.Fatalf("print output is %q, want %q", got, want)
 	}
 }
 

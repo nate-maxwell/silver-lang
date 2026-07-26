@@ -2,6 +2,7 @@ package evaluator
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"silver/ast"
@@ -18,14 +19,23 @@ var (
 )
 
 type Evaluator struct {
-	modules map[string]*object.Module // filepath to module
-	loading map[string]bool           // module load state | circular import detection
+	builtins builtinRegistry
+	modules  map[string]*object.Module // filepath to module
+	loading  map[string]bool           // module load state | circular import detection
 }
 
 func New() *Evaluator {
+	return NewWithOutput(os.Stdout)
+}
+
+func NewWithOutput(out io.Writer) *Evaluator {
+	if out == nil {
+		out = io.Discard
+	}
 	return &Evaluator{
-		modules: make(map[string]*object.Module),
-		loading: make(map[string]bool),
+		builtins: newDefaultBuiltinRegistry(out),
+		modules:  make(map[string]*object.Module),
+		loading:  make(map[string]bool),
 	}
 }
 
@@ -61,7 +71,7 @@ func (e *Evaluator) Eval(node ast.Node, env *object.Environment) object.Object {
 		env.Set(node.Name.Value, val)
 
 	case *ast.Identifier:
-		return evalIdentifier(node, env)
+		return e.evalIdentifier(node, env)
 
 	case *ast.ImportExpression:
 		return e.importModule(node.Path.Value, env)
@@ -246,11 +256,11 @@ func evalModuleMember(value object.Object, member string) object.Object {
 	return export
 }
 
-func evalIdentifier(node *ast.Identifier, env *object.Environment) object.Object {
+func (e *Evaluator) evalIdentifier(node *ast.Identifier, env *object.Environment) object.Object {
 	if val, ok := env.Get(node.Value); ok {
 		return val
 	}
-	if builtin, ok := builtins[node.Value]; ok {
+	if builtin, ok := e.builtins.get(node.Value); ok {
 		return builtin
 	}
 	return newError("identifier not found: %s", node.Value)

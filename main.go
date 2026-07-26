@@ -27,7 +27,7 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 		repl.Start(in, out)
 		return 0
 	case 1:
-		engine := evaluator.New()
+		engine := evaluator.NewWithOutput(out)
 		result := engine.EvalFile(args[0], object.NewEnvironment())
 		if result != nil && result.Type() == object.ERROR_OBJ {
 			fmt.Fprintln(errOut, result.Inspect())

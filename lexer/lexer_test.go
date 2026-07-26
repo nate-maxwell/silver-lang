@@ -142,3 +142,47 @@ func TestNextToken(t *testing.T) {
 		}
 	}
 }
+
+func TestLineComments(t *testing.T) {
+	input := `
+	// A comment may occupy an entire line.
+	let value = 10; // It may also follow other tokens.
+	let half = value / 2;
+	// A single slash must remain the division operator.
+	half // A comment at EOF does not need a trailing newline.`
+
+	tests := []struct {
+		expectedType    token.TokenType
+		expectedLiteral string
+	}{
+		{token.LET, "let"},
+		{token.IDENT, "value"},
+		{token.ASSIGN, "="},
+		{token.INT, "10"},
+		{token.SEMICOLON, ";"},
+		{token.LET, "let"},
+		{token.IDENT, "half"},
+		{token.ASSIGN, "="},
+		{token.IDENT, "value"},
+		{token.SLASH, "/"},
+		{token.INT, "2"},
+		{token.SEMICOLON, ";"},
+		{token.IDENT, "half"},
+		{token.EOF, ""},
+	}
+
+	l := New(input)
+	for i, tt := range tests {
+		tok := l.NextToken()
+		if tok.Type != tt.expectedType || tok.Literal != tt.expectedLiteral {
+			t.Fatalf(
+				"tests[%d] - wrong token. expected=(%q, %q), got=(%q, %q)",
+				i,
+				tt.expectedType,
+				tt.expectedLiteral,
+				tok.Type,
+				tok.Literal,
+			)
+		}
+	}
+}

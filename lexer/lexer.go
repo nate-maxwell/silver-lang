@@ -35,7 +35,7 @@ func (l *Lexer) readChar() {
 func (l *Lexer) NextToken() token.Token {
 	var tok token.Token
 
-	l.skipWhitespace()
+	l.skipIgnoredCharacters()
 
 	switch l.ch {
 	case '=':
@@ -104,6 +104,27 @@ func (l *Lexer) NextToken() token.Token {
 
 	l.readChar()
 	return tok
+}
+
+// skipIgnoredCharacters consumes whitespace and line comments before the next
+// token. It loops because a comment's terminating newline may be followed by
+// more whitespace or another comment.
+func (l *Lexer) skipIgnoredCharacters() {
+	for {
+		l.skipWhitespace()
+		if l.ch != '/' || l.peekChar() != '/' {
+			return
+		}
+		l.skipLineComment()
+	}
+}
+
+// skipLineComment consumes a // comment up to, but not including, its line
+// ending. EOF also terminates a comment, allowing comments on the final line.
+func (l *Lexer) skipLineComment() {
+	for l.ch != '\n' && l.ch != '\r' && l.ch != 0 {
+		l.readChar()
+	}
 }
 
 func (l *Lexer) peekChar() byte {

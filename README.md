@@ -1,2 +1,2 @@
-# silver-lang
+# Silver
 The Silver interpreted programming language

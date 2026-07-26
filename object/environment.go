@@ -1,16 +1,21 @@
 package object
 
+// Environment is a lexical scope. outer links closures and nested calls to
+// their parent scope, while sourceDir supplies the base for relative imports.
 type Environment struct {
-	store     map[string]Object
-	outer     *Environment
-	sourceDir string
+	store     map[string]Object // bindings defined directly in this scope
+	outer     *Environment      // enclosing lexical scope, if any
+	sourceDir string            // directory of the source file being evaluated
 }
 
+// NewEnvironment constructs an empty top-level environment.
 func NewEnvironment() *Environment {
 	s := make(map[string]Object)
 	return &Environment{store: s, outer: nil}
 }
 
+// Get resolves name in the current scope, then walks outward through enclosing
+// scopes.
 func (e *Environment) Get(name string) (Object, bool) {
 	obj, ok := e.store[name]
 	if !ok && e.outer != nil {
@@ -19,6 +24,8 @@ func (e *Environment) Get(name string) (Object, bool) {
 	return obj, ok
 }
 
+// Set creates or replaces a binding in the current scope and returns val for
+// evaluator convenience.
 func (e *Environment) Set(name string, val Object) Object {
 	e.store[name] = val
 	return val
@@ -34,10 +41,13 @@ func (e *Environment) Bindings() map[string]Object {
 	return bindings
 }
 
+// SetSourceDir records the directory used to resolve relative module imports.
 func (e *Environment) SetSourceDir(dir string) {
 	e.sourceDir = dir
 }
 
+// SourceDir returns this scope's source directory, inheriting it from an outer
+// scope when necessary.
 func (e *Environment) SourceDir() string {
 	if e.sourceDir != "" {
 		return e.sourceDir
@@ -48,6 +58,7 @@ func (e *Environment) SourceDir() string {
 	return ""
 }
 
+// NewEnclosedEnvironment constructs a child lexical scope linked to outer.
 func NewEnclosedEnvironment(outer *Environment) *Environment {
 	env := NewEnvironment()
 	env.outer = outer

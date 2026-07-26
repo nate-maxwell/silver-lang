@@ -10,10 +10,15 @@ import (
 	"silver/repl"
 )
 
+// main delegates process setup to run so CLI behavior can be tested with
+// in-memory streams.
 func main() {
 	os.Exit(run(os.Args[1:], os.Stdin, os.Stdout, os.Stderr))
 }
 
+// run executes either the interactive REPL or one source file. It returns a
+// process-style status code instead of exiting directly: 0 for success, 1 for
+// evaluation failure, and 2 for invalid command-line usage.
 func run(args []string, in io.Reader, out, errOut io.Writer) int {
 	switch len(args) {
 	case 0:

@@ -1,12 +1,35 @@
 package token
 
+// TokenType identifies a lexical category such as an identifier, operator, or
+// keyword.
 type TokenType string
 
-type Token struct {
-	Type    TokenType
-	Literal string
+// Position identifies the start of a token in its source. Line and Column are
+// one-based for display, while Offset is a zero-based byte offset useful for
+// tooling that needs to index the original source.
+type Position struct {
+	Source string
+	Offset int
+	Line   int
+	Column int
 }
 
+// IsValid reports whether the position contains displayable source
+// coordinates. Manually constructed AST nodes may have a zero position.
+func (p Position) IsValid() bool {
+	return p.Line > 0 && p.Column > 0
+}
+
+// Token is one lexical unit produced by the lexer. Position points to the
+// first byte of Literal in the original source.
+type Token struct {
+	Type     TokenType
+	Literal  string
+	Position Position
+}
+
+// Token type constants are grouped by their lexical role. Their string values
+// are also used in parser diagnostics.
 const (
 	ILLEGAL = "ILLEGAL"
 	EOF     = "EOF"
@@ -54,6 +77,8 @@ const (
 	IMPORT   = "IMPORT"
 )
 
+// keywords maps reserved source words to their specialized token types. Any
+// word absent from this table is treated as an identifier.
 var keywords = map[string]TokenType{
 	"fn":     FUNCTION,
 	"let":    LET,
@@ -65,6 +90,8 @@ var keywords = map[string]TokenType{
 	"import": IMPORT,
 }
 
+// LookupIdent classifies an identifier as a reserved keyword or a normal
+// user-defined name.
 func LookupIdent(ident string) TokenType {
 	if tok, ok := keywords[ident]; ok {
 		return tok

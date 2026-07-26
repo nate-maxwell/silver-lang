@@ -8,6 +8,8 @@ import (
 	"strconv"
 )
 
+// Pratt binding powers increase from weak equality/comparison operators to
+// tight calls, indexing, and member access.
 const (
 	_ int = iota
 	LOWEST
@@ -21,6 +23,8 @@ const (
 	MEMBER      // module.member
 )
 
+// precedences assigns binding power to infix token types. Tokens absent from
+// the table use LOWEST, which terminates the current Pratt-parser expression.
 var precedences = map[token.TokenType]int{
 	token.EQ:       EQUALS,
 	token.NOT_EQ:   EQUALS,
@@ -39,22 +43,29 @@ var precedences = map[token.TokenType]int{
 Main parser
 ---------------------------------------------------------------------------------------------------------- */
 
+// Parser callback types used by the Pratt dispatch tables.
 type (
+	// prefixParseFn parses an expression that begins with the current token.
 	prefixParseFn func() ast.Expression
-	infixParseFn  func(ast.Expression) ast.Expression
+	// infixParseFn extends an already-parsed left expression.
+	infixParseFn func(ast.Expression) ast.Expression
 )
 
+// Parser implements a two-token-lookahead Pratt parser. Prefix and infix
+// parse-function tables keep syntax extension localized by token type.
 type Parser struct {
-	l      *lexer.Lexer
-	errors []string
+	l      *lexer.Lexer // token source
+	errors []string     // accumulated diagnostics; parsing attempts to continue
 
-	curToken  token.Token
-	peekToken token.Token
+	curToken  token.Token // token currently being parsed
+	peekToken token.Token // one-token lookahead
 
 	prefixParseFns map[token.TokenType]prefixParseFn
 	infixParseFns  map[token.TokenType]infixParseFn
 }
 
+// New constructs a parser, registers the language grammar, and primes current
+// and lookahead tokens.
 func New(l *lexer.Lexer) *Parser {
 	p := &Parser{
 		l:      l,
@@ -96,6 +107,8 @@ func New(l *lexer.Lexer) *Parser {
 	return p
 }
 
+// ParseProgram parses statements until EOF and returns the AST root. Callers
+// should inspect Errors before evaluating the result.
 func (p *Parser) ParseProgram() *ast.Program {
 	program := &ast.Program{}
 	program.Statements = []ast.Statement{}
@@ -109,6 +122,7 @@ func (p *Parser) ParseProgram() *ast.Program {
 	return program
 }
 
+// parseIdentifier converts the current identifier token into an AST node.
 func (p *Parser) parseIdentifier() ast.Expression {
 	return &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
 }
@@ -117,6 +131,8 @@ func (p *Parser) parseIdentifier() ast.Expression {
 Function literal parsing
 ---------------------------------------------------------------------------------------------------------- */
 
+// parseFunctionLitearl parses an fn expression, including its parameter list
+// and brace-delimited body.
 func (p *Parser) parseFunctionLitearl() ast.Expression {
 	lit := &ast.FunctionLiteral{Token: p.curToken}
 
@@ -135,6 +151,7 @@ func (p *Parser) parseFunctionLitearl() ast.Expression {
 	return lit
 }
 
+// parseFunctionParameters parses zero or more comma-separated parameter names.
 func (p *Parser) parseFunctionParameters() []*ast.Identifier {
 	identifiers := []*ast.Identifier{}
 
@@ -162,6 +179,7 @@ func (p *Parser) parseFunctionParameters() []*ast.Identifier {
 	return identifiers
 }
 
+// parseCallExpression extends function with a parenthesized argument list.
 func (p *Parser) parseCallExpression(function ast.Expression) ast.Expression {
 	exp := &ast.CallExpression{Token: p.curToken, Function: function}
 	exp.Arguments = p.parseExpressionList(token.RPAREN)
@@ -172,6 +190,7 @@ func (p *Parser) parseCallExpression(function ast.Expression) ast.Expression {
 Statement parsing
 ---------------------------------------------------------------------------------------------------------- */
 
+// parseStatement dispatches according to the current statement-leading token.
 func (p *Parser) parseStatement() ast.Statement {
 	switch p.curToken.Type {
 	case token.LET:
@@ -183,6 +202,7 @@ func (p *Parser) parseStatement() ast.Statement {
 	}
 }
 
+// parseLetStatement parses a named binding and its value expression.
 func (p *Parser) parseLetStatement() *ast.LetStatement {
 	stmt := &ast.LetStatement{Token: p.curToken}
 
@@ -207,6 +227,7 @@ func (p *Parser) parseLetStatement() *ast.LetStatement {
 	return stmt
 }
 
+// parseReturnStatement parses the expression returned by a function.
 func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
 	stmt := &ast.ReturnStatement{Token: p.curToken}
 
@@ -221,6 +242,8 @@ func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
 	return stmt
 }
 
+// parseBlockStatement parses statements until a closing brace or EOF. The
+// opening brace is expected to be the current token.
 func (p *Parser) parseBlockStatement() *ast.BlockStatement {
 	block := &ast.BlockStatement{Token: p.curToken}
 	block.Statements = []ast.Statement{}
@@ -241,6 +264,8 @@ func (p *Parser) parseBlockStatement() *ast.BlockStatement {
 Expression parsing
 ---------------------------------------------------------------------------------------------------------- */
 
+// parseExpressionStatement wraps a top-level expression and consumes an
+// optional trailing semicolon.
 func (p *Parser) parseExpressionStatement() *ast.ExpressionStatement {
 	stmt := &ast.ExpressionStatement{Token: p.curToken}
 	stmt.Expression = p.parseExpression(LOWEST)
@@ -252,6 +277,7 @@ func (p *Parser) parseExpressionStatement() *ast.ExpressionStatement {
 	return stmt
 }
 
+// parsePrefixExpression parses the right operand at PREFIX precedence.
 func (p *Parser) parsePrefixExpression() ast.Expression {
 	expression := &ast.PrefixExpression{
 		Token:    p.curToken,
@@ -265,6 +291,8 @@ func (p *Parser) parsePrefixExpression() ast.Expression {
 	return expression
 }
 
+// parseInfixExpression combines left with the operator at the current token and
+// a right operand parsed at that operator's precedence.
 func (p *Parser) parseInfixExpression(left ast.Expression) ast.Expression {
 	expression := &ast.InfixExpression{
 		Token:    p.curToken,
@@ -279,6 +307,8 @@ func (p *Parser) parseInfixExpression(left ast.Expression) ast.Expression {
 	return expression
 }
 
+// parseGroupedExpression parses a parenthesized expression without adding a
+// distinct grouping node to the AST.
 func (p *Parser) parseGroupedExpression() ast.Expression {
 	p.nextToken()
 
@@ -291,6 +321,7 @@ func (p *Parser) parseGroupedExpression() ast.Expression {
 	return exp
 }
 
+// parseIfExpression parses a condition, consequence, and optional else block.
 func (p *Parser) parseIfExpression() ast.Expression {
 	expression := &ast.IfExpression{Token: p.curToken}
 
@@ -324,10 +355,12 @@ func (p *Parser) parseIfExpression() ast.Expression {
 	return expression
 }
 
+// parseStringLiteral builds a literal from the lexer's unquoted token value.
 func (p *Parser) parseStringLiteral() ast.Expression {
 	return &ast.StringLiteral{Token: p.curToken, Value: p.curToken.Literal}
 }
 
+// parseImportExpression accepts the restricted import("path") form.
 func (p *Parser) parseImportExpression() ast.Expression {
 	expression := &ast.ImportExpression{Token: p.curToken}
 
@@ -347,6 +380,7 @@ func (p *Parser) parseImportExpression() ast.Expression {
 	return expression
 }
 
+// parseMemberExpression parses .name access on left.
 func (p *Parser) parseMemberExpression(left ast.Expression) ast.Expression {
 	expression := &ast.MemberExpression{Token: p.curToken, Object: left}
 
@@ -358,6 +392,7 @@ func (p *Parser) parseMemberExpression(left ast.Expression) ast.Expression {
 	return expression
 }
 
+// parseIndexExpression parses a bracketed index applied to left.
 func (p *Parser) parseIndexExpression(left ast.Expression) ast.Expression {
 	exp := &ast.IndexExpression{Token: p.curToken, Left: left}
 
@@ -375,19 +410,24 @@ func (p *Parser) parseIndexExpression(left ast.Expression) ast.Expression {
 Tokens
 ---------------------------------------------------------------------------------------------------------- */
 
+// nextToken advances both current and lookahead tokens by one position.
 func (p *Parser) nextToken() {
 	p.curToken = p.peekToken
 	p.peekToken = p.l.NextToken()
 }
 
+// curTokenIs reports whether the current token has type t.
 func (p *Parser) curTokenIs(t token.TokenType) bool {
 	return p.curToken.Type == t
 }
 
+// peekTokenIs reports whether the lookahead token has type t.
 func (p *Parser) peekTokenIs(t token.TokenType) bool {
 	return p.peekToken.Type == t
 }
 
+// expectPeek advances when lookahead has the requested type; otherwise it
+// records a positioned parser error.
 func (p *Parser) expectPeek(t token.TokenType) bool {
 	if p.peekTokenIs(t) {
 		p.nextToken()
@@ -402,28 +442,42 @@ func (p *Parser) expectPeek(t token.TokenType) bool {
 Errors
 ---------------------------------------------------------------------------------------------------------- */
 
+// Errors returns the parser diagnostics accumulated so far.
 func (p *Parser) Errors() []string {
 	return p.errors
 }
 
+// peekError records an unexpected-lookahead diagnostic.
 func (p *Parser) peekError(t token.TokenType) {
 	msg := fmt.Sprintf("expected next token to be %s, got %s instead",
 		t, p.peekToken.Type)
-	p.errors = append(p.errors, msg)
+	p.addError(p.peekToken.Position, msg)
+}
+
+// addError prefixes a diagnostic with source coordinates when available.
+func (p *Parser) addError(position token.Position, message string) {
+	if position.IsValid() {
+		message = fmt.Sprintf("%s:%d:%d: %s", position.Source, position.Line, position.Column, message)
+	}
+	p.errors = append(p.errors, message)
 }
 
 /* ----------------------------------------------------------------------------------------------------------
 Expression general
 ---------------------------------------------------------------------------------------------------------- */
 
+// registerPrefix installs a parser for expressions beginning with tokenType.
 func (p *Parser) registerPrefix(tokenType token.TokenType, fn prefixParseFn) {
 	p.prefixParseFns[tokenType] = fn
 }
 
+// registerInfix installs a parser for expressions extending a left operand.
 func (p *Parser) registerInfix(tokenType token.TokenType, fn infixParseFn) {
 	p.infixParseFns[tokenType] = fn
 }
 
+// parseExpression is the Pratt parser core. It parses one prefix expression,
+// then repeatedly consumes tighter-binding infix expressions.
 func (p *Parser) parseExpression(precedence int) ast.Expression {
 	prefix := p.prefixParseFns[p.curToken.Type]
 	if prefix == nil {
@@ -450,22 +504,25 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
 Expression error logging
 ---------------------------------------------------------------------------------------------------------- */
 
+// noPrefixParseFnError records that the current token cannot begin an
+// expression.
 func (p *Parser) noPrefixParseFnError(t token.TokenType) {
 	msg := fmt.Sprintf("no prefix parse function for %s found", t)
-	p.errors = append(p.errors, msg)
+	p.addError(p.curToken.Position, msg)
 }
 
 /* ----------------------------------------------------------------------------------------------------------
 Type literals
 ---------------------------------------------------------------------------------------------------------- */
 
+// parseIntegerLiteral converts the current token into a signed 64-bit value.
 func (p *Parser) parseIntegerLiteral() ast.Expression {
 	lit := &ast.IntegerLiteral{Token: p.curToken}
 
 	value, err := strconv.ParseInt(p.curToken.Literal, 0, 64)
 	if err != nil {
 		msg := fmt.Sprintf("could not parse %q as integer", p.curToken.Literal)
-		p.errors = append(p.errors, msg)
+		p.addError(p.curToken.Position, msg)
 		return nil
 	}
 
@@ -474,10 +531,12 @@ func (p *Parser) parseIntegerLiteral() ast.Expression {
 	return lit
 }
 
+// parseBoolean maps the True and False token types to a boolean AST value.
 func (p *Parser) parseBoolean() ast.Expression {
 	return &ast.Boolean{Token: p.curToken, Value: p.curTokenIs(token.TRUE)}
 }
 
+// parseArrayLiteral parses a bracket-delimited expression list.
 func (p *Parser) parseArrayLiteral() ast.Expression {
 	array := &ast.ArrayLiteral{Token: p.curToken}
 	array.Elements = p.parseExpressionList(token.RBRACKET)
@@ -485,6 +544,8 @@ func (p *Parser) parseArrayLiteral() ast.Expression {
 	return array
 }
 
+// parseExpressionList parses a possibly empty, comma-separated list ending in
+// the requested delimiter. It is shared by calls and arrays.
 func (p *Parser) parseExpressionList(end token.TokenType) []ast.Expression {
 	list := []ast.Expression{}
 
@@ -509,6 +570,7 @@ func (p *Parser) parseExpressionList(end token.TokenType) []ast.Expression {
 	return list
 }
 
+// parseHashLiteral parses comma-separated key:value expression pairs.
 func (p *Parser) parseHashLiteral() ast.Expression {
 	hash := &ast.HashLiteral{Token: p.curToken}
 	hash.Pairs = make(map[ast.Expression]ast.Expression)
@@ -542,6 +604,7 @@ func (p *Parser) parseHashLiteral() ast.Expression {
 Operator precedence
 ---------------------------------------------------------------------------------------------------------- */
 
+// peekPrecedence returns the binding power of the lookahead token.
 func (p *Parser) peekPrecedence() int {
 	if p, ok := precedences[p.peekToken.Type]; ok {
 		return p
@@ -550,6 +613,7 @@ func (p *Parser) peekPrecedence() int {
 	return LOWEST
 }
 
+// curPrecedence returns the binding power of the current token.
 func (p *Parser) curPrecedence() int {
 	if p, ok := precedences[p.curToken.Type]; ok {
 		return p

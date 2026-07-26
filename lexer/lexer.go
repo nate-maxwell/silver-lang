@@ -2,108 +2,151 @@ package lexer
 
 import "silver/token"
 
-// The object responsible for reading through the characters of a script
+// Lexer converts Silver source text into a stream of positioned tokens. It
+// scans bytes; line and column coordinates are one-based for diagnostics.
 type Lexer struct {
-	input        string
-	position     int  // current position in input (points to current char)
-	readPosition int  // current reading position in input (after current char)
-	ch           byte // current char under examination
+	input        string // complete source text
+	source       string // filename or synthetic source label
+	position     int    // byte offset of ch
+	readPosition int    // byte offset that readChar will consume next
+	ch           byte   // byte currently under examination; zero means EOF
+	line         int    // line containing ch
+	column       int    // column containing ch
+	nextLine     int    // line to assign to the next byte
+	nextColumn   int    // column to assign to the next byte
 }
 
-// Constructs a new Lexer
+// New constructs a lexer for in-memory input using <input> as its diagnostic
+// source name.
 func New(input string) *Lexer {
-	l := &Lexer{input: input}
+	return NewWithSource(input, "<input>")
+}
+
+// NewWithSource constructs a lexer whose tokens retain the source name used
+// in diagnostics and tracebacks.
+func NewWithSource(input, source string) *Lexer {
+	l := &Lexer{
+		input:      input,
+		source:     source,
+		nextLine:   1,
+		nextColumn: 1,
+	}
 	l.readChar()
 	return l
 }
 
-// Advances the current and peek pointers to the next positions for the lexer.
+// readChar advances the scanner by one byte and updates the coordinates for
+// both the current and next byte.
 func (l *Lexer) readChar() {
+	l.position = l.readPosition
+	l.line = l.nextLine
+	l.column = l.nextColumn
+
 	if l.readPosition >= len(l.input) {
 		l.ch = 0
-	} else {
-		l.ch = l.input[l.readPosition]
+		return
 	}
-	l.position = l.readPosition
+
+	l.ch = l.input[l.readPosition]
 	l.readPosition += 1
+	if l.ch == '\n' {
+		l.nextLine = l.line + 1
+		l.nextColumn = 1
+	} else {
+		l.nextLine = l.line
+		l.nextColumn = l.column + 1
+	}
 }
 
-// Checks the current byte to match against a pre-defined token.
-// If one is found, a new token of a premade type is returned at the current
-// char position, otherwise, a new token of user inputs is created
-// and returned.
+// NextToken returns the next non-comment, non-whitespace token. Identifier and
+// number readers advance to the first byte after their token before returning.
 func (l *Lexer) NextToken() token.Token {
 	var tok token.Token
 
 	l.skipIgnoredCharacters()
+	position := l.currentPosition()
 
 	switch l.ch {
 	case '=':
 		if l.peekChar() == '=' {
 			tok = l.makeTwoCharToken(token.EQ)
 		} else {
-			tok = newToken(token.ASSIGN, l.ch)
+			tok = newToken(token.ASSIGN, l.ch, position)
 		}
 	case '+':
-		tok = newToken(token.PLUS, l.ch)
+		tok = newToken(token.PLUS, l.ch, position)
 	case '-':
-		tok = newToken(token.MINUS, l.ch)
+		tok = newToken(token.MINUS, l.ch, position)
 	case '!':
 		if l.peekChar() == '=' {
 			tok = l.makeTwoCharToken(token.NOT_EQ)
 		} else {
-			tok = newToken(token.BANG, l.ch)
+			tok = newToken(token.BANG, l.ch, position)
 		}
 	case '*':
-		tok = newToken(token.ASTERISK, l.ch)
+		tok = newToken(token.ASTERISK, l.ch, position)
 	case '/':
-		tok = newToken(token.SLASH, l.ch)
+		tok = newToken(token.SLASH, l.ch, position)
 	case '<':
-		tok = newToken(token.LT, l.ch)
+		tok = newToken(token.LT, l.ch, position)
 	case '>':
-		tok = newToken(token.GT, l.ch)
+		tok = newToken(token.GT, l.ch, position)
 	case ',':
-		tok = newToken(token.COMMA, l.ch)
+		tok = newToken(token.COMMA, l.ch, position)
 	case ';':
-		tok = newToken(token.SEMICOLON, l.ch)
+		tok = newToken(token.SEMICOLON, l.ch, position)
 	case '(':
-		tok = newToken(token.LPAREN, l.ch)
+		tok = newToken(token.LPAREN, l.ch, position)
 	case ')':
-		tok = newToken(token.RPAREN, l.ch)
+		tok = newToken(token.RPAREN, l.ch, position)
 	case '{':
-		tok = newToken(token.LBRACE, l.ch)
+		tok = newToken(token.LBRACE, l.ch, position)
 	case '}':
-		tok = newToken(token.RBRACE, l.ch)
+		tok = newToken(token.RBRACE, l.ch, position)
 	case '"':
 		tok.Type = token.STRING
 		tok.Literal = l.readString()
+		tok.Position = position
 	case '[':
-		tok = newToken(token.LBRACKET, l.ch)
+		tok = newToken(token.LBRACKET, l.ch, position)
 	case ']':
-		tok = newToken(token.RBRACKET, l.ch)
+		tok = newToken(token.RBRACKET, l.ch, position)
 	case ':':
-		tok = newToken(token.COLON, l.ch)
+		tok = newToken(token.COLON, l.ch, position)
 	case '.':
-		tok = newToken(token.DOT, l.ch)
+		tok = newToken(token.DOT, l.ch, position)
 	case 0:
 		tok.Literal = ""
 		tok.Type = token.EOF
+		tok.Position = position
 	default:
 		if isLetter(l.ch) {
 			tok.Literal = l.readIdentifier()
 			tok.Type = token.LookupIdent(tok.Literal)
+			tok.Position = position
 			return tok
 		} else if isDigit(l.ch) {
 			tok.Type = token.INT
 			tok.Literal = l.readNumber()
+			tok.Position = position
 			return tok
 		} else {
-			tok = newToken(token.ILLEGAL, l.ch)
+			tok = newToken(token.ILLEGAL, l.ch, position)
 		}
 	}
 
 	l.readChar()
 	return tok
+}
+
+// currentPosition snapshots the source coordinates at the current byte.
+func (l *Lexer) currentPosition() token.Position {
+	return token.Position{
+		Source: l.source,
+		Offset: l.position,
+		Line:   l.line,
+		Column: l.column,
+	}
 }
 
 // skipIgnoredCharacters consumes whitespace and line comments before the next
@@ -127,6 +170,7 @@ func (l *Lexer) skipLineComment() {
 	}
 }
 
+// peekChar returns the next byte without advancing, or zero at EOF.
 func (l *Lexer) peekChar() byte {
 	if l.readPosition >= len(l.input) {
 		return 0 // Set to ascii null for EOF
@@ -135,27 +179,29 @@ func (l *Lexer) peekChar() byte {
 	}
 }
 
+// makeTwoCharToken consumes the second byte of a two-character operator while
+// retaining the first byte's position.
 func (l *Lexer) makeTwoCharToken(tokenType token.TokenType) token.Token {
+	position := l.currentPosition()
 	ch := l.ch
 	l.readChar()
 	literal := string(ch) + string(l.ch)
-	return token.Token{Type: tokenType, Literal: literal}
+	return token.Token{Type: tokenType, Literal: literal, Position: position}
 }
 
-// Skips whitespace until a new char is hit
+// skipWhitespace advances past spaces, tabs, and line endings.
 func (l *Lexer) skipWhitespace() {
 	for l.ch == ' ' || l.ch == '\t' || l.ch == '\n' || l.ch == '\r' {
 		l.readChar()
 	}
 }
 
-// Creates a token of the given type with a string value of the given bytes.
-func newToken(tokenType token.TokenType, ch byte) token.Token {
-	return token.Token{Type: tokenType, Literal: string(ch)}
+// newToken constructs a single-byte token at position.
+func newToken(tokenType token.TokenType, ch byte, position token.Position) token.Token {
+	return token.Token{Type: tokenType, Literal: string(ch), Position: position}
 }
 
-// Reads all chars until a non-char is found and returns
-// the identifier string composed of those chars.
+// readIdentifier consumes a Silver identifier and returns its source text.
 func (l *Lexer) readIdentifier() string {
 	position := l.position
 	for isLetter(l.ch) {
@@ -164,8 +210,7 @@ func (l *Lexer) readIdentifier() string {
 	return l.input[position:l.position]
 }
 
-// Reads all chars until a non-number is found and returns
-// the number string composed of those numbers.
+// readNumber consumes a digit-only integer literal and returns its source text.
 func (l *Lexer) readNumber() string {
 	position := l.position
 	for isDigit(l.ch) {
@@ -174,6 +219,8 @@ func (l *Lexer) readNumber() string {
 	return l.input[position:l.position]
 }
 
+// readString consumes bytes until the closing quote or EOF. The returned
+// literal excludes the surrounding quotes.
 func (l *Lexer) readString() string {
 	position := l.position + 1
 	for {
@@ -186,12 +233,13 @@ func (l *Lexer) readString() string {
 	return l.input[position:l.position]
 }
 
-// Is the current byte a number?
+// isDigit reports whether ch is an ASCII decimal digit.
 func isDigit(ch byte) bool {
 	return '0' <= ch && ch <= '9'
 }
 
-// Is the current byte a character?
+// isLetter reports whether ch may occur in a Silver identifier. Digits are not
+// currently accepted after the first character.
 func isLetter(ch byte) bool {
 	return 'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z' || ch == '_'
 }

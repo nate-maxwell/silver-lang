@@ -186,3 +186,33 @@ func TestLineComments(t *testing.T) {
 		}
 	}
 }
+
+func TestTokenPositions(t *testing.T) {
+	input := "let value = 1; // comment\n  value / 2"
+	l := NewWithSource(input, "example.silver")
+
+	tests := []struct {
+		literal string
+		line    int
+		column  int
+	}{
+		{"let", 1, 1},
+		{"value", 1, 5},
+		{"=", 1, 11},
+		{"1", 1, 13},
+		{";", 1, 14},
+		{"value", 2, 3},
+		{"/", 2, 9},
+		{"2", 2, 11},
+	}
+
+	for i, tt := range tests {
+		tok := l.NextToken()
+		if tok.Literal != tt.literal {
+			t.Fatalf("tests[%d] - literal is %q, want %q", i, tok.Literal, tt.literal)
+		}
+		if tok.Position.Source != "example.silver" || tok.Position.Line != tt.line || tok.Position.Column != tt.column {
+			t.Fatalf("tests[%d] - position is %+v, want example.silver:%d:%d", i, tok.Position, tt.line, tt.column)
+		}
+	}
+}

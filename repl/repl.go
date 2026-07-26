@@ -10,8 +10,11 @@ import (
 	"silver/parser"
 )
 
+// PROMPT is written before each interactive input line.
 const PROMPT = ">> "
 
+// Start runs a persistent read-evaluate-print loop. It reuses one environment
+// and evaluator so bindings and imported modules survive between input lines.
 func Start(in io.Reader, out io.Writer) {
 	scanner := bufio.NewScanner(in)
 	env := object.NewEnvironment()
@@ -25,7 +28,7 @@ func Start(in io.Reader, out io.Writer) {
 		}
 
 		line := scanner.Text()
-		l := lexer.New(line)
+		l := lexer.NewWithSource(line, "<repl>")
 		p := parser.New(l)
 
 		program := p.ParseProgram()
@@ -42,6 +45,7 @@ func Start(in io.Reader, out io.Writer) {
 	}
 }
 
+// printParserErrors writes parser diagnostics in the REPL's indented format.
 func printParserErrors(out io.Writer, errors []string) {
 	for _, msg := range errors {
 		io.WriteString(out, "\t"+msg+"\n")

@@ -216,3 +216,31 @@ func TestTokenPositions(t *testing.T) {
 		}
 	}
 }
+
+func TestFloatTokens(t *testing.T) {
+	input := `0.5 12.34 1.member 1. 1.5.6`
+	tests := []struct {
+		tokenType token.TokenType
+		literal   string
+	}{
+		{token.FLOAT, "0.5"},
+		{token.FLOAT, "12.34"},
+		{token.INT, "1"},
+		{token.DOT, "."},
+		{token.IDENT, "member"},
+		{token.INT, "1"},
+		{token.DOT, "."},
+		{token.FLOAT, "1.5"},
+		{token.DOT, "."},
+		{token.INT, "6"},
+		{token.EOF, ""},
+	}
+
+	l := New(input)
+	for i, want := range tests {
+		got := l.NextToken()
+		if got.Type != want.tokenType || got.Literal != want.literal {
+			t.Fatalf("token %d is (%q, %q), want (%q, %q)", i, got.Type, got.Literal, want.tokenType, want.literal)
+		}
+	}
+}

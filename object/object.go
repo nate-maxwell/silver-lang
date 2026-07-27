@@ -15,6 +15,7 @@ type ObjectType string
 // changing them is an observable language change.
 const (
 	INTEGER_OBJ      = "INTEGER"
+	FLOAT_OBJ        = "FLOAT"
 	BOOLEAN_OBJ      = "BOOLEAN"
 	STRING_OBJ       = "STRING"
 	NULL_OBJ         = "NULL"

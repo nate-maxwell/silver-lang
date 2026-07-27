@@ -126,8 +126,7 @@ func (l *Lexer) NextToken() token.Token {
 			tok.Position = position
 			return tok
 		} else if isDigit(l.ch) {
-			tok.Type = token.INT
-			tok.Literal = l.readNumber()
+			tok.Literal, tok.Type = l.readNumber()
 			tok.Position = position
 			return tok
 		} else {
@@ -210,13 +209,24 @@ func (l *Lexer) readIdentifier() string {
 	return l.input[position:l.position]
 }
 
-// readNumber consumes a digit-only integer literal and returns its source text.
-func (l *Lexer) readNumber() string {
+// readNumber consumes an integer or decimal float. A dot is part of the number
+// only when followed by a digit, preserving member access after integers.
+func (l *Lexer) readNumber() (string, token.TokenType) {
 	position := l.position
 	for isDigit(l.ch) {
 		l.readChar()
 	}
-	return l.input[position:l.position]
+
+	tokenType := token.TokenType(token.INT)
+	if l.ch == '.' && isDigit(l.peekChar()) {
+		tokenType = token.FLOAT
+		l.readChar()
+		for isDigit(l.ch) {
+			l.readChar()
+		}
+	}
+
+	return l.input[position:l.position], tokenType
 }
 
 // readString consumes bytes until the closing quote or EOF. The returned

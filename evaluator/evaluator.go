@@ -28,6 +28,9 @@ type Evaluator struct {
 	modules  map[string]*object.Module // filepath to module
 	loading  map[string]bool           // module load state | circular import detection
 	contexts []string                  // active Silver function/module names
+	// nextEnumValueID gives every evaluated enum member a session-unique hash
+	// identity, even when separate modules declare enums with the same names.
+	nextEnumValueID uint64
 }
 
 // New constructs an evaluator whose print builtin writes to standard output.
@@ -96,6 +99,9 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 		}
 		env.Set(node.Name.Value, val)
 
+	case *ast.EnumStatement:
+		return e.evalEnumStatement(node, env)
+
 	case *ast.Identifier:
 		return e.evalIdentifier(node, env)
 
@@ -105,11 +111,11 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 		return result
 
 	case *ast.MemberExpression:
-		module := e.Eval(node.Object, env)
-		if isError(module) {
-			return module
+		value := e.Eval(node.Object, env)
+		if isError(value) {
+			return value
 		}
-		return evalModuleMember(module, node.Member.Value)
+		return evalMember(value, node.Member.Value)
 
 	// Expressions
 	case *ast.IfExpression:
@@ -283,19 +289,24 @@ func parseFile(path string) (*ast.Program, *object.Error) {
 	return program, nil
 }
 
-// evalModuleMember returns a module export or an error for unsupported values
-// and missing names.
-func evalModuleMember(value object.Object, member string) object.Object {
-	module, ok := value.(*object.Module)
-	if !ok {
+// evalMember resolves members on module and enum namespace objects.
+func evalMember(value object.Object, member string) object.Object {
+	switch value := value.(type) {
+	case *object.Module:
+		export, ok := value.Exports[member]
+		if !ok {
+			return newError("module %q has no member %q", value.Path, member)
+		}
+		return export
+	case *object.Enum:
+		enumValue, ok := value.Members[member]
+		if !ok {
+			return newError("enum %q has no member %q", value.Name, member)
+		}
+		return enumValue
+	default:
 		return newError("member access not supported on %s", value.Type())
 	}
-
-	export, ok := module.Exports[member]
-	if !ok {
-		return newError("module %q has no member %q", module.Path, member)
-	}
-	return export
 }
 
 // evalIdentifier resolves lexical bindings before falling back to the native

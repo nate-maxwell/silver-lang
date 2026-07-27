@@ -25,6 +25,8 @@ const (
 	ARRAY_OBJ        = "ARRAY"
 	HASH_OBJ         = "HASH"
 	MODULE_OBJ       = "MODULE"
+	ENUM_OBJ         = "ENUM"
+	ENUM_VALUE_OBJ   = "ENUM_VALUE"
 )
 
 // Object is any value that can exist at runtime in a Silver program.

@@ -171,8 +171,7 @@ type InfixExpression struct {
 	Right    Expression
 }
 
-// MemberExpression accesses a named member on another expression, currently a
-// module value.
+// MemberExpression accesses a named member on a module or enum namespace.
 type MemberExpression struct {
 	Token  token.Token // The . token
 	Object Expression

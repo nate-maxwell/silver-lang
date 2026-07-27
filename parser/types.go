@@ -107,7 +107,7 @@ func (p *Parser) parseEnumStatement() *ast.EnumStatement {
 // parseEnumMembers parses a possibly empty comma-separated member list. A
 // trailing comma before the closing brace is accepted.
 func (p *Parser) parseEnumMembers() []*ast.Identifier {
-	members := []*ast.Identifier{}
+	var members []*ast.Identifier
 	seen := make(map[string]bool)
 
 	if p.peekTokenIs(token.RBRACE) {

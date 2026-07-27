@@ -6,25 +6,21 @@ import (
 	"os"
 	"path/filepath"
 	"silver/ast"
+	builtinpkg "silver/evaluator/builtins"
 	"silver/lexer"
 	"silver/object"
 	"silver/parser"
 	"strings"
 )
 
-// Canonical singleton values make identity-based boolean and null comparisons
-// deterministic throughout evaluation.
-var (
-	NULL  = &object.Null{}
-	TRUE  = &object.Boolean{Value: true}
-	FALSE = &object.Boolean{Value: false}
-)
+// NULL is the canonical null singleton used by identity-based truthiness.
+var NULL = &object.Null{}
 
 // Evaluator owns the state shared across one execution session: native
 // builtins, imported-module caches, circular-import state, and traceback
 // contexts. Reuse one evaluator for a REPL or a group of related evaluations.
 type Evaluator struct {
-	builtins builtinRegistry
+	builtins *builtinpkg.Registry
 	modules  map[string]*object.Module // filepath to module
 	loading  map[string]bool           // module load state | circular import detection
 	contexts []string                  // active Silver function/module names
@@ -45,7 +41,7 @@ func NewWithOutput(out io.Writer) *Evaluator {
 		out = io.Discard
 	}
 	return &Evaluator{
-		builtins: newDefaultBuiltinRegistry(out),
+		builtins: builtinpkg.New(out, NULL),
 		modules:  make(map[string]*object.Module),
 		loading:  make(map[string]bool),
 		contexts: make([]string, 0),
@@ -318,7 +314,7 @@ func (e *Evaluator) evalIdentifier(node *ast.Identifier, env *object.Environment
 	if val, ok := env.Get(node.Value); ok {
 		return val
 	}
-	if builtin, ok := e.builtins.get(node.Value); ok {
+	if builtin, ok := e.builtins.Lookup(node.Value); ok {
 		return builtin
 	}
 	return newError("identifier not found: %s", node.Value)
@@ -466,17 +462,6 @@ func evalInfixExpression(operator string, left, right object.Object) object.Obje
 	}
 }
 
-// evalStringInfixExpression implements the operators supported by strings.
-func evalStringInfixExpression(operator string, left, right object.Object) object.Object {
-	if operator != "+" {
-		return newError("unknown operator: %s %s %s", left.Type(), operator, right.Type())
-	}
-
-	leftVal := left.(*object.String).Value
-	rightVal := right.(*object.String).Value
-	return &object.String{Value: leftVal + rightVal}
-}
-
 // evalIndexExpression dispatches indexing according to the left operand type.
 func evalIndexExpression(left, index object.Object) object.Object {
 	switch {
@@ -487,37 +472,6 @@ func evalIndexExpression(left, index object.Object) object.Object {
 	default:
 		return newError("index operator not supported: %s", left.Type())
 	}
-}
-
-// evalArrayIndexExpression returns null for indexes outside the array bounds.
-func evalArrayIndexExpression(array, index object.Object) object.Object {
-	arrayObject := array.(*object.Array)
-	idx := index.(*object.Integer).Value
-	max := int64(len(arrayObject.Elements) - 1)
-
-	if idx < 0 || idx > max {
-		return NULL
-	}
-
-	return arrayObject.Elements[idx]
-}
-
-// evalHashIndexExpression normalizes a hashable key and returns null when the
-// key is absent.
-func evalHashIndexExpression(hash, index object.Object) object.Object {
-	hashObject := hash.(*object.Hash)
-
-	key, ok := index.(object.Hashable)
-	if !ok {
-		return newError("unusable as hash key: %s", index.Type())
-	}
-
-	pair, ok := hashObject.Pairs[key.HashKey()]
-	if !ok {
-		return NULL
-	}
-
-	return pair.Value
 }
 
 // evalIfExpression evaluates only the selected branch.
@@ -536,67 +490,6 @@ func (e *Evaluator) evalIfExpression(ie *ast.IfExpression, env *object.Environme
 	}
 }
 
-// isTruthy implements Silver truthiness. Only null and False are falsey.
-func isTruthy(obj object.Object) bool {
-	switch obj {
-	case NULL:
-		return false
-	case TRUE:
-		return true
-	case FALSE:
-		return false
-	default:
-		return true
-	}
-}
-
-// evalHashLiteral evaluates key/value pairs and rejects keys that do not
-// implement object.Hashable.
-func (e *Evaluator) evalHashLiteral(node *ast.HashLiteral, env *object.Environment) object.Object {
-	pairs := make(map[object.HashKey]object.HashPair)
-
-	for keyNode, valueNode := range node.Pairs {
-		key := e.Eval(keyNode, env)
-		if isError(key) {
-			return key
-		}
-
-		hashKey, ok := key.(object.Hashable)
-		if !ok {
-			return newError("unusable as hash key: %s", key.Type())
-		}
-
-		value := e.Eval(valueNode, env)
-		if isError(value) {
-			return value
-		}
-
-		hashed := hashKey.HashKey()
-		pairs[hashed] = object.HashPair{Key: key, Value: value}
-	}
-
-	return &object.Hash{Pairs: pairs}
-}
-
-/* ----------------------------------------------------------------------------------------------------------
-Unary operators
----------------------------------------------------------------------------------------------------------- */
-
-// evalBangOperatorExpression implements logical negation using canonical
-// singleton values.
-func evalBangOperatorExpression(right object.Object) object.Object {
-	switch right {
-	case TRUE:
-		return FALSE
-	case FALSE:
-		return TRUE
-	case NULL:
-		return TRUE
-	default:
-		return FALSE
-	}
-}
-
 // evalMinusPrefixOperatorExpression negates an integer or float and reports a
 // type error for other operands.
 func evalMinusPrefixOperatorExpression(right object.Object) object.Object {
@@ -608,54 +501,6 @@ func evalMinusPrefixOperatorExpression(right object.Object) object.Object {
 	default:
 		return newError("unknown operator: -%s", right.Type())
 	}
-}
-
-/* ----------------------------------------------------------------------------------------------------------
-Binary operators
----------------------------------------------------------------------------------------------------------- */
-
-// evalIntegerInfixExpression implements integer arithmetic and comparisons.
-// Division by zero becomes a Silver error rather than a Go panic.
-func evalIntegerInfixExpression(operator string, left, right object.Object) object.Object {
-	leftVal := left.(*object.Integer).Value
-	rightVal := right.(*object.Integer).Value
-
-	switch operator {
-	case "+":
-		return &object.Integer{Value: leftVal + rightVal}
-	case "-":
-		return &object.Integer{Value: leftVal - rightVal}
-	case "*":
-		return &object.Integer{Value: leftVal * rightVal}
-	case "/":
-		if rightVal == 0 {
-			return newError("division by zero")
-		}
-		return &object.Integer{Value: leftVal / rightVal}
-	case "<":
-		return nativeBoolToBooleanObject(leftVal < rightVal)
-	case ">":
-		return nativeBoolToBooleanObject(leftVal > rightVal)
-	case "==":
-		return nativeBoolToBooleanObject(leftVal == rightVal)
-	case "!=":
-		return nativeBoolToBooleanObject(leftVal != rightVal)
-	default:
-		return newError("unknown operator: %s %s %s", left.Type(), operator, right.Type())
-	}
-}
-
-/* ----------------------------------------------------------------------------------------------------------
-Booleans
----------------------------------------------------------------------------------------------------------- */
-
-// nativeBoolToBooleanObject returns canonical boolean instances because
-// equality for these values relies on object identity.
-func nativeBoolToBooleanObject(input bool) *object.Boolean {
-	if input {
-		return TRUE
-	}
-	return FALSE
 }
 
 /* ----------------------------------------------------------------------------------------------------------

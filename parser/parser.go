@@ -5,7 +5,6 @@ import (
 	"silver/ast"
 	"silver/lexer"
 	"silver/token"
-	"strconv"
 )
 
 // Pratt binding powers increase from weak equality/comparison operators to
@@ -358,11 +357,6 @@ func (p *Parser) parseIfExpression() ast.Expression {
 	return expression
 }
 
-// parseStringLiteral builds a literal from the lexer's unquoted token value.
-func (p *Parser) parseStringLiteral() ast.Expression {
-	return &ast.StringLiteral{Token: p.curToken, Value: p.curToken.Literal}
-}
-
 // parseImportExpression accepts the restricted import("path") form.
 func (p *Parser) parseImportExpression() ast.Expression {
 	expression := &ast.ImportExpression{Token: p.curToken}
@@ -514,39 +508,6 @@ func (p *Parser) noPrefixParseFnError(t token.TokenType) {
 	p.addError(p.curToken.Position, msg)
 }
 
-/* ----------------------------------------------------------------------------------------------------------
-Type literals
----------------------------------------------------------------------------------------------------------- */
-
-// parseIntegerLiteral converts the current token into a signed 64-bit value.
-func (p *Parser) parseIntegerLiteral() ast.Expression {
-	lit := &ast.IntegerLiteral{Token: p.curToken}
-
-	value, err := strconv.ParseInt(p.curToken.Literal, 0, 64)
-	if err != nil {
-		msg := fmt.Sprintf("could not parse %q as integer", p.curToken.Literal)
-		p.addError(p.curToken.Position, msg)
-		return nil
-	}
-
-	lit.Value = value
-
-	return lit
-}
-
-// parseBoolean maps the True and False token types to a boolean AST value.
-func (p *Parser) parseBoolean() ast.Expression {
-	return &ast.Boolean{Token: p.curToken, Value: p.curTokenIs(token.TRUE)}
-}
-
-// parseArrayLiteral parses a bracket-delimited expression list.
-func (p *Parser) parseArrayLiteral() ast.Expression {
-	array := &ast.ArrayLiteral{Token: p.curToken}
-	array.Elements = p.parseExpressionList(token.RBRACKET)
-
-	return array
-}
-
 // parseExpressionList parses a possibly empty, comma-separated list ending in
 // the requested delimiter. It is shared by calls and arrays.
 func (p *Parser) parseExpressionList(end token.TokenType) []ast.Expression {
@@ -571,36 +532,6 @@ func (p *Parser) parseExpressionList(end token.TokenType) []ast.Expression {
 	}
 
 	return list
-}
-
-// parseHashLiteral parses comma-separated key:value expression pairs.
-func (p *Parser) parseHashLiteral() ast.Expression {
-	hash := &ast.HashLiteral{Token: p.curToken}
-	hash.Pairs = make(map[ast.Expression]ast.Expression)
-
-	for !p.peekTokenIs(token.RBRACE) {
-		p.nextToken()
-		key := p.parseExpression(LOWEST)
-
-		if !p.expectPeek(token.COLON) {
-			return nil
-		}
-
-		p.nextToken()
-		value := p.parseExpression(LOWEST)
-
-		hash.Pairs[key] = value
-
-		if !p.peekTokenIs(token.RBRACE) && !p.expectPeek(token.COMMA) {
-			return nil
-		}
-	}
-
-	if !p.expectPeek(token.RBRACE) {
-		return nil
-	}
-
-	return hash
 }
 
 /* ----------------------------------------------------------------------------------------------------------

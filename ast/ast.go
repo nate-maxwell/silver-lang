@@ -436,70 +436,6 @@ func (ce *CallExpression) String() string {
 	return out.String()
 }
 
-/* ----------------------------------------------------------------------------------------------------------
-Types
----------------------------------------------------------------------------------------------------------- */
-
-// Boolean is a True or False literal.
-type Boolean struct {
-	Token token.Token
-	Value bool
-}
-
-// expressionNode marks Boolean as an Expression.
-func (b *Boolean) expressionNode() {}
-
-// TokenLiteral returns the boolean literal's source spelling.
-func (b *Boolean) TokenLiteral() string { return b.Token.Literal }
-
-// Position returns the literal's position.
-func (b *Boolean) Position() token.Position {
-	return b.Token.Position
-}
-
-// String returns the boolean literal's source spelling.
-func (b *Boolean) String() string { return b.Token.Literal }
-
-// IntegerLiteral is a parsed signed 64-bit integer value.
-type IntegerLiteral struct {
-	Token token.Token
-	Value int64
-}
-
-// expressionNode marks IntegerLiteral as an Expression.
-func (il *IntegerLiteral) expressionNode() {}
-
-// TokenLiteral returns the integer's source spelling.
-func (il *IntegerLiteral) TokenLiteral() string { return il.Token.Literal }
-
-// Position returns the literal's position.
-func (il *IntegerLiteral) Position() token.Position {
-	return il.Token.Position
-}
-
-// String returns the integer's source spelling.
-func (il *IntegerLiteral) String() string { return il.Token.Literal }
-
-// StringLiteral is a quoted string value. Value excludes the quote characters.
-type StringLiteral struct {
-	Token token.Token
-	Value string
-}
-
-// expressionNode marks StringLiteral as an Expression.
-func (sl *StringLiteral) expressionNode() {}
-
-// TokenLiteral returns the string's unquoted token literal.
-func (sl *StringLiteral) TokenLiteral() string { return sl.Token.Literal }
-
-// Position returns the opening quote's position.
-func (sl *StringLiteral) Position() token.Position {
-	return sl.Token.Position
-}
-
-// String returns the string token's unquoted value.
-func (sl *StringLiteral) String() string { return sl.Token.Literal }
-
 // ImportExpression loads a module from the string literal in Path.
 type ImportExpression struct {
 	Token token.Token // The 'import' token
@@ -520,39 +456,6 @@ func (ie *ImportExpression) Position() token.Position {
 // String renders the import call and quoted path.
 func (ie *ImportExpression) String() string {
 	return ie.TokenLiteral() + "(\"" + ie.Path.Value + "\")"
-}
-
-// ArrayLiteral contains expressions evaluated from left to right into an array.
-type ArrayLiteral struct {
-	Token    token.Token // the '[' token
-	Elements []Expression
-}
-
-// expressionNode marks ArrayLiteral as an Expression.
-func (al *ArrayLiteral) expressionNode() {}
-
-// TokenLiteral returns the opening bracket.
-func (al *ArrayLiteral) TokenLiteral() string { return al.Token.Literal }
-
-// Position returns the opening bracket's position.
-func (al *ArrayLiteral) Position() token.Position {
-	return al.Token.Position
-}
-
-// String renders the array's comma-separated element expressions.
-func (al *ArrayLiteral) String() string {
-	var out bytes.Buffer
-
-	elements := []string{}
-	for _, el := range al.Elements {
-		elements = append(elements, el.String())
-	}
-
-	out.WriteString("[")
-	out.WriteString(strings.Join(elements, ", "))
-	out.WriteString("]")
-
-	return out.String()
 }
 
 // IndexExpression looks up Index in Left, which may be an array or hash.
@@ -582,40 +485,6 @@ func (ie *IndexExpression) String() string {
 	out.WriteString("[")
 	out.WriteString(ie.Index.String())
 	out.WriteString("])")
-
-	return out.String()
-}
-
-// HashLiteral stores key/value expression pairs. Evaluation later validates
-// that each key produces a hashable runtime object.
-type HashLiteral struct {
-	Token token.Token // the '{' token
-	Pairs map[Expression]Expression
-}
-
-// expressionNode marks HashLiteral as an Expression.
-func (hl *HashLiteral) expressionNode() {}
-
-// TokenLiteral returns the opening brace.
-func (hl *HashLiteral) TokenLiteral() string { return hl.Token.Literal }
-
-// Position returns the opening brace's position.
-func (hl *HashLiteral) Position() token.Position {
-	return hl.Token.Position
-}
-
-// String renders the hash's key/value expressions.
-func (hl *HashLiteral) String() string {
-	var out bytes.Buffer
-
-	pairs := []string{}
-	for key, value := range hl.Pairs {
-		pairs = append(pairs, key.String()+":"+value.String())
-	}
-
-	out.WriteString("{")
-	out.WriteString(strings.Join(pairs, ", "))
-	out.WriteString("}")
 
 	return out.String()
 }

@@ -26,6 +26,8 @@ const (
 	MODULE_OBJ       = "MODULE"
 	ENUM_OBJ         = "ENUM"
 	ENUM_VALUE_OBJ   = "ENUM_VALUE"
+	STRUCT_OBJ       = "STRUCT"
+	STRUCT_VALUE_OBJ = "STRUCT_VALUE"
 )
 
 // Object is any value that can exist at runtime in a Silver program.
@@ -58,6 +60,7 @@ type BuiltinFunction func(args ...Object) Object
 type Function struct {
 	Name       string
 	Parameters []*ast.Identifier
+	ReturnType *ast.TypeAnnotation
 	Body       *ast.BlockStatement
 	Env        *Environment
 }
@@ -72,13 +75,18 @@ func (f *Function) Inspect() string {
 
 	params := []string{}
 	for _, p := range f.Parameters {
-		params = append(params, p.String())
+		params = append(params, p.DeclarationString())
 	}
 
 	out.WriteString("fn")
 	out.WriteString("(")
 	out.WriteString(strings.Join(params, ", "))
-	out.WriteString(") {\n")
+	out.WriteString(")")
+	if f.ReturnType != nil {
+		out.WriteString(": ")
+		out.WriteString(f.ReturnType.String())
+	}
+	out.WriteString(" {\n")
 	out.WriteString(f.Body.String())
 	out.WriteString("\n}")
 

@@ -86,9 +86,15 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 		return &object.ReturnValue{Value: val}
 
 	case *ast.LetStatement:
+		if err := e.validateTypeAnnotation(node.Name.Type, env); err != nil {
+			return err
+		}
 		val := e.Eval(node.Value, env)
 		if isError(val) {
 			return val
+		}
+		if err := e.requireType(node.Name.Type, val, env, fmt.Sprintf("binding %q", node.Name.Value)); err != nil {
+			return err
 		}
 		if function, ok := val.(*object.Function); ok && function.Name == "" {
 			function.Name = node.Name.Value
@@ -97,6 +103,9 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 
 	case *ast.EnumStatement:
 		return e.evalEnumStatement(node, env)
+
+	case *ast.StructStatement:
+		return e.evalStructStatement(node, env)
 
 	case *ast.Identifier:
 		return e.evalIdentifier(node, env)
@@ -150,9 +159,17 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 		return nativeBoolToBooleanObject(node.Value)
 
 	case *ast.FunctionLiteral:
+		for _, parameter := range node.Parameters {
+			if err := e.validateTypeAnnotation(parameter.Type, env); err != nil {
+				return err
+			}
+		}
+		if err := e.validateTypeAnnotation(node.ReturnType, env); err != nil {
+			return err
+		}
 		params := node.Parameters
 		body := node.Body
-		return &object.Function{Parameters: params, Env: env, Body: body}
+		return &object.Function{Parameters: params, ReturnType: node.ReturnType, Env: env, Body: body}
 
 	case *ast.CallExpression:
 		function := e.Eval(node.Function, env)
@@ -288,7 +305,7 @@ func parseFile(path string) (*ast.Program, *object.Error) {
 	return program, nil
 }
 
-// evalMember resolves members on module and enum namespace objects.
+// evalMember resolves members on modules, enum namespaces, and struct values.
 func evalMember(value object.Object, member string) object.Object {
 	switch value := value.(type) {
 	case *object.Module:
@@ -303,6 +320,12 @@ func evalMember(value object.Object, member string) object.Object {
 			return newError("enum %q has no member %q", value.Name, member)
 		}
 		return enumValue
+	case *object.StructInstance:
+		field, ok := value.Values[member]
+		if !ok {
+			return newError("struct %q has no field %q", value.Struct.Name, member)
+		}
+		return field
 	default:
 		return newError("member access not supported on %s", value.Type())
 	}
@@ -332,6 +355,11 @@ func (e *Evaluator) applyFunction(fn object.Object, args []object.Object) object
 		if len(args) != len(fn.Parameters) {
 			return newError("wrong number of arguments. got=%d, want=%d", len(args), len(fn.Parameters))
 		}
+		for i, parameter := range fn.Parameters {
+			if err := e.requireType(parameter.Type, args[i], fn.Env, fmt.Sprintf("parameter %q", parameter.Value)); err != nil {
+				return err
+			}
+		}
 		extendedEnv := extendFunctionEnv(fn, args)
 		name := fn.Name
 		if name == "" {
@@ -339,11 +367,30 @@ func (e *Evaluator) applyFunction(fn object.Object, args []object.Object) object
 		}
 		e.pushContext(name)
 		defer e.popContext()
-		evaluated := e.Eval(fn.Body, extendedEnv)
-		return unwrapReturnValue(evaluated)
+		evaluated := unwrapReturnValue(e.Eval(fn.Body, extendedEnv))
+		if isError(evaluated) {
+			return evaluated
+		}
+		if err := e.requireType(fn.ReturnType, evaluated, fn.Env, fmt.Sprintf("return value of %q", name)); err != nil {
+			return err
+		}
+		return evaluated
 
 	case *object.Builtin:
 		return fn.Fn(args...)
+
+	case *object.Struct:
+		if len(args) != len(fn.Fields) {
+			return newError("wrong number of arguments for struct %s. got=%d, want=%d", fn.Name, len(args), len(fn.Fields))
+		}
+		values := make(map[string]object.Object, len(fn.Fields))
+		for i, field := range fn.Fields {
+			if err := e.requireType(fn.FieldTypes[i], args[i], fn.Env, fmt.Sprintf("field %q", fn.Name+"."+field)); err != nil {
+				return err
+			}
+			values[field] = args[i]
+		}
+		return &object.StructInstance{Struct: fn, Values: values}
 
 	default:
 		return newError("not a function: %s", fn.Type())

@@ -19,6 +19,7 @@ type EnumValue struct {
 	EnumName string
 	Member   string
 	HashID   uint64
+	Enum     *Enum
 }
 
 // Type returns the enum-value runtime tag.

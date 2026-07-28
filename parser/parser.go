@@ -5,6 +5,7 @@ import (
 	"silver/ast"
 	"silver/lexer"
 	"silver/token"
+	"strconv"
 )
 
 // Pratt binding powers increase from weak equality/comparison operators to
@@ -141,6 +142,13 @@ func (p *Parser) parseFunctionLitearl() ast.Expression {
 	}
 
 	lit.Parameters = p.parseFunctionParameters()
+	if p.peekTokenIs(token.COLON) {
+		p.nextToken()
+		lit.ReturnType = p.parseTypeAnnotation()
+		if lit.ReturnType == nil {
+			return nil
+		}
+	}
 
 	if !p.expectPeek(token.LBRACE) {
 		return nil
@@ -160,15 +168,19 @@ func (p *Parser) parseFunctionParameters() []*ast.Identifier {
 		return identifiers
 	}
 
-	p.nextToken()
+	if !p.expectPeek(token.IDENT) {
+		return nil
+	}
 
-	ident := &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
+	ident := p.parseDeclarationIdentifier()
 	identifiers = append(identifiers, ident)
 
 	for p.peekTokenIs(token.COMMA) {
 		p.nextToken()
-		p.nextToken()
-		ident := &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
+		if !p.expectPeek(token.IDENT) {
+			return nil
+		}
+		ident := p.parseDeclarationIdentifier()
 		identifiers = append(identifiers, ident)
 	}
 
@@ -197,6 +209,8 @@ func (p *Parser) parseStatement() ast.Statement {
 		return p.parseLetStatement()
 	case token.ENUM:
 		return p.parseEnumStatement()
+	case token.STRUCT:
+		return p.parseStructStatement()
 	case token.RETURN:
 		return p.parseReturnStatement()
 	default:
@@ -213,6 +227,13 @@ func (p *Parser) parseLetStatement() *ast.LetStatement {
 	}
 
 	stmt.Name = &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
+	if p.peekTokenIs(token.COLON) {
+		p.nextToken()
+		stmt.Name.Type = p.parseTypeAnnotation()
+		if stmt.Name.Type == nil {
+			return nil
+		}
+	}
 
 	if !p.expectPeek(token.ASSIGN) {
 		return nil
@@ -693,4 +714,95 @@ func (p *Parser) parseEnumMembers() []*ast.Identifier {
 			return members
 		}
 	}
+}
+
+// parseStructStatement parses struct Name { field, ... } and an optional
+// trailing semicolon. Field names must be unique identifiers.
+func (p *Parser) parseStructStatement() *ast.StructStatement {
+	statement := &ast.StructStatement{Token: p.curToken}
+
+	if !p.expectPeek(token.IDENT) {
+		return nil
+	}
+	statement.Name = &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
+
+	if !p.expectPeek(token.LBRACE) {
+		return nil
+	}
+	statement.Fields = p.parseStructFields()
+
+	if p.peekTokenIs(token.SEMICOLON) {
+		p.nextToken()
+	}
+	return statement
+}
+
+// parseStructFields parses a possibly empty comma-separated field list. A
+// trailing comma before the closing brace is accepted.
+func (p *Parser) parseStructFields() []*ast.Identifier {
+	var fields []*ast.Identifier
+	seen := make(map[string]bool)
+
+	if p.peekTokenIs(token.RBRACE) {
+		p.nextToken()
+		return fields
+	}
+
+	for {
+		if !p.expectPeek(token.IDENT) {
+			return nil
+		}
+
+		field := p.parseDeclarationIdentifier()
+		if seen[field.Value] {
+			p.addError(field.Position(), fmt.Sprintf("duplicate struct field %q", field.Value))
+		} else {
+			seen[field.Value] = true
+			fields = append(fields, field)
+		}
+
+		if p.peekTokenIs(token.RBRACE) {
+			p.nextToken()
+			return fields
+		}
+		if !p.expectPeek(token.COMMA) {
+			return nil
+		}
+		if p.peekTokenIs(token.RBRACE) {
+			p.nextToken()
+			return fields
+		}
+	}
+}
+
+// parseDeclarationIdentifier parses the optional : type suffix on the
+// current identifier. It leaves the final type component as the current token.
+func (p *Parser) parseDeclarationIdentifier() *ast.Identifier {
+	identifier := &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
+	if p.peekTokenIs(token.COLON) {
+		p.nextToken()
+		identifier.Type = p.parseTypeAnnotation()
+	}
+	return identifier
+}
+
+// parseTypeAnnotation parses the identifier following a current colon and any
+// dot-qualified components. Type names are resolved by the evaluator.
+func (p *Parser) parseTypeAnnotation() *ast.TypeAnnotation {
+	if !p.expectPeek(token.IDENT) {
+		return nil
+	}
+
+	annotation := &ast.TypeAnnotation{
+		Token: p.curToken,
+		Parts: []string{p.curToken.Literal},
+	}
+	for p.peekTokenIs(token.DOT) {
+		p.nextToken()
+		if !p.expectPeek(token.IDENT) {
+			return nil
+		}
+		annotation.Parts = append(annotation.Parts, p.curToken.Literal)
+	}
+	return annotation
 }

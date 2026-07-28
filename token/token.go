@@ -77,6 +77,7 @@ const (
 	RETURN   = "RETURN"
 	IMPORT   = "IMPORT"
 	ENUM     = "ENUM"
+	STRUCT   = "STRUCT"
 )
 
 // keywords maps reserved source words to their specialized token types. Any
@@ -91,6 +92,7 @@ var keywords = map[string]TokenType{
 	"return": RETURN,
 	"import": IMPORT,
 	"enum":   ENUM,
+	"struct": STRUCT,
 }
 
 // LookupIdent classifies an identifier as a reserved keyword or a normal

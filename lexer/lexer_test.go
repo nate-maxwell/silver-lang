@@ -244,3 +244,27 @@ func TestFloatTokens(t *testing.T) {
 		}
 	}
 }
+
+func TestStructKeyword(t *testing.T) {
+	l := New(`struct Point { x, y }`)
+	want := []struct {
+		tokenType token.TokenType
+		literal   string
+	}{
+		{token.STRUCT, "struct"},
+		{token.IDENT, "Point"},
+		{token.LBRACE, "{"},
+		{token.IDENT, "x"},
+		{token.COMMA, ","},
+		{token.IDENT, "y"},
+		{token.RBRACE, "}"},
+		{token.EOF, ""},
+	}
+
+	for i, expected := range want {
+		got := l.NextToken()
+		if got.Type != expected.tokenType || got.Literal != expected.literal {
+			t.Fatalf("token %d is (%q, %q), want (%q, %q)", i, got.Type, got.Literal, expected.tokenType, expected.literal)
+		}
+	}
+}

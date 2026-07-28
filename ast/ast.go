@@ -171,7 +171,7 @@ type InfixExpression struct {
 	Right    Expression
 }
 
-// MemberExpression accesses a named member on a module or enum namespace.
+// MemberExpression accesses a named member on a module, enum, or struct value.
 type MemberExpression struct {
 	Token  token.Token // The . token
 	Object Expression
@@ -268,6 +268,7 @@ Identifiers
 type Identifier struct {
 	Token token.Token // the token.IDENT token
 	Value string
+	Type  *TypeAnnotation // optional declaration annotation
 }
 
 // expressionNode marks Identifier as an Expression.
@@ -283,6 +284,16 @@ func (i *Identifier) Position() token.Position {
 
 // String returns the identifier's resolved source name.
 func (i *Identifier) String() string { return i.Value }
+
+// DeclarationString renders an identifier together with its optional type.
+// Expression identifiers deliberately use String so annotations never leak
+// into ordinary name references.
+func (i *Identifier) DeclarationString() string {
+	if i.Type == nil {
+		return i.Value
+	}
+	return i.Value + ": " + i.Type.String()
+}
 
 /* ----------------------------------------------------------------------------------------------------------
 Let statements
@@ -310,7 +321,7 @@ func (ls *LetStatement) Position() token.Position {
 func (ls *LetStatement) String() string {
 	var out bytes.Buffer
 	out.WriteString(ls.TokenLiteral() + " ")
-	out.WriteString(ls.Name.String())
+	out.WriteString(ls.Name.DeclarationString())
 	out.WriteString(" = ")
 
 	if ls.Value != nil {
@@ -366,6 +377,7 @@ Function literals + calls
 type FunctionLiteral struct {
 	Token      token.Token // The 'fn' token
 	Parameters []*Identifier
+	ReturnType *TypeAnnotation
 	Body       *BlockStatement
 }
 
@@ -386,13 +398,18 @@ func (fl *FunctionLiteral) String() string {
 
 	params := []string{}
 	for _, p := range fl.Parameters {
-		params = append(params, p.String())
+		params = append(params, p.DeclarationString())
 	}
 
 	out.WriteString(fl.TokenLiteral())
 	out.WriteString("(")
 	out.WriteString(strings.Join(params, ", "))
-	out.WriteString(") ")
+	out.WriteString(")")
+	if fl.ReturnType != nil {
+		out.WriteString(": ")
+		out.WriteString(fl.ReturnType.String())
+	}
+	out.WriteString(" ")
 	out.WriteString(fl.Body.String())
 
 	return out.String()

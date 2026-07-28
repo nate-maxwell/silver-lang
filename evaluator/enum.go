@@ -8,6 +8,7 @@ import (
 // evalEnumStatement creates the enum namespace and one singleton value per
 // member, then binds the namespace in the current environment.
 func (e *Evaluator) evalEnumStatement(node *ast.EnumStatement, env *object.Environment) object.Object {
+	enum := &object.Enum{Name: node.Name.Value}
 	members := make(map[string]*object.EnumValue, len(node.Members))
 	for _, member := range node.Members {
 		if _, exists := members[member.Value]; exists {
@@ -18,10 +19,11 @@ func (e *Evaluator) evalEnumStatement(node *ast.EnumStatement, env *object.Envir
 			EnumName: node.Name.Value,
 			Member:   member.Value,
 			HashID:   e.nextEnumValueID,
+			Enum:     enum,
 		}
 	}
 
-	enum := &object.Enum{Name: node.Name.Value, Members: members}
+	enum.Members = members
 	env.Set(node.Name.Value, enum)
 	return nil
 }

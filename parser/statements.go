@@ -1,0 +1,102 @@
+package parser
+
+import (
+	"silver/ast"
+	"silver/token"
+)
+
+// parseStatement dispatches according to the current statement-leading token.
+func (p *Parser) parseStatement() ast.Statement {
+	switch p.curToken.Type {
+	case token.LET:
+		return p.parseLetStatement()
+	case token.ENUM:
+		return p.parseEnumStatement()
+	case token.STRUCT:
+		return p.parseStructStatement()
+	case token.RETURN:
+		return p.parseReturnStatement()
+	default:
+		return p.parseExpressionStatement()
+	}
+}
+
+// consumeStatementEnd accepts a physical newline, a closing delimiter, EOF,
+// or a legacy explicit semicolon. Adjacent statements on one line must retain
+// a semicolon so token adjacency cannot silently change program structure.
+func (p *Parser) consumeStatementEnd() {
+	if p.peekTokenIs(token.SEMICOLON) {
+		p.nextToken()
+		return
+	}
+	if p.peekTokenIs(token.EOF) || p.peekTokenIs(token.RBRACE) || p.lineBreakBeforePeek() {
+		return
+	}
+	p.addError(p.peekToken.Position, "expected newline between statements")
+}
+
+// parseLetStatement parses a named binding and its value expression.
+func (p *Parser) parseLetStatement() *ast.LetStatement {
+	stmt := &ast.LetStatement{Token: p.curToken}
+
+	if !p.expectPeek(token.IDENT) {
+		return nil
+	}
+
+	stmt.Name = &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
+	if p.peekTokenIs(token.COLON) {
+		p.nextToken()
+		stmt.Name.Type = p.parseTypeAnnotation()
+		if stmt.Name.Type == nil {
+			return nil
+		}
+	}
+
+	if !p.expectPeek(token.ASSIGN) {
+		return nil
+	}
+
+	p.nextToken()
+
+	stmt.Value = p.parseExpression(LOWEST)
+
+	p.consumeStatementEnd()
+
+	return stmt
+}
+
+// parseReturnStatement parses the expression returned by a function.
+func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
+	stmt := &ast.ReturnStatement{Token: p.curToken}
+
+	if p.peekTokenIs(token.SEMICOLON) || p.peekTokenIs(token.RBRACE) || p.peekTokenIs(token.EOF) || p.lineBreakBeforePeek() {
+		p.consumeStatementEnd()
+		return stmt
+	}
+
+	p.nextToken()
+
+	stmt.ReturnValue = p.parseExpression(LOWEST)
+
+	p.consumeStatementEnd()
+
+	return stmt
+}
+
+// parseBlockStatement parses statements until a closing brace or EOF. The
+// opening brace is expected to be the current token.
+func (p *Parser) parseBlockStatement() *ast.BlockStatement {
+	block := &ast.BlockStatement{Token: p.curToken}
+	block.Statements = []ast.Statement{}
+
+	p.nextToken()
+
+	for !p.curTokenIs(token.RBRACE) && !p.curTokenIs(token.EOF) {
+		stmt := p.parseStatement()
+		block.Statements = append(block.Statements, stmt)
+
+		p.nextToken()
+	}
+
+	return block
+}

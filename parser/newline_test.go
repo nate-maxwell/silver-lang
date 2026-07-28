@@ -8,14 +8,14 @@ import (
 )
 
 func TestNewlinesSeparateStatements(t *testing.T) {
-	p := New(lexer.New("let age: int = 36\nlet name: string = \"Ada\"\nage"))
+	p := New(lexer.New("let age: int = 36\nlet name: str = \"Ada\"\nage"))
 	program := p.ParseProgram()
 	checkParserErrors(t, p)
 
 	if len(program.Statements) != 3 {
 		t.Fatalf("program has %d statements, want 3", len(program.Statements))
 	}
-	if got, want := program.String(), "let age: int = 36\nlet name: string = Ada\nage"; got != want {
+	if got, want := program.String(), "let age: int = 36\nlet name: str = Ada\nage"; got != want {
 		t.Fatalf("program string is %q, want %q", got, want)
 	}
 }

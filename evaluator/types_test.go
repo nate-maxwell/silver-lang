@@ -15,7 +15,7 @@ func TestTypedLetBindingRejectsMismatch(t *testing.T) {
 	if !ok {
 		t.Fatalf("result is %T, want *object.Error", evaluated)
 	}
-	if got, want := err.Message, `type mismatch for binding "age": expected int, got string`; got != want {
+	if got, want := err.Message, `type mismatch for binding "age": expected int, got str`; got != want {
 		t.Fatalf("error message is %q, want %q", got, want)
 	}
 }
@@ -26,18 +26,18 @@ func TestTypedFunctionParameter(t *testing.T) {
 	if !ok {
 		t.Fatalf("result is %T, want *object.Error", evaluated)
 	}
-	if got, want := err.Message, `type mismatch for parameter "value": expected int, got string`; got != want {
+	if got, want := err.Message, `type mismatch for parameter "value": expected int, got str`; got != want {
 		t.Fatalf("error message is %q, want %q", got, want)
 	}
 }
 
 func TestTypedFunctionReturnValue(t *testing.T) {
-	evaluated := testEval("let label = fn(): string { 42 }\nlabel()")
+	evaluated := testEval("let label = fn(): str { 42 }\nlabel()")
 	err, ok := evaluated.(*object.Error)
 	if !ok {
 		t.Fatalf("result is %T, want *object.Error", evaluated)
 	}
-	if got, want := err.Message, `type mismatch for return value of "label": expected string, got int`; got != want {
+	if got, want := err.Message, `type mismatch for return value of "label": expected str, got int`; got != want {
 		t.Fatalf("error message is %q, want %q", got, want)
 	}
 }
@@ -49,6 +49,17 @@ func TestUnknownType(t *testing.T) {
 		t.Fatalf("result is %T, want *object.Error", evaluated)
 	}
 	if got, want := err.Message, `unknown type "Missing"`; got != want {
+		t.Fatalf("error message is %q, want %q", got, want)
+	}
+}
+
+func TestStringTypeNameIsRejected(t *testing.T) {
+	evaluated := testEval(`let value: string = "old spelling"`)
+	err, ok := evaluated.(*object.Error)
+	if !ok {
+		t.Fatalf("result is %T, want *object.Error", evaluated)
+	}
+	if got, want := err.Message, `unknown type "string"`; got != want {
 		t.Fatalf("error message is %q, want %q", got, want)
 	}
 }

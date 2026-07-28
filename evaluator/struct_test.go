@@ -21,7 +21,7 @@ point.x + point.y
 func TestStructValueInspection(t *testing.T) {
 	evaluated := testEval(`
 struct Person {
-	name: string
+	name: str
 	age: int
 }
 Person("Ada", 36)
@@ -91,7 +91,7 @@ point.y
 func TestStructFieldTypeMismatch(t *testing.T) {
 	evaluated := testEval(`
 struct Person {
-	name: string
+	name: str
 	age: int
 }
 Person("Ada", "old")
@@ -100,7 +100,7 @@ Person("Ada", "old")
 	if !ok {
 		t.Fatalf("result is %T, want *object.Error", evaluated)
 	}
-	if got, want := err.Message, `type mismatch for field "Person.age": expected int, got string`; got != want {
+	if got, want := err.Message, `type mismatch for field "Person.age": expected int, got str`; got != want {
 		t.Fatalf("error message is %q, want %q", got, want)
 	}
 }

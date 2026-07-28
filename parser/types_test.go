@@ -21,7 +21,7 @@ func TestTypedLetStatement(t *testing.T) {
 }
 
 func TestTypedFunctionLiteral(t *testing.T) {
-	p := New(lexer.New(`fn(person: models.Person, active: bool): string { person.name; }`))
+	p := New(lexer.New(`fn(person: models.Person, active: bool): str { person.name; }`))
 	program := p.ParseProgram()
 	checkParserErrors(t, p)
 
@@ -33,7 +33,7 @@ func TestTypedFunctionLiteral(t *testing.T) {
 	if got := function.Parameters[1].Type.String(); got != "bool" {
 		t.Fatalf("second parameter type is %q, want bool", got)
 	}
-	if function.ReturnType == nil || function.ReturnType.String() != "string" {
-		t.Fatalf("return type is %v, want string", function.ReturnType)
+	if function.ReturnType == nil || function.ReturnType.String() != "str" {
+		t.Fatalf("return type is %v, want str", function.ReturnType)
 	}
 }

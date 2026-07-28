@@ -9,8 +9,11 @@ import (
 
 func TestStructStatement(t *testing.T) {
 	p := New(lexer.New(`
-	struct Point { x: int, y: int, };
-	let point: Point = Point(1, 2);
+	struct Point {
+		x: int
+		y: int
+	}
+	let point: Point = Point(1, 2)
 `))
 	program := p.ParseProgram()
 	checkParserErrors(t, p)

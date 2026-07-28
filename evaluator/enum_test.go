@@ -29,10 +29,10 @@ func TestEnumEquality(t *testing.T) {
 		input string
 		want  bool
 	}{
-		{`enum Direction { North, South } Direction.North == Direction.North;`, true},
-		{`enum Direction { North, South } Direction.North == Direction.South;`, false},
-		{`enum Direction { North, South } Direction.North != Direction.South;`, true},
-		{`enum First { Value } enum Second { Value } First.Value == Second.Value;`, false},
+		{"enum Direction { North, South }\nDirection.North == Direction.North", true},
+		{"enum Direction { North, South }\nDirection.North == Direction.South", false},
+		{"enum Direction { North, South }\nDirection.North != Direction.South", true},
+		{"enum First { Value }\nenum Second { Value }\nFirst.Value == Second.Value", false},
 	}
 
 	for _, tt := range tests {
@@ -59,7 +59,7 @@ labels[Direction.South];
 }
 
 func TestMissingEnumMember(t *testing.T) {
-	evaluated := testEval(`enum Direction { North } Direction.South;`)
+	evaluated := testEval("enum Direction { North }\nDirection.South")
 	err, ok := evaluated.(*object.Error)
 	if !ok {
 		t.Fatalf("result is %T, want *object.Error", evaluated)

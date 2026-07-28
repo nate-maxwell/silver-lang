@@ -8,15 +8,24 @@ import (
 
 func TestStructConstructionAndFieldAccess(t *testing.T) {
 	evaluated := testEval(`
-struct Point { x: int, y: int }
-let point: Point = Point(3, 4);
-point.x + point.y;
+struct Point {
+	x: int
+	y: int
+}
+let point: Point = Point(3, 4)
+point.x + point.y
 `)
 	testIntegerObject(t, evaluated, 7)
 }
 
 func TestStructValueInspection(t *testing.T) {
-	evaluated := testEval(`struct Person { name: string, age: int } Person("Ada", 36);`)
+	evaluated := testEval(`
+struct Person {
+	name: string
+	age: int
+}
+Person("Ada", 36)
+`)
 	value, ok := evaluated.(*object.StructInstance)
 	if !ok {
 		t.Fatalf("result is %T, want *object.StructInstance", evaluated)
@@ -27,7 +36,13 @@ func TestStructValueInspection(t *testing.T) {
 }
 
 func TestStructConstructorArity(t *testing.T) {
-	evaluated := testEval(`struct Point { x: int, y: int } Point(1);`)
+	evaluated := testEval(`
+struct Point {
+	x: int
+	y: int
+}
+Point(1)
+`)
 	err, ok := evaluated.(*object.Error)
 	if !ok {
 		t.Fatalf("result is %T, want *object.Error", evaluated)
@@ -38,7 +53,12 @@ func TestStructConstructorArity(t *testing.T) {
 }
 
 func TestMissingStructField(t *testing.T) {
-	evaluated := testEval(`struct Point { x: int } Point(1).y;`)
+	evaluated := testEval(`
+struct Point {
+	x: int
+}
+Point(1).y
+`)
 	err, ok := evaluated.(*object.Error)
 	if !ok {
 		t.Fatalf("result is %T, want *object.Error", evaluated)
@@ -52,11 +72,16 @@ func TestStructExportedFromModule(t *testing.T) {
 	dir := t.TempDir()
 	libraryPath := filepath.Join(dir, "library.lib")
 	mainPath := filepath.Join(dir, "main.slvr")
-	writeMonkeyFile(t, libraryPath, `struct Point { x: int, y: int }`)
+	writeMonkeyFile(t, libraryPath, `
+struct Point {
+	x: int
+	y: int
+}
+`)
 	writeMonkeyFile(t, mainPath, `
-let library = import("./library.lib");
-let point: library.Point = library.Point(8, 9);
-point.y;
+let library = import("./library.lib")
+let point: library.Point = library.Point(8, 9)
+point.y
 `)
 
 	evaluated := New().EvalFile(mainPath, object.NewEnvironment())
@@ -64,7 +89,13 @@ point.y;
 }
 
 func TestStructFieldTypeMismatch(t *testing.T) {
-	evaluated := testEval(`struct Person { name: string, age: int } Person("Ada", "old");`)
+	evaluated := testEval(`
+struct Person {
+	name: string
+	age: int
+}
+Person("Ada", "old")
+`)
 	err, ok := evaluated.(*object.Error)
 	if !ok {
 		t.Fatalf("result is %T, want *object.Error", evaluated)

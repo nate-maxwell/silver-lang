@@ -79,6 +79,9 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 		return e.evalBlockStatement(node, env)
 
 	case *ast.ReturnStatement:
+		if node.ReturnValue == nil {
+			return &object.ReturnValue{Value: NULL}
+		}
 		val := e.Eval(node.ReturnValue, env)
 		if isError(val) {
 			return val

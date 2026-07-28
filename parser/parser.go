@@ -243,9 +243,7 @@ func (p *Parser) parseLetStatement() *ast.LetStatement {
 
 	stmt.Value = p.parseExpression(LOWEST)
 
-	if p.peekTokenIs(token.SEMICOLON) {
-		p.nextToken()
-	}
+	p.consumeStatementEnd()
 
 	return stmt
 }
@@ -254,13 +252,16 @@ func (p *Parser) parseLetStatement() *ast.LetStatement {
 func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
 	stmt := &ast.ReturnStatement{Token: p.curToken}
 
+	if p.peekTokenIs(token.SEMICOLON) || p.peekTokenIs(token.RBRACE) || p.peekTokenIs(token.EOF) || p.lineBreakBeforePeek() {
+		p.consumeStatementEnd()
+		return stmt
+	}
+
 	p.nextToken()
 
 	stmt.ReturnValue = p.parseExpression(LOWEST)
 
-	if p.peekTokenIs(token.SEMICOLON) {
-		p.nextToken()
-	}
+	p.consumeStatementEnd()
 
 	return stmt
 }
@@ -287,15 +288,13 @@ func (p *Parser) parseBlockStatement() *ast.BlockStatement {
 Expression parsing
 ---------------------------------------------------------------------------------------------------------- */
 
-// parseExpressionStatement wraps a top-level expression and consumes an
-// optional trailing semicolon.
+// parseExpressionStatement wraps a top-level expression and validates its
+// newline-delimited statement boundary.
 func (p *Parser) parseExpressionStatement() *ast.ExpressionStatement {
 	stmt := &ast.ExpressionStatement{Token: p.curToken}
 	stmt.Expression = p.parseExpression(LOWEST)
 
-	if p.peekTokenIs(token.SEMICOLON) {
-		p.nextToken()
-	}
+	p.consumeStatementEnd()
 
 	return stmt
 }
@@ -504,7 +503,7 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
 	}
 	leftExp := prefix()
 
-	for !p.peekTokenIs(token.SEMICOLON) && precedence < p.peekPrecedence() {
+	for !p.peekTokenIs(token.SEMICOLON) && !p.lineBreakBeforePeek() && precedence < p.peekPrecedence() {
 		infix := p.infixParseFns[p.peekToken.Type]
 		if infix == nil {
 			return leftExp
@@ -575,6 +574,28 @@ func (p *Parser) curPrecedence() int {
 	}
 
 	return LOWEST
+}
+
+// lineBreakBeforePeek reports whether ignored source whitespace crossed a
+// physical line. Newlines terminate expressions without becoming AST tokens.
+func (p *Parser) lineBreakBeforePeek() bool {
+	current := p.curToken.Position
+	peek := p.peekToken.Position
+	return current.IsValid() && peek.IsValid() && current.Source == peek.Source && peek.Line > current.Line
+}
+
+// consumeStatementEnd accepts a physical newline, a closing delimiter, EOF,
+// or a legacy explicit semicolon. Adjacent statements on one line must retain
+// a semicolon so token adjacency cannot silently change program structure.
+func (p *Parser) consumeStatementEnd() {
+	if p.peekTokenIs(token.SEMICOLON) {
+		p.nextToken()
+		return
+	}
+	if p.peekTokenIs(token.EOF) || p.peekTokenIs(token.RBRACE) || p.lineBreakBeforePeek() {
+		return
+	}
+	p.addError(p.peekToken.Position, "expected newline between statements")
 }
 
 /* ----------------------------------------------------------------------------------------------------------
@@ -657,8 +678,8 @@ func (p *Parser) parseHashLiteral() ast.Expression {
 	return hash
 }
 
-// parseEnumStatement parses enum Name { Member, ... } and an optional trailing
-// semicolon. Member names must be unique identifiers.
+// parseEnumStatement parses enum Name { Member, ... }. Member names must be
+// unique identifiers; a legacy trailing semicolon remains accepted.
 func (p *Parser) parseEnumStatement() *ast.EnumStatement {
 	statement := &ast.EnumStatement{Token: p.curToken}
 
@@ -672,14 +693,12 @@ func (p *Parser) parseEnumStatement() *ast.EnumStatement {
 	}
 	statement.Members = p.parseEnumMembers()
 
-	if p.peekTokenIs(token.SEMICOLON) {
-		p.nextToken()
-	}
+	p.consumeStatementEnd()
 	return statement
 }
 
-// parseEnumMembers parses a possibly empty comma-separated member list. A
-// trailing comma before the closing brace is accepted.
+// parseEnumMembers parses a possibly empty member list separated by newlines
+// or commas. A trailing comma before the closing brace is accepted.
 func (p *Parser) parseEnumMembers() []*ast.Identifier {
 	var members []*ast.Identifier
 	seen := make(map[string]bool)
@@ -706,7 +725,10 @@ func (p *Parser) parseEnumMembers() []*ast.Identifier {
 			p.nextToken()
 			return members
 		}
-		if !p.expectPeek(token.COMMA) {
+		if p.peekTokenIs(token.COMMA) {
+			p.nextToken()
+		} else if !p.lineBreakBeforePeek() {
+			p.peekError(token.COMMA)
 			return nil
 		}
 		if p.peekTokenIs(token.RBRACE) {
@@ -716,8 +738,8 @@ func (p *Parser) parseEnumMembers() []*ast.Identifier {
 	}
 }
 
-// parseStructStatement parses struct Name { field, ... } and an optional
-// trailing semicolon. Field names must be unique identifiers.
+// parseStructStatement parses struct Name { field, ... }. Field names must be
+// unique identifiers; a legacy trailing semicolon remains accepted.
 func (p *Parser) parseStructStatement() *ast.StructStatement {
 	statement := &ast.StructStatement{Token: p.curToken}
 
@@ -731,14 +753,12 @@ func (p *Parser) parseStructStatement() *ast.StructStatement {
 	}
 	statement.Fields = p.parseStructFields()
 
-	if p.peekTokenIs(token.SEMICOLON) {
-		p.nextToken()
-	}
+	p.consumeStatementEnd()
 	return statement
 }
 
-// parseStructFields parses a possibly empty comma-separated field list. A
-// trailing comma before the closing brace is accepted.
+// parseStructFields parses a possibly empty field list separated by newlines
+// or commas. A trailing comma before the closing brace is accepted.
 func (p *Parser) parseStructFields() []*ast.Identifier {
 	var fields []*ast.Identifier
 	seen := make(map[string]bool)
@@ -765,7 +785,10 @@ func (p *Parser) parseStructFields() []*ast.Identifier {
 			p.nextToken()
 			return fields
 		}
-		if !p.expectPeek(token.COMMA) {
+		if p.peekTokenIs(token.COMMA) {
+			p.nextToken()
+		} else if !p.lineBreakBeforePeek() {
+			p.peekError(token.COMMA)
 			return nil
 		}
 		if p.peekTokenIs(token.RBRACE) {

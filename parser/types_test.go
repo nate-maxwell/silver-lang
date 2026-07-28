@@ -7,7 +7,7 @@ import (
 )
 
 func TestTypedLetStatement(t *testing.T) {
-	p := New(lexer.New(`let age: int = 36;`))
+	p := New(lexer.New(`let age: int = 36`))
 	program := p.ParseProgram()
 	checkParserErrors(t, p)
 
@@ -15,7 +15,7 @@ func TestTypedLetStatement(t *testing.T) {
 	if statement.Name.Type == nil || statement.Name.Type.String() != "int" {
 		t.Fatalf("let type is %v, want int", statement.Name.Type)
 	}
-	if got, want := statement.String(), "let age: int = 36;"; got != want {
+	if got, want := statement.String(), "let age: int = 36"; got != want {
 		t.Fatalf("let string is %q, want %q", got, want)
 	}
 }

@@ -6,11 +6,11 @@ import (
 )
 
 func TestTypedLetBinding(t *testing.T) {
-	testIntegerObject(t, testEval(`let age: int = 36; age;`), 36)
+	testIntegerObject(t, testEval("let age: int = 36\nage"), 36)
 }
 
 func TestTypedLetBindingRejectsMismatch(t *testing.T) {
-	evaluated := testEval(`let age: int = "thirty-six";`)
+	evaluated := testEval(`let age: int = "thirty-six"`)
 	err, ok := evaluated.(*object.Error)
 	if !ok {
 		t.Fatalf("result is %T, want *object.Error", evaluated)
@@ -21,7 +21,7 @@ func TestTypedLetBindingRejectsMismatch(t *testing.T) {
 }
 
 func TestTypedFunctionParameter(t *testing.T) {
-	evaluated := testEval(`let double = fn(value: int): int { value * 2; }; double("two");`)
+	evaluated := testEval("let double = fn(value: int): int { value * 2 }\ndouble(\"two\")")
 	err, ok := evaluated.(*object.Error)
 	if !ok {
 		t.Fatalf("result is %T, want *object.Error", evaluated)
@@ -32,7 +32,7 @@ func TestTypedFunctionParameter(t *testing.T) {
 }
 
 func TestTypedFunctionReturnValue(t *testing.T) {
-	evaluated := testEval(`let label = fn(): string { 42; }; label();`)
+	evaluated := testEval("let label = fn(): string { 42 }\nlabel()")
 	err, ok := evaluated.(*object.Error)
 	if !ok {
 		t.Fatalf("result is %T, want *object.Error", evaluated)
@@ -43,7 +43,7 @@ func TestTypedFunctionReturnValue(t *testing.T) {
 }
 
 func TestUnknownType(t *testing.T) {
-	evaluated := testEval(`let value: Missing = 1;`)
+	evaluated := testEval(`let value: Missing = 1`)
 	err, ok := evaluated.(*object.Error)
 	if !ok {
 		t.Fatalf("result is %T, want *object.Error", evaluated)
@@ -54,9 +54,14 @@ func TestUnknownType(t *testing.T) {
 }
 
 func TestEnumTypeAnnotation(t *testing.T) {
-	evaluated := testEval(`enum Direction { North, South } let direction: Direction = Direction.North; direction;`)
+	evaluated := testEval("enum Direction { North, South }\nlet direction: Direction = Direction.North\ndirection")
 	value, ok := evaluated.(*object.EnumValue)
 	if !ok || value.Member != "North" {
 		t.Fatalf("result is %#v, want Direction.North", evaluated)
 	}
+}
+
+func TestBareReturnUsesNull(t *testing.T) {
+	evaluated := testEval("let noValue = fn(): null {\nreturn\n}\nnoValue()")
+	testNullObject(t, evaluated)
 }

@@ -50,7 +50,10 @@ func (p *Program) TokenLiteral() string {
 func (p *Program) String() string {
 	var out bytes.Buffer
 
-	for _, s := range p.Statements {
+	for index, s := range p.Statements {
+		if index > 0 {
+			out.WriteString("\n")
+		}
 		out.WriteString(s.String())
 	}
 
@@ -82,7 +85,10 @@ func (bs *BlockStatement) Position() token.Position {
 func (bs *BlockStatement) String() string {
 	var out bytes.Buffer
 
-	for _, s := range bs.Statements {
+	for index, s := range bs.Statements {
+		if index > 0 {
+			out.WriteString("\n")
+		}
 		out.WriteString(s.String())
 	}
 
@@ -317,7 +323,7 @@ func (ls *LetStatement) Position() token.Position {
 	return ls.Token.Position
 }
 
-// String renders the binding as a let statement.
+// String renders the binding without a statement terminator.
 func (ls *LetStatement) String() string {
 	var out bytes.Buffer
 	out.WriteString(ls.TokenLiteral() + " ")
@@ -327,8 +333,6 @@ func (ls *LetStatement) String() string {
 	if ls.Value != nil {
 		out.WriteString(ls.Value.String())
 	}
-
-	out.WriteString(";")
 
 	return out.String()
 }
@@ -354,17 +358,16 @@ func (rs *ReturnStatement) Position() token.Position {
 	return rs.Token.Position
 }
 
-// String renders the return statement.
+// String renders the return statement without a statement terminator.
 func (rs *ReturnStatement) String() string {
 	var out bytes.Buffer
 
-	out.WriteString(rs.TokenLiteral() + " ")
+	out.WriteString(rs.TokenLiteral())
 
 	if rs.ReturnValue != nil {
+		out.WriteString(" ")
 		out.WriteString(rs.ReturnValue.String())
 	}
-
-	out.WriteString(";")
 
 	return out.String()
 }

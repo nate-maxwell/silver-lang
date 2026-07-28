@@ -55,14 +55,15 @@ func (m *Module) Inspect() string { return "<module " + m.Path + ">" }
 type BuiltinFunction func(args ...Object) Object
 
 // Function is a Silver closure. Env captures the lexical environment active at
-// declaration time, and Name is assigned when the closure is bound by let for
-// use in tracebacks.
+// declaration time, Name is assigned when the closure is bound by let, and an
+// optional ReceiverType marks a struct method.
 type Function struct {
-	Name       string
-	Parameters []*ast.Identifier
-	ReturnType *ast.TypeAnnotation
-	Body       *ast.BlockStatement
-	Env        *Environment
+	Name         string
+	ReceiverType *ast.TypeAnnotation
+	Parameters   []*ast.Identifier
+	ReturnType   *ast.TypeAnnotation
+	Body         *ast.BlockStatement
+	Env          *Environment
 }
 
 // Type returns the user-defined function runtime tag.
@@ -79,6 +80,11 @@ func (f *Function) Inspect() string {
 	}
 
 	out.WriteString("fn")
+	if f.ReceiverType != nil {
+		out.WriteString("[")
+		out.WriteString(f.ReceiverType.String())
+		out.WriteString("]")
+	}
 	out.WriteString("(")
 	out.WriteString(strings.Join(params, ", "))
 	out.WriteString(")")

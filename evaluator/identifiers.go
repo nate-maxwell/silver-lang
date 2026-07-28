@@ -21,11 +21,13 @@ func evalMember(value object.Object, member string) object.Object {
 		}
 		return enumValue
 	case *object.StructInstance:
-		field, ok := value.Values[member]
-		if !ok {
-			return newError("struct %q has no field %q", value.Struct.Name, member)
+		if field, ok := value.Values[member]; ok {
+			return field
 		}
-		return field
+		if method, ok := value.Struct.Methods[member]; ok {
+			return &object.BoundMethod{Method: method, Receiver: value}
+		}
+		return newError("struct %q has no field or method %q", value.Struct.Name, member)
 	default:
 		return newError("member access not supported on %s", value.Type())
 	}

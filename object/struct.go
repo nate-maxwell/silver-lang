@@ -10,6 +10,7 @@ type Struct struct {
 	Name       string
 	Fields     []string
 	FieldTypes []*ast.TypeAnnotation
+	Methods    map[string]*Function
 	Env        *Environment
 }
 
@@ -25,6 +26,18 @@ type StructInstance struct {
 	Struct *Struct
 	Values map[string]Object
 }
+
+// BoundMethod pairs a struct method with the instance supplied as self.
+type BoundMethod struct {
+	Method   *Function
+	Receiver *StructInstance
+}
+
+// Type makes bound methods callable anywhere an ordinary function is valid.
+func (bm *BoundMethod) Type() ObjectType { return FUNCTION_OBJ }
+
+// Inspect delegates to the underlying function representation.
+func (bm *BoundMethod) Inspect() string { return bm.Method.Inspect() }
 
 // Type returns the struct-value runtime tag.
 func (s *StructInstance) Type() ObjectType { return STRUCT_VALUE_OBJ }

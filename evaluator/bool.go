@@ -2,7 +2,9 @@ package evaluator
 
 import "silver/object"
 
-// Canonical boolean singletons make identity-based equality deterministic.
+// Canonical boolean singletons are the boolean portion of constant pooling.
+// Unlike the unbounded evaluator-local pools, there are only two possible
+// values, so these can be safely shared by every evaluator.
 var (
 	TRUE  = &object.Boolean{Value: true}
 	FALSE = &object.Boolean{Value: false}

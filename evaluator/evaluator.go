@@ -16,10 +16,11 @@ var NULL = &object.Null{}
 // builtins, imported-module caches, circular-import state, and traceback
 // contexts. Reuse one evaluator for a REPL or a group of related evaluations.
 type Evaluator struct {
-	builtins *builtinpkg.Registry
-	modules  map[string]*object.Module // filepath to module
-	loading  map[string]bool           // module load state | circular import detection
-	contexts []string                  // active Silver function/module names
+	builtins  *builtinpkg.Registry
+	constants *constantPool
+	modules   map[string]*object.Module // filepath to module
+	loading   map[string]bool           // module load state | circular import detection
+	contexts  []string                  // active Silver function/module names
 	// nextEnumValueID gives every evaluated enum member a session-unique hash
 	// identity, even when separate modules declare enums with the same names.
 	nextEnumValueID uint64
@@ -37,10 +38,11 @@ func NewWithOutput(out io.Writer) *Evaluator {
 		out = io.Discard
 	}
 	return &Evaluator{
-		builtins: builtinpkg.New(out, NULL),
-		modules:  make(map[string]*object.Module),
-		loading:  make(map[string]bool),
-		contexts: make([]string, 0),
+		builtins:  builtinpkg.New(out, NULL),
+		constants: newConstantPool(),
+		modules:   make(map[string]*object.Module),
+		loading:   make(map[string]bool),
+		contexts:  make([]string, 0),
 	}
 }
 
@@ -156,10 +158,10 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 		return evalInfixExpression(node.Operator, left, right)
 
 	case *ast.IntegerLiteral:
-		return &object.Integer{Value: node.Value}
+		return e.constants.integer(node.Value)
 
 	case *ast.FloatLiteral:
-		return &object.Float{Value: node.Value}
+		return e.constants.float(node.Value)
 
 	case *ast.Boolean:
 		return nativeBoolToBooleanObject(node.Value)
@@ -203,7 +205,7 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 		return result
 
 	case *ast.StringLiteral:
-		return &object.String{Value: node.Value}
+		return e.constants.string(node.Value)
 
 	case *ast.ArrayLiteral:
 		elements := e.evalExpressions(node.Elements, env)

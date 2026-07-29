@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"silver/ast"
+	"silver/astcache"
 	"silver/lexer"
 	"silver/object"
 	"silver/parser"
@@ -93,11 +94,17 @@ func parseFile(path string) (*ast.Program, *object.Error) {
 	if err != nil {
 		return nil, newError("could not read %q: %s", path, err)
 	}
+	if program, ok := astcache.Load(path, input); ok {
+		return program, nil
+	}
 
 	p := parser.New(lexer.NewWithSource(string(input), path))
 	program := p.ParseProgram()
 	if len(p.Errors()) != 0 {
 		return nil, newError("could not parse %q:\n%s", path, strings.Join(p.Errors(), "\n"))
 	}
+	// A cache is an optimization only. Read-only directories and other cache
+	// write failures must not prevent valid source from running.
+	_ = astcache.Store(path, input, program)
 	return program, nil
 }

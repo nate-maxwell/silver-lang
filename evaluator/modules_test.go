@@ -3,6 +3,7 @@ package evaluator
 import (
 	"os"
 	"path/filepath"
+	"silver/astcache"
 	"silver/lexer"
 	"silver/object"
 	"silver/parser"
@@ -38,6 +39,45 @@ math.double(21);
 	}
 	if _, ok := env.Get("double"); ok {
 		t.Fatal("module binding leaked into the importing environment")
+	}
+}
+
+func TestEvalFileCreatesAndRefreshesASTCache(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "main.slvr")
+	source := []byte("let answer = 41\nanswer")
+	writeMonkeyFile(t, path, string(source))
+
+	result := New().EvalFile(path, object.NewEnvironment())
+	assertInteger(t, result, 41)
+	if _, ok := astcache.Load(path, source); !ok {
+		t.Fatal("EvalFile did not create a usable AST cache")
+	}
+
+	changedSource := []byte("let answer = 42\nanswer")
+	writeMonkeyFile(t, path, string(changedSource))
+	result = New().EvalFile(path, object.NewEnvironment())
+	assertInteger(t, result, 42)
+	if _, ok := astcache.Load(path, changedSource); !ok {
+		t.Fatal("EvalFile did not refresh the AST cache after a source change")
+	}
+	if _, ok := astcache.Load(path, source); ok {
+		t.Fatal("refreshed cache still matches the old source")
+	}
+}
+
+func TestEvalFileRepairsDamagedASTCache(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "main.slvr")
+	source := []byte("42")
+	writeMonkeyFile(t, path, string(source))
+	if err := os.WriteFile(astcache.Path(path), []byte("damaged"), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	result := New().EvalFile(path, object.NewEnvironment())
+	assertInteger(t, result, 42)
+	if _, ok := astcache.Load(path, source); !ok {
+		t.Fatal("EvalFile did not replace the damaged AST cache")
 	}
 }
 
@@ -100,5 +140,16 @@ func writeMonkeyFile(t *testing.T, path, contents string) {
 	t.Helper()
 	if err := os.WriteFile(path, []byte(contents), 0644); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func assertInteger(t *testing.T, result object.Object, want int64) {
+	t.Helper()
+	integer, ok := result.(*object.Integer)
+	if !ok {
+		t.Fatalf("result is %T (%v), want *object.Integer", result, result)
+	}
+	if integer.Value != want {
+		t.Fatalf("result is %d, want %d", integer.Value, want)
 	}
 }

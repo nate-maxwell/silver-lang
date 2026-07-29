@@ -103,6 +103,7 @@ func parseFile(path string) (*ast.Program, *object.Error) {
 	if len(p.Errors()) != 0 {
 		return nil, newError("could not parse %q:\n%s", path, strings.Join(p.Errors(), "\n"))
 	}
+	program = foldConstants(program)
 	// A cache is an optimization only. Read-only directories and other cache
 	// write failures must not prevent valid source from running.
 	_ = astcache.Store(path, input, program)

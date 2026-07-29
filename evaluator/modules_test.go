@@ -3,6 +3,7 @@ package evaluator
 import (
 	"os"
 	"path/filepath"
+	"silver/ast"
 	"silver/astcache"
 	"silver/lexer"
 	"silver/object"
@@ -63,6 +64,24 @@ func TestEvalFileCreatesAndRefreshesASTCache(t *testing.T) {
 	}
 	if _, ok := astcache.Load(path, source); ok {
 		t.Fatal("refreshed cache still matches the old source")
+	}
+}
+
+func TestEvalFileCachesFoldedAST(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "main.slvr")
+	source := []byte("1 + 2 * 3")
+	writeMonkeyFile(t, path, string(source))
+
+	result := New().EvalFile(path, object.NewEnvironment())
+	assertInteger(t, result, 7)
+	program, ok := astcache.Load(path, source)
+	if !ok {
+		t.Fatal("could not load EvalFile's AST cache")
+	}
+	expression := program.Statements[0].(*ast.ExpressionStatement).Expression
+	integer, ok := expression.(*ast.IntegerLiteral)
+	if !ok || integer.Value != 7 {
+		t.Fatalf("cached expression is %T (%v), want folded integer 7", expression, expression)
 	}
 }
 

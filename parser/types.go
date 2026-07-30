@@ -16,8 +16,8 @@ func (p *Parser) parseDeclarationIdentifier() *ast.Identifier {
 	return identifier
 }
 
-// parseTypeAnnotation parses the identifier following a current colon and any
-// dot-qualified components. Type names are resolved by the evaluator.
+// parseTypeAnnotation parses the identifier following the current token and
+// any dot-qualified components. Type names are resolved by the evaluator.
 func (p *Parser) parseTypeAnnotation() *ast.TypeAnnotation {
 	if !p.expectPeek(token.IDENT) {
 		return nil

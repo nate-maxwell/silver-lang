@@ -5,8 +5,8 @@ import (
 	"strings"
 )
 
-// TypeAnnotation is a primitive or qualified nominal type name appearing
-// after a declaration colon, such as int or geometry.Point.
+// TypeAnnotation is a primitive or qualified nominal type name, such as int
+// or geometry.Point.
 type TypeAnnotation struct {
 	Token token.Token // the first identifier in the type name
 	Parts []string

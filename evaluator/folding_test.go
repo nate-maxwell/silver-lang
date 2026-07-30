@@ -19,6 +19,7 @@ func TestFoldConstants(t *testing.T) {
 		{`"silver" + "lang"`, expectFoldedString("silverlang")},
 		{"!!5", expectFoldedBoolean(true)},
 		{"5 / 2", expectFoldedInteger(2)},
+		{"2 ** 3", expectFoldedInteger(8)},
 	}
 
 	for _, test := range tests {
@@ -32,7 +33,7 @@ func TestFoldConstants(t *testing.T) {
 
 func TestFoldConstantsThroughoutTree(t *testing.T) {
 	program := parseForFolding(t, `
-let calculate = fn(value) {
+let calculate = fn(value) hash = {
     let numbers = [1 + 2, value + (3 * 4)]
     return {1 + 1: numbers[6 / 2]}
 }

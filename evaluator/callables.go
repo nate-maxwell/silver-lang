@@ -64,10 +64,16 @@ func (e *Evaluator) applyUserFunction(fn *object.Function, args []object.Object,
 	}
 	e.pushContext(contextName)
 	defer e.popContext()
-	evaluated := unwrapReturnValue(e.Eval(fn.Body, extendedEnv))
+	evaluated := e.Eval(fn.Body, extendedEnv)
 	if isError(evaluated) {
 		return evaluated
 	}
+	// An omitted return type declares a void function. Its body still runs and
+	// explicit returns still stop control flow, but no body value escapes.
+	if fn.ReturnType == nil {
+		return NULL
+	}
+	evaluated = unwrapReturnValue(evaluated)
 	if err := e.requireType(fn.ReturnType, evaluated, fn.Env, fmt.Sprintf("return value of %q", contextName)); err != nil {
 		return err
 	}

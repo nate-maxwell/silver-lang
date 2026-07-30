@@ -25,6 +25,11 @@ func evalFloatInfixExpression(operator string, left, right object.Object) object
 		return &object.Float{Value: leftValue - rightValue}
 	case "*":
 		return &object.Float{Value: leftValue * rightValue}
+	case "**":
+		if leftValue == 0 && rightValue < 0 {
+			return newError("division by zero")
+		}
+		return &object.Float{Value: math.Pow(leftValue, rightValue)}
 	case "/":
 		if rightValue == 0 {
 			return newError("division by zero")

@@ -70,9 +70,9 @@ func TestFunctionParameterParsing(t *testing.T) {
 		input          string
 		expectedParams []string
 	}{
-		{input: "fn() {};", expectedParams: []string{}},
-		{input: "fn(x) {};", expectedParams: []string{"x"}},
-		{input: "fn(x, y, z) {};", expectedParams: []string{"x", "y", "z"}},
+		{input: "fn() = {};", expectedParams: []string{}},
+		{input: "fn(x) = {};", expectedParams: []string{"x"}},
+		{input: "fn(x, y, z) = {};", expectedParams: []string{"x", "y", "z"}},
 	}
 
 	for _, tt := range tests {
@@ -96,7 +96,7 @@ func TestFunctionParameterParsing(t *testing.T) {
 }
 
 func TestFunctionLiteralParsing(t *testing.T) {
-	input := `fn(x, y) { x + y; }`
+	input := `fn(x, y) int = { x + y; }`
 
 	l := lexer.New(input)
 	p := New(l)
@@ -281,6 +281,22 @@ func TestOperatorPrecedenceParsing(t *testing.T) {
 			"((a * b) / c)",
 		},
 		{
+			"a ** b ** c",
+			"(a ** (b ** c))",
+		},
+		{
+			"a * b ** c",
+			"(a * (b ** c))",
+		},
+		{
+			"-a ** b",
+			"(-(a ** b))",
+		},
+		{
+			"a ** -b",
+			"(a ** (-b))",
+		},
+		{
 			"a + b / c",
 			"(a + (b / c))",
 		},
@@ -385,6 +401,7 @@ func TestParsingInfixExpressions(t *testing.T) {
 		{"5 + 5;", 5, "+", 5},
 		{"5 - 5;", 5, "-", 5},
 		{"5 * 5;", 5, "*", 5},
+		{"5 ** 5;", 5, "**", 5},
 		{"5 / 5;", 5, "/", 5},
 		{"5 > 5;", 5, ">", 5},
 		{"5 < 5;", 5, "<", 5},

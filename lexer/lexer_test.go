@@ -9,7 +9,7 @@ import (
 func TestNextToken(t *testing.T) {
 	input := `let five = 5;
 	let ten = 10;
-	let add = fn(x, y) {
+	let add = fn(x, y) = {
 	x + y;
 	};
 	let result = add(five, ten);
@@ -53,6 +53,7 @@ func TestNextToken(t *testing.T) {
 		{token.COMMA, ","},
 		{token.IDENT, "y"},
 		{token.RPAREN, ")"},
+		{token.ASSIGN, "="},
 		{token.LBRACE, "{"},
 		{token.IDENT, "x"},
 		{token.PLUS, "+"},
@@ -241,6 +242,31 @@ func TestFloatTokens(t *testing.T) {
 		got := l.NextToken()
 		if got.Type != want.tokenType || got.Literal != want.literal {
 			t.Fatalf("token %d is (%q, %q), want (%q, %q)", i, got.Type, got.Literal, want.tokenType, want.literal)
+		}
+	}
+}
+
+func TestPowerToken(t *testing.T) {
+	l := NewWithSource("2 ** 3 * 4", "power.silver")
+	want := []struct {
+		tokenType token.TokenType
+		literal   string
+		column    int
+	}{
+		{token.INT, "2", 1},
+		{token.POWER, "**", 3},
+		{token.INT, "3", 6},
+		{token.ASTERISK, "*", 8},
+		{token.INT, "4", 10},
+		{token.EOF, "", 11},
+	}
+
+	for i, expected := range want {
+		got := l.NextToken()
+		if got.Type != expected.tokenType || got.Literal != expected.literal || got.Position.Column != expected.column {
+			t.Fatalf("token %d is (%q, %q, column %d), want (%q, %q, column %d)",
+				i, got.Type, got.Literal, got.Position.Column,
+				expected.tokenType, expected.literal, expected.column)
 		}
 	}
 }

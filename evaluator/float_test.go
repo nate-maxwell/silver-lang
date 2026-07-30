@@ -17,6 +17,9 @@ func TestFloatEvaluation(t *testing.T) {
 		{"5.0 - 2", 3.0},
 		{"2 * 1.25", 2.5},
 		{"5 / 2.0", 2.5},
+		{"9 ** 0.5", 3.0},
+		{"4.0 ** 3", 64.0},
+		{"2 ** -2", 0.25},
 	}
 
 	for _, tt := range tests {
@@ -58,6 +61,19 @@ func TestFloatDivisionByZero(t *testing.T) {
 	}
 	if err.Message != "division by zero" {
 		t.Fatalf("error message is %q, want division by zero", err.Message)
+	}
+}
+
+func TestZeroToNegativePowerIsDivisionByZero(t *testing.T) {
+	for _, input := range []string{"0 ** -1", "0.0 ** -1"} {
+		evaluated := testEval(input)
+		err, ok := evaluated.(*object.Error)
+		if !ok {
+			t.Fatalf("%s result is %T, want *object.Error", input, evaluated)
+		}
+		if err.Message != "division by zero" {
+			t.Fatalf("%s error message is %q, want division by zero", input, err.Message)
+		}
 	}
 }
 

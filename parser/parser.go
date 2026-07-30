@@ -16,6 +16,7 @@ const (
 	SUM         // +
 	PRODUCT     // *
 	PREFIX      // -X or !X
+	POWER       // ** (binds more tightly than a leading prefix)
 	CALL        // myFunction(X)
 	INDEX       // array[index]
 	MEMBER      // module.member
@@ -71,6 +72,7 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerInfix(token.MINUS, p.parseInfixExpression)
 	p.registerInfix(token.SLASH, p.parseInfixExpression)
 	p.registerInfix(token.ASTERISK, p.parseInfixExpression)
+	p.registerInfix(token.POWER, p.parsePowerExpression)
 	p.registerInfix(token.EQ, p.parseInfixExpression)
 	p.registerInfix(token.NOT_EQ, p.parseInfixExpression)
 	p.registerInfix(token.LT, p.parseInfixExpression)

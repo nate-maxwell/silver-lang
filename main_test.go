@@ -38,7 +38,7 @@ func TestRunFileReportsErrors(t *testing.T) {
 
 func TestRunFileReportsTraceback(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "main.silver")
-	if err := os.WriteFile(path, []byte(`let fail = fn() {
+	if err := os.WriteFile(path, []byte(`let fail = fn() = {
     1 + True;
 };
 fail();

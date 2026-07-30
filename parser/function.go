@@ -3,8 +3,8 @@ package parser
 import "silver/ast"
 import "silver/token"
 
-// parseFunctionLitearl parses an fn expression, including its parameter list
-// and brace-delimited body.
+// parseFunctionLitearl parses an fn expression, including its parameter list,
+// optional return type, and equals-prefixed brace-delimited body.
 func (p *Parser) parseFunctionLitearl() ast.Expression {
 	lit := &ast.FunctionLiteral{Token: p.curToken}
 
@@ -21,12 +21,15 @@ func (p *Parser) parseFunctionLitearl() ast.Expression {
 	}
 
 	lit.Parameters = p.parseFunctionParameters()
-	if p.peekTokenIs(token.COLON) {
-		p.nextToken()
+	if p.peekTokenIs(token.IDENT) {
 		lit.ReturnType = p.parseTypeAnnotation()
 		if lit.ReturnType == nil {
 			return nil
 		}
+	}
+
+	if !p.expectPeek(token.ASSIGN) {
+		return nil
 	}
 
 	if !p.expectPeek(token.LBRACE) {

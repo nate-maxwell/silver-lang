@@ -84,7 +84,11 @@ func (l *Lexer) NextToken() token.Token {
 			tok = newToken(token.BANG, l.ch, position)
 		}
 	case '*':
-		tok = newToken(token.ASTERISK, l.ch, position)
+		if l.peekChar() == '*' {
+			tok = l.makeTwoCharToken(token.POWER)
+		} else {
+			tok = newToken(token.ASTERISK, l.ch, position)
+		}
 	case '/':
 		tok = newToken(token.SLASH, l.ch, position)
 	case '<':

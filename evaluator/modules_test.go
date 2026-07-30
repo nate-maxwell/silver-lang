@@ -21,7 +21,7 @@ func TestEvalFileWithNestedRelativeImport(t *testing.T) {
 	writeMonkeyFile(t, filepath.Join(libDir, "base.monkey"), `let factor = 2;`)
 	writeMonkeyFile(t, filepath.Join(libDir, "math.monkey"), `
 let base = import("./base.monkey");
-let double = fn(x) { x * base.factor; };
+let double = fn(x) int = { x * base.factor; };
 `)
 	mainPath := filepath.Join(dir, "main.monkey")
 	writeMonkeyFile(t, mainPath, `

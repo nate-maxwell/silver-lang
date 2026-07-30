@@ -7,7 +7,7 @@ import (
 )
 
 func TestStructMethodFunctionLiteral(t *testing.T) {
-	p := New(lexer.New(`fn[Person](greeting: str): str { greeting }`))
+	p := New(lexer.New(`fn[Person](greeting: str) str = { greeting }`))
 	program := p.ParseProgram()
 	checkParserErrors(t, p)
 
@@ -22,13 +22,13 @@ func TestStructMethodFunctionLiteral(t *testing.T) {
 	if function.ReturnType == nil || function.ReturnType.String() != "str" {
 		t.Fatalf("return type is %v, want str", function.ReturnType)
 	}
-	if got, want := function.String(), "fn[Person](greeting: str): str greeting"; got != want {
+	if got, want := function.String(), "fn[Person](greeting: str) str = greeting"; got != want {
 		t.Fatalf("function string is %q, want %q", got, want)
 	}
 }
 
 func TestQualifiedStructMethodReceiver(t *testing.T) {
-	p := New(lexer.New(`fn[models.Person]() {}`))
+	p := New(lexer.New(`fn[models.Person]() = {}`))
 	program := p.ParseProgram()
 	checkParserErrors(t, p)
 

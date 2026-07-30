@@ -27,7 +27,7 @@ struct Person {
 	numbers: array
 }
 
-let shout = fn[Person](): str {
+let shout = fn[Person]() str = {
 	self.name
 }
 
@@ -48,7 +48,7 @@ func TestStructMethodAcceptsParameters(t *testing.T) {
 struct Person {
 	age: int
 }
-let ageAfter = fn[Person](years: int): int {
+let ageAfter = fn[Person](years: int) int = {
 	self.age + years
 }
 Person(36).ageAfter(4)
@@ -62,7 +62,7 @@ func TestStructMethodCanCallBuiltin(t *testing.T) {
 struct Person {
 	name: str
 }
-let greet = fn[Person]() {
+let greet = fn[Person]() = {
 	print("hello")
 }
 Person("Ada").greet()
@@ -78,7 +78,7 @@ func TestStructMethodRequiresReceiver(t *testing.T) {
 struct Person {
 	name: str
 }
-let shout = fn[Person](): str {
+let shout = fn[Person]() str = {
 	self.name
 }
 shout()
@@ -93,7 +93,7 @@ shout()
 }
 
 func TestMethodReceiverMustBeStruct(t *testing.T) {
-	evaluated := testEval(`let invalid = fn[int]() {}`)
+	evaluated := testEval(`let invalid = fn[int]() = {}`)
 	err, ok := evaluated.(*object.Error)
 	if !ok {
 		t.Fatalf("result is %T, want *object.Error", evaluated)
@@ -195,7 +195,7 @@ func TestStructMethodCannotConflictWithField(t *testing.T) {
 struct Person {
 	name: str
 }
-let name = fn[Person]() {}
+let name = fn[Person]() = {}
 `)
 	err, ok := evaluated.(*object.Error)
 	if !ok {
@@ -209,8 +209,8 @@ let name = fn[Person]() {}
 func TestDuplicateStructMethodIsRejected(t *testing.T) {
 	evaluated := testEval(`
 struct Person {}
-let greet = fn[Person]() {}
-let greet = fn[Person]() {}
+let greet = fn[Person]() = {}
+let greet = fn[Person]() = {}
 `)
 	err, ok := evaluated.(*object.Error)
 	if !ok {
@@ -229,7 +229,7 @@ func TestStructMethodExportedFromModule(t *testing.T) {
 struct Person {
 	name: str
 }
-let shout = fn[Person](): str {
+let shout = fn[Person]() str = {
 	self.name
 }
 `)

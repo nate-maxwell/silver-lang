@@ -47,6 +47,7 @@ const (
 	PLUS     = "+"
 	MINUS    = "-"
 	ASTERISK = "*"
+	POWER    = "**"
 	SLASH    = "/"
 
 	LT     = "<"

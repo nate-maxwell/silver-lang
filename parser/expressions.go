@@ -75,6 +75,22 @@ func (p *Parser) parseInfixExpression(left ast.Expression) ast.Expression {
 	return expression
 }
 
+// parsePowerExpression parses exponentiation one level below its own binding
+// power on the right, making chains right-associative: a ** b ** c is
+// interpreted as a ** (b ** c).
+func (p *Parser) parsePowerExpression(left ast.Expression) ast.Expression {
+	expression := &ast.InfixExpression{
+		Token:    p.curToken,
+		Operator: p.curToken.Literal,
+		Left:     left,
+	}
+
+	p.nextToken()
+	expression.Right = p.parseExpression(POWER - 1)
+
+	return expression
+}
+
 // parseGroupedExpression parses a parenthesized expression without adding a
 // distinct grouping node to the AST.
 func (p *Parser) parseGroupedExpression() ast.Expression {

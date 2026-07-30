@@ -21,7 +21,7 @@ func TestTypedLetBindingRejectsMismatch(t *testing.T) {
 }
 
 func TestTypedFunctionParameter(t *testing.T) {
-	evaluated := testEval("let double = fn(value: int): int { value * 2 }\ndouble(\"two\")")
+	evaluated := testEval("let double = fn(value: int) int = { value * 2 }\ndouble(\"two\")")
 	err, ok := evaluated.(*object.Error)
 	if !ok {
 		t.Fatalf("result is %T, want *object.Error", evaluated)
@@ -32,7 +32,7 @@ func TestTypedFunctionParameter(t *testing.T) {
 }
 
 func TestTypedFunctionReturnValue(t *testing.T) {
-	evaluated := testEval("let label = fn(): str { 42 }\nlabel()")
+	evaluated := testEval("let label = fn() str = { 42 }\nlabel()")
 	err, ok := evaluated.(*object.Error)
 	if !ok {
 		t.Fatalf("result is %T, want *object.Error", evaluated)
@@ -73,6 +73,11 @@ func TestEnumTypeAnnotation(t *testing.T) {
 }
 
 func TestBareReturnUsesNull(t *testing.T) {
-	evaluated := testEval("let noValue = fn(): null {\nreturn\n}\nnoValue()")
+	evaluated := testEval("let noValue = fn() null = {\nreturn\n}\nnoValue()")
+	testNullObject(t, evaluated)
+}
+
+func TestFunctionWithoutReturnTypeReturnsNull(t *testing.T) {
+	evaluated := testEval("let noValue = fn() = {\nreturn 42\n}\nnoValue()")
 	testNullObject(t, evaluated)
 }

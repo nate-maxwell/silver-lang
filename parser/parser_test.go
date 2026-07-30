@@ -142,6 +142,14 @@ func TestFunctionLiteralParsing(t *testing.T) {
 	testInfixExpression(t, bodyStmt.Expression, "x", "+", "y")
 }
 
+func TestFunctionLiteralRejectsReceiverSyntax(t *testing.T) {
+	p := New(lexer.New(`fn[Person]() = {}`))
+	p.ParseProgram()
+	if len(p.Errors()) == 0 {
+		t.Fatal("parser accepted removed fn[Type] receiver syntax")
+	}
+}
+
 func TestIfExpression(t *testing.T) {
 	input := `if (x < y) { x }`
 

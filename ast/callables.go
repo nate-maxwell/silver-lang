@@ -7,13 +7,11 @@ import (
 )
 
 // FunctionLiteral declares parameters and a body for a Silver closure.
-// ReceiverType is populated by fn[Struct] method declarations.
 type FunctionLiteral struct {
-	Token        token.Token // The 'fn' token
-	ReceiverType *TypeAnnotation
-	Parameters   []*Identifier
-	ReturnType   *TypeAnnotation
-	Body         *BlockStatement
+	Token      token.Token // The 'fn' token
+	Parameters []*Identifier
+	ReturnType *TypeAnnotation
+	Body       *BlockStatement
 }
 
 // expressionNode marks FunctionLiteral as an Expression.
@@ -37,11 +35,6 @@ func (fl *FunctionLiteral) String() string {
 	}
 
 	out.WriteString(fl.TokenLiteral())
-	if fl.ReceiverType != nil {
-		out.WriteString("[")
-		out.WriteString(fl.ReceiverType.String())
-		out.WriteString("]")
-	}
 	out.WriteString("(")
 	out.WriteString(strings.Join(params, ", "))
 	out.WriteString(")")

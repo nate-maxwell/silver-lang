@@ -8,14 +8,6 @@ import "silver/token"
 func (p *Parser) parseFunctionLitearl() ast.Expression {
 	lit := &ast.FunctionLiteral{Token: p.curToken}
 
-	if p.peekTokenIs(token.LBRACKET) {
-		p.nextToken()
-		lit.ReceiverType = p.parseTypeAnnotation()
-		if lit.ReceiverType == nil || !p.expectPeek(token.RBRACKET) {
-			return nil
-		}
-	}
-
 	if !p.expectPeek(token.LPAREN) {
 		return nil
 	}

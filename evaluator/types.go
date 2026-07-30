@@ -66,8 +66,6 @@ func typeMatches(annotation *ast.TypeAnnotation, value object.Object, env *objec
 		switch value := value.(type) {
 		case *object.Function:
 			function = value
-		case *object.BoundMethod:
-			function = value.Method
 		default:
 			return false, ""
 		}
@@ -100,8 +98,8 @@ func typeMatches(annotation *ast.TypeAnnotation, value object.Object, env *objec
 	}
 }
 
-// runtimeFunctionMatches checks a closure or bound method against a concrete
-// function signature. Untyped parameters accept every input type, while an
+// runtimeFunctionMatches checks a closure against a concrete call signature.
+// Untyped parameters accept every input type, while an
 // omitted return annotation has Silver's guaranteed null result.
 func runtimeFunctionMatches(expected *ast.TypeAnnotation, actual *object.Function, expectedEnv *object.Environment) (bool, string) {
 	if len(expected.ParameterTypes) != len(actual.Parameters) {

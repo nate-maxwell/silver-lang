@@ -10,18 +10,7 @@ import (
 func (e *Evaluator) applyFunction(fn object.Object, args []object.Object) object.Object {
 	switch fn := fn.(type) {
 	case *object.Function:
-		if fn.ReceiverType != nil {
-			name := fn.Name
-			if name == "" {
-				name = "<anonymous>"
-			}
-			return newError("method %q requires a receiver", name)
-		}
-		return e.applyUserFunction(fn, args, nil, fn.Name)
-
-	case *object.BoundMethod:
-		name := fn.Receiver.Struct.Name + "." + fn.Method.Name
-		return e.applyUserFunction(fn.Method, args, fn.Receiver, name)
+		return e.applyUserFunction(fn, args, fn.Name)
 
 	case *object.Builtin:
 		return fn.Fn(args...)
@@ -44,9 +33,8 @@ func (e *Evaluator) applyFunction(fn object.Object, args []object.Object) object
 	}
 }
 
-// applyUserFunction validates and invokes a closure, optionally binding self
-// for a struct method call.
-func (e *Evaluator) applyUserFunction(fn *object.Function, args []object.Object, receiver *object.StructInstance, contextName string) object.Object {
+// applyUserFunction validates and invokes a closure.
+func (e *Evaluator) applyUserFunction(fn *object.Function, args []object.Object, contextName string) object.Object {
 	if len(args) != len(fn.Parameters) {
 		return newError("wrong number of arguments. got=%d, want=%d", len(args), len(fn.Parameters))
 	}
@@ -56,9 +44,6 @@ func (e *Evaluator) applyUserFunction(fn *object.Function, args []object.Object,
 		}
 	}
 	extendedEnv := extendFunctionEnv(fn, args)
-	if receiver != nil {
-		extendedEnv.Set("self", receiver)
-	}
 	if contextName == "" {
 		contextName = "<anonymous>"
 	}

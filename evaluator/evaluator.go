@@ -101,11 +101,6 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 			if function.Name == "" {
 				function.Name = node.Name.Value
 			}
-			if function.ReceiverType != nil {
-				if err := e.attachStructMethod(function); err != nil {
-					return err
-				}
-			}
 		}
 		env.Set(node.Name.Value, val)
 
@@ -167,11 +162,6 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 		return nativeBoolToBooleanObject(node.Value)
 
 	case *ast.FunctionLiteral:
-		if node.ReceiverType != nil {
-			if _, err := resolveMethodReceiver(node.ReceiverType, env); err != nil {
-				return err
-			}
-		}
 		for _, parameter := range node.Parameters {
 			if err := e.validateTypeAnnotation(parameter.Type, env); err != nil {
 				return err
@@ -183,11 +173,10 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 		params := node.Parameters
 		body := node.Body
 		return &object.Function{
-			ReceiverType: node.ReceiverType,
-			Parameters:   params,
-			ReturnType:   node.ReturnType,
-			Env:          env,
-			Body:         body,
+			Parameters: params,
+			ReturnType: node.ReturnType,
+			Env:        env,
+			Body:       body,
 		}
 
 	case *ast.CallExpression:

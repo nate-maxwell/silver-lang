@@ -15,6 +15,7 @@ func TestRoundTrip(t *testing.T) {
 	source := []byte(`
 enum State { Ready, Waiting }
 struct Person { name: string, age: int }
+struct Handler { callback: call(value: int) }
 let values = [1, 2.5, True, "four", {"five": 5}]
 let person = Person{"Ada", 36}
 person.age = 37

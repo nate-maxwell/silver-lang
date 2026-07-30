@@ -26,6 +26,20 @@ type StructInstance struct {
 	Values map[string]Object
 }
 
+// BoundMethod pairs a callable struct field with the instance that supplied
+// it. Calling the method injects Receiver as the function's first argument.
+type BoundMethod struct {
+	Method   *Function
+	Receiver *StructInstance
+	Name     string
+}
+
+// Type makes a bound method usable anywhere a callable value is accepted.
+func (bm *BoundMethod) Type() ObjectType { return FUNCTION_OBJ }
+
+// Inspect delegates to the stored function.
+func (bm *BoundMethod) Inspect() string { return bm.Method.Inspect() }
+
 // Type returns the struct-value runtime tag.
 func (s *StructInstance) Type() ObjectType { return STRUCT_VALUE_OBJ }
 

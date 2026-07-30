@@ -18,12 +18,18 @@ func (p *Parser) parseDeclarationIdentifier() *ast.Identifier {
 
 // parseTypeAnnotation parses the identifier following the current token and
 // any dot-qualified components. A call type may additionally declare a
-// signature using call(parameterType, ...) returnType.
+// signature using call([name:] parameterType, ...) [returnType].
 func (p *Parser) parseTypeAnnotation() *ast.TypeAnnotation {
 	if !p.expectPeek(token.IDENT) {
 		return nil
 	}
+	return p.parseTypeAnnotationFromCurrent()
+}
 
+// parseTypeAnnotationFromCurrent parses a type whose first identifier is the
+// current token. This lets named call parameters distinguish name: Type from
+// an unnamed Type without requiring more lexer lookahead.
+func (p *Parser) parseTypeAnnotationFromCurrent() *ast.TypeAnnotation {
 	annotation := &ast.TypeAnnotation{
 		Token: p.curToken,
 		Parts: []string{p.curToken.Literal},
@@ -37,31 +43,45 @@ func (p *Parser) parseTypeAnnotation() *ast.TypeAnnotation {
 	}
 	if len(annotation.Parts) == 1 && annotation.Parts[0] == "call" && p.peekTokenIs(token.LPAREN) {
 		annotation.ParameterTypes = make([]*ast.TypeAnnotation, 0)
+		annotation.ParameterNames = make([]string, 0)
 		p.nextToken()
 		if p.peekTokenIs(token.RPAREN) {
 			p.nextToken()
 		} else {
-			parameterType := p.parseTypeAnnotation()
-			if parameterType == nil {
-				return nil
-			}
-			annotation.ParameterTypes = append(annotation.ParameterTypes, parameterType)
-			for p.peekTokenIs(token.COMMA) {
+			for {
 				p.nextToken()
-				parameterType = p.parseTypeAnnotation()
+				if !p.curTokenIs(token.IDENT) {
+					p.peekError(token.IDENT)
+					return nil
+				}
+
+				parameterName := ""
+				var parameterType *ast.TypeAnnotation
+				if p.peekTokenIs(token.COLON) {
+					parameterName = p.curToken.Literal
+					p.nextToken()
+					parameterType = p.parseTypeAnnotation()
+				} else {
+					parameterType = p.parseTypeAnnotationFromCurrent()
+				}
 				if parameterType == nil {
 					return nil
 				}
+				annotation.ParameterNames = append(annotation.ParameterNames, parameterName)
 				annotation.ParameterTypes = append(annotation.ParameterTypes, parameterType)
+
+				if !p.peekTokenIs(token.COMMA) {
+					break
+				}
+				p.nextToken()
 			}
 			if !p.expectPeek(token.RPAREN) {
 				return nil
 			}
 		}
 
-		annotation.ReturnType = p.parseTypeAnnotation()
-		if annotation.ReturnType == nil {
-			return nil
+		if p.peekTokenIs(token.IDENT) && !p.lineBreakBeforePeek() {
+			annotation.ReturnType = p.parseTypeAnnotation()
 		}
 	}
 	return annotation

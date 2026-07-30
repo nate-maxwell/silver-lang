@@ -57,10 +57,21 @@ func evalMember(value object.Object, member string) object.Object {
 		}
 		return enumValue
 	case *object.StructInstance:
-		if field, ok := value.Values[member]; ok {
-			return field
+		field, ok := value.Values[member]
+		if !ok {
+			return newError("struct %q has no field %q", value.Struct.Name, member)
 		}
-		return newError("struct %q has no field %q", value.Struct.Name, member)
+		for index, fieldName := range value.Struct.Fields {
+			if fieldName != member || !value.Struct.FieldTypes[index].IsCallSignature() {
+				continue
+			}
+			function, ok := field.(*object.Function)
+			if !ok {
+				return field
+			}
+			return &object.BoundMethod{Method: function, Receiver: value, Name: member}
+		}
+		return field
 	default:
 		return newError("member access not supported on %s", value.Type())
 	}

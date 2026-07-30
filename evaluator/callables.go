@@ -13,6 +13,12 @@ func (e *Evaluator) applyFunction(fn object.Object, args []object.Object) object
 	case *object.Function:
 		return e.applyUserFunction(fn, args, fn.Name)
 
+	case *object.BoundMethod:
+		boundArgs := make([]object.Object, 0, len(args)+1)
+		boundArgs = append(boundArgs, fn.Receiver)
+		boundArgs = append(boundArgs, args...)
+		return e.applyUserFunction(fn.Method, boundArgs, fn.Receiver.Struct.Name+"."+fn.Name)
+
 	case *object.Builtin:
 		return fn.Fn(args...)
 

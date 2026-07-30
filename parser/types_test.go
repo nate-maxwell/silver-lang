@@ -57,10 +57,20 @@ func TestCallSignatureTypeAnnotation(t *testing.T) {
 	}
 }
 
-func TestCallSignatureRequiresReturnType(t *testing.T) {
-	p := New(lexer.New(`let callback: call(int) = fn(value: int) int { value }`))
-	p.ParseProgram()
-	if len(p.Errors()) == 0 {
-		t.Fatal("parser accepted a call signature without a return type")
+func TestCallSignatureMayOmitNullReturnType(t *testing.T) {
+	p := New(lexer.New(`let callback: call(value: int) = fn(value: int) {}`))
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	statement := program.Statements[0].(*ast.LetStatement)
+	signature := statement.Name.Type
+	if signature.ReturnType != nil {
+		t.Fatalf("return type is %v, want implicit null", signature.ReturnType)
+	}
+	if len(signature.ParameterNames) != 1 || signature.ParameterNames[0] != "value" {
+		t.Fatalf("parameter names are %v, want [value]", signature.ParameterNames)
+	}
+	if got, want := signature.String(), "call(value: int)"; got != want {
+		t.Fatalf("signature is %q, want %q", got, want)
 	}
 }

@@ -36,10 +36,10 @@ func (e *Evaluator) validateTypeAnnotation(annotation *ast.TypeAnnotation, env *
 				return err
 			}
 		}
-		if annotation.ReturnType == nil {
-			return newError("call type %q is missing a return type", annotation.String())
+		if annotation.ReturnType != nil {
+			return e.validateTypeAnnotation(annotation.ReturnType, env)
 		}
-		return e.validateTypeAnnotation(annotation.ReturnType, env)
+		return nil
 	}
 	if len(annotation.Parts) == 1 {
 		if _, ok := primitiveTypes[annotation.String()]; ok {
@@ -66,6 +66,8 @@ func typeMatches(annotation *ast.TypeAnnotation, value object.Object, env *objec
 		switch value := value.(type) {
 		case *object.Function:
 			function = value
+		case *object.BoundMethod:
+			function = value.Method
 		default:
 			return false, ""
 		}
@@ -106,6 +108,9 @@ func runtimeFunctionMatches(expected *ast.TypeAnnotation, actual *object.Functio
 		return false, ""
 	}
 	for index, expectedParameter := range expected.ParameterTypes {
+		if index < len(expected.ParameterNames) && expected.ParameterNames[index] != "" && expected.ParameterNames[index] != actual.Parameters[index].Value {
+			return false, ""
+		}
 		actualParameter := actual.Parameters[index].Type
 		if actualParameter == nil {
 			continue
@@ -116,10 +121,7 @@ func runtimeFunctionMatches(expected *ast.TypeAnnotation, actual *object.Functio
 		}
 	}
 
-	if actual.ReturnType == nil {
-		return isPrimitiveAnnotation(expected.ReturnType, "null"), ""
-	}
-	return annotationAssignable(expected.ReturnType, actual.ReturnType, expectedEnv, actual.Env)
+	return callReturnAssignable(expected.ReturnType, actual.ReturnType, expectedEnv, actual.Env)
 }
 
 // annotationAssignable reports whether every value described by source is
@@ -134,6 +136,11 @@ func annotationAssignable(target, source *ast.TypeAnnotation, targetEnv, sourceE
 			return false, ""
 		}
 		for index := range target.ParameterTypes {
+			if index < len(target.ParameterNames) && target.ParameterNames[index] != "" {
+				if index >= len(source.ParameterNames) || target.ParameterNames[index] != source.ParameterNames[index] {
+					return false, ""
+				}
+			}
 			matches, resolutionError := annotationAssignable(
 				source.ParameterTypes[index], target.ParameterTypes[index], sourceEnv, targetEnv,
 			)
@@ -141,7 +148,7 @@ func annotationAssignable(target, source *ast.TypeAnnotation, targetEnv, sourceE
 				return matches, resolutionError
 			}
 		}
-		return annotationAssignable(target.ReturnType, source.ReturnType, targetEnv, sourceEnv)
+		return callReturnAssignable(target.ReturnType, source.ReturnType, targetEnv, sourceEnv)
 	}
 	if source.IsCallSignature() {
 		return isPrimitiveAnnotation(target, "call"), ""
@@ -171,6 +178,21 @@ func annotationAssignable(target, source *ast.TypeAnnotation, targetEnv, sourceE
 		return false, resolutionError
 	}
 	return targetType == sourceType, ""
+}
+
+// callReturnAssignable treats an omitted call-signature or function return as
+// null while preserving ordinary annotation assignability for explicit types.
+func callReturnAssignable(target, source *ast.TypeAnnotation, targetEnv, sourceEnv *object.Environment) (bool, string) {
+	if target == nil && source == nil {
+		return true, ""
+	}
+	if target == nil {
+		return isPrimitiveAnnotation(source, "null"), ""
+	}
+	if source == nil {
+		return isPrimitiveAnnotation(target, "null"), ""
+	}
+	return annotationAssignable(target, source, targetEnv, sourceEnv)
 }
 
 func isPrimitiveAnnotation(annotation *ast.TypeAnnotation, name string) bool {

@@ -85,7 +85,7 @@ func (f *Function) Inspect() string {
 		out.WriteString(" ")
 		out.WriteString(f.ReturnType.String())
 	}
-	out.WriteString(" = {\n")
+	out.WriteString(" {\n")
 	out.WriteString(f.Body.String())
 	out.WriteString("\n}")
 

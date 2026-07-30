@@ -10,10 +10,10 @@ import (
 
 func TestTracebackIncludesSourceLocationsAndFunctionNames(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "main.silver")
-	writeMonkeyFile(t, path, `let fail = fn() = {
+	writeMonkeyFile(t, path, `let fail = fn() {
     1 + True;
 };
-let middle = fn() = {
+let middle = fn() {
     fail();
 };
 middle();
@@ -49,10 +49,10 @@ func TestTracebackPreservesLocationsAcrossModules(t *testing.T) {
 	libraryPath := filepath.Join(dir, "library.silver")
 	mainPath := filepath.Join(dir, "main.silver")
 
-	writeMonkeyFile(t, libraryPath, `let fail = fn() = {
+	writeMonkeyFile(t, libraryPath, `let fail = fn() {
     1 / 0;
 };
-let run = fn() = {
+let run = fn() {
     fail();
 };
 `)
@@ -79,7 +79,7 @@ library.run();
 
 func TestFunctionArityErrorHasCallLocation(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "arity.silver")
-	writeMonkeyFile(t, path, `let identity = fn(value) = { value; };
+	writeMonkeyFile(t, path, `let identity = fn(value) { value; };
 identity();
 `)
 

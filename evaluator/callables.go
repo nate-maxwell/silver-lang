@@ -2,6 +2,7 @@ package evaluator
 
 import (
 	"fmt"
+	"silver/ast"
 	"silver/object"
 )
 
@@ -16,34 +17,34 @@ func (e *Evaluator) applyFunction(fn object.Object, args []object.Object) object
 		return fn.Fn(args...)
 
 	case *object.Struct:
-		if len(args) != len(fn.Fields) {
-			return newError("wrong number of arguments for struct %s. got=%d, want=%d", fn.Name, len(args), len(fn.Fields))
-		}
-		values := make(map[string]object.Object, len(fn.Fields))
-		for i, field := range fn.Fields {
-			if err := e.requireType(fn.FieldTypes[i], args[i], fn.Env, fmt.Sprintf("field %q", fn.Name+"."+field)); err != nil {
-				return err
-			}
-			values[field] = args[i]
-		}
-		return &object.StructInstance{Struct: fn, Values: values}
+		return e.applyStruct(fn, args)
 
 	default:
 		return newError("not a function: %s", fn.Type())
 	}
 }
 
-// applyUserFunction validates and invokes a closure.
-func (e *Evaluator) applyUserFunction(fn *object.Function, args []object.Object, contextName string) object.Object {
-	if len(args) != len(fn.Parameters) {
-		return newError("wrong number of arguments. got=%d, want=%d", len(args), len(fn.Parameters))
+func (e *Evaluator) applyStruct(definition *object.Struct, values []object.Object) object.Object {
+	if len(values) != len(definition.Fields) {
+		return newError("wrong number of arguments for struct %s. got=%d, want=%d", definition.Name, len(values), len(definition.Fields))
 	}
-	for i, parameter := range fn.Parameters {
-		if err := e.requireType(parameter.Type, args[i], fn.Env, fmt.Sprintf("parameter %q", parameter.Value)); err != nil {
+	fields := make(map[string]object.Object, len(definition.Fields))
+	for index, field := range definition.Fields {
+		if err := e.requireType(definition.FieldTypes[index], values[index], definition.Env, fmt.Sprintf("field %q", definition.Name+"."+field)); err != nil {
 			return err
 		}
+		fields[field] = values[index]
 	}
-	extendedEnv := extendFunctionEnv(fn, args)
+	return &object.StructInstance{Struct: definition, Values: fields}
+}
+
+// applyUserFunction validates and invokes a closure.
+func (e *Evaluator) applyUserFunction(fn *object.Function, args []object.Object, contextName string) object.Object {
+	boundArgs, err := e.bindFunctionArguments(fn, args)
+	if err != nil {
+		return err
+	}
+	extendedEnv := extendFunctionEnv(fn, boundArgs)
 	if contextName == "" {
 		contextName = "<anonymous>"
 	}
@@ -63,6 +64,91 @@ func (e *Evaluator) applyUserFunction(fn *object.Function, args []object.Object,
 		return err
 	}
 	return evaluated
+}
+
+// bindFunctionArguments applies ordinary positional binding first. When a
+// struct value does not satisfy the parameter at its position, its fields are
+// offered to the remaining parameters by name. A matching struct parameter is
+// therefore kept intact instead of being destructured.
+func (e *Evaluator) bindFunctionArguments(fn *object.Function, args []object.Object) ([]object.Object, *object.Error) {
+	if len(args) > len(fn.Parameters) {
+		return nil, newError("wrong number of arguments. got=%d, want=%d", len(args), len(fn.Parameters))
+	}
+
+	bound := make([]object.Object, len(fn.Parameters))
+	assigned := make([]bool, len(fn.Parameters))
+	boundCount := 0
+
+	for _, argument := range args {
+		parameterIndex := nextUnassignedParameter(assigned)
+		if parameterIndex == len(fn.Parameters) {
+			return nil, newError("wrong number of arguments. got=%d, want=%d", boundCount+1, len(fn.Parameters))
+		}
+
+		parameter := fn.Parameters[parameterIndex]
+		matches, resolutionError := parameterTypeMatches(parameter, argument, fn.Env)
+		if resolutionError != "" {
+			return nil, newError("%s", resolutionError)
+		}
+		if matches {
+			bound[parameterIndex] = argument
+			assigned[parameterIndex] = true
+			boundCount++
+			continue
+		}
+
+		structValue, ok := argument.(*object.StructInstance)
+		if !ok {
+			return nil, e.parameterTypeError(parameter, argument, fn.Env)
+		}
+
+		extracted := 0
+		for index := parameterIndex; index < len(fn.Parameters); index++ {
+			if assigned[index] {
+				continue
+			}
+			candidate := fn.Parameters[index]
+			fieldValue, ok := structValue.Values[candidate.Value]
+			if !ok {
+				continue
+			}
+			if err := e.requireType(candidate.Type, fieldValue, fn.Env, fmt.Sprintf("parameter %q", candidate.Value)); err != nil {
+				return nil, err
+			}
+			bound[index] = fieldValue
+			assigned[index] = true
+			boundCount++
+			extracted++
+		}
+		if extracted == 0 {
+			return nil, e.parameterTypeError(parameter, argument, fn.Env)
+		}
+	}
+
+	if boundCount != len(fn.Parameters) {
+		return nil, newError("wrong number of arguments. got=%d, want=%d", boundCount, len(fn.Parameters))
+	}
+	return bound, nil
+}
+
+func nextUnassignedParameter(assigned []bool) int {
+	for index, isAssigned := range assigned {
+		if !isAssigned {
+			return index
+		}
+	}
+	return len(assigned)
+}
+
+func parameterTypeMatches(parameter *ast.Identifier, argument object.Object, env *object.Environment) (bool, string) {
+	if parameter.Type == nil {
+		return true, ""
+	}
+	return typeMatches(parameter.Type, argument, env)
+}
+
+func (e *Evaluator) parameterTypeError(parameter *ast.Identifier, argument object.Object, env *object.Environment) *object.Error {
+	return e.requireType(parameter.Type, argument, env, fmt.Sprintf("parameter %q", parameter.Value))
 }
 
 // extendFunctionEnv binds evaluated arguments to parameters in a child of the

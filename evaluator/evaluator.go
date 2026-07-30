@@ -104,6 +104,9 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 		}
 		env.Set(node.Name.Value, val)
 
+	case *ast.MemberAssignmentStatement:
+		return e.evalMemberAssignment(node, env)
+
 	case *ast.EnumStatement:
 		return e.evalEnumStatement(node, env)
 
@@ -192,6 +195,21 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 		result := e.applyFunction(function, args)
 		e.prependCallerFrame(result, node)
 		return result
+
+	case *ast.StructLiteral:
+		structType := e.Eval(node.StructType, env)
+		if isError(structType) {
+			return structType
+		}
+		definition, ok := structType.(*object.Struct)
+		if !ok {
+			return newError("not a struct: %s", runtimeTypeName(structType))
+		}
+		values := e.evalExpressions(node.Values, env)
+		if len(values) == 1 && isError(values[0]) {
+			return values[0]
+		}
+		return e.applyStruct(definition, values)
 
 	case *ast.StringLiteral:
 		return e.constants.string(node.Value)

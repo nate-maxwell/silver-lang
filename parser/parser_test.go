@@ -70,9 +70,9 @@ func TestFunctionParameterParsing(t *testing.T) {
 		input          string
 		expectedParams []string
 	}{
-		{input: "fn() = {};", expectedParams: []string{}},
-		{input: "fn(x) = {};", expectedParams: []string{"x"}},
-		{input: "fn(x, y, z) = {};", expectedParams: []string{"x", "y", "z"}},
+		{input: "fn() {};", expectedParams: []string{}},
+		{input: "fn(x) {};", expectedParams: []string{"x"}},
+		{input: "fn(x, y, z) {};", expectedParams: []string{"x", "y", "z"}},
 	}
 
 	for _, tt := range tests {
@@ -96,7 +96,7 @@ func TestFunctionParameterParsing(t *testing.T) {
 }
 
 func TestFunctionLiteralParsing(t *testing.T) {
-	input := `fn(x, y) int = { x + y; }`
+	input := `fn(x, y) int { x + y; }`
 
 	l := lexer.New(input)
 	p := New(l)
@@ -143,10 +143,18 @@ func TestFunctionLiteralParsing(t *testing.T) {
 }
 
 func TestFunctionLiteralRejectsReceiverSyntax(t *testing.T) {
-	p := New(lexer.New(`fn[Person]() = {}`))
+	p := New(lexer.New(`fn[Person]() {}`))
 	p.ParseProgram()
 	if len(p.Errors()) == 0 {
 		t.Fatal("parser accepted removed fn[Type] receiver syntax")
+	}
+}
+
+func TestFunctionLiteralRejectsEqualsBeforeBody(t *testing.T) {
+	p := New(lexer.New(`fn(value: int) int = { value }`))
+	p.ParseProgram()
+	if len(p.Errors()) == 0 {
+		t.Fatal("parser accepted removed = before function body")
 	}
 }
 

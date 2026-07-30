@@ -21,7 +21,7 @@ func TestTypedLetStatement(t *testing.T) {
 }
 
 func TestTypedFunctionLiteral(t *testing.T) {
-	p := New(lexer.New(`fn(person: models.Person, active: bool) str = { person.name; }`))
+	p := New(lexer.New(`fn(person: models.Person, active: bool) str { person.name; }`))
 	program := p.ParseProgram()
 	checkParserErrors(t, p)
 
@@ -39,7 +39,7 @@ func TestTypedFunctionLiteral(t *testing.T) {
 }
 
 func TestCallSignatureTypeAnnotation(t *testing.T) {
-	p := New(lexer.New(`fn(transform: call(int, models.Person) str) call(str) bool = {}`))
+	p := New(lexer.New(`fn(transform: call(int, models.Person) str) call(str) bool {}`))
 	program := p.ParseProgram()
 	checkParserErrors(t, p)
 
@@ -58,7 +58,7 @@ func TestCallSignatureTypeAnnotation(t *testing.T) {
 }
 
 func TestCallSignatureRequiresReturnType(t *testing.T) {
-	p := New(lexer.New(`let callback: call(int) = fn(value: int) int = { value }`))
+	p := New(lexer.New(`let callback: call(int) = fn(value: int) int { value }`))
 	p.ParseProgram()
 	if len(p.Errors()) == 0 {
 		t.Fatal("parser accepted a call signature without a return type")

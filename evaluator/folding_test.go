@@ -33,7 +33,7 @@ func TestFoldConstants(t *testing.T) {
 
 func TestFoldConstantsThroughoutTree(t *testing.T) {
 	program := parseForFolding(t, `
-let calculate = fn(value) hash = {
+let calculate = fn(value) hash {
     let numbers = [1 + 2, value + (3 * 4)]
     return {1 + 1: numbers[6 / 2]}
 }

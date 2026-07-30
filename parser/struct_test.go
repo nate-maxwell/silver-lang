@@ -13,7 +13,7 @@ func TestStructStatement(t *testing.T) {
 		x: int
 		y: int
 	}
-	let point: Point = Point(1, 2)
+	let point: Point = Point{1, 2}
 `))
 	program := p.ParseProgram()
 	checkParserErrors(t, p)
@@ -55,5 +55,39 @@ func TestStructRejectsDuplicateFields(t *testing.T) {
 	}
 	if message := p.Errors()[0]; !strings.Contains(message, `duplicate struct field "x"`) || !strings.Contains(message, "duplicate.slvr:1:23") {
 		t.Fatalf("unexpected parser error: %q", message)
+	}
+}
+
+func TestStructLiteral(t *testing.T) {
+	p := New(lexer.New(`Location{0.0, 1.0, 2.0}`))
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	statement := program.Statements[0].(*ast.ExpressionStatement)
+	literal, ok := statement.Expression.(*ast.StructLiteral)
+	if !ok {
+		t.Fatalf("expression is %T, want *ast.StructLiteral", statement.Expression)
+	}
+	if !testIdentifier(t, literal.StructType, "Location") {
+		return
+	}
+	if len(literal.Values) != 3 {
+		t.Fatalf("literal has %d values, want 3", len(literal.Values))
+	}
+	if got, want := literal.String(), "Location{0.0, 1.0, 2.0}"; got != want {
+		t.Fatalf("literal string is %q, want %q", got, want)
+	}
+}
+
+func TestStructLiteralRequiresCommaSeparatedValues(t *testing.T) {
+	for _, input := range []string{
+		`Location{0.0 1.0, 2.0}`,
+		"Location{\n0.0\n1.0\n2.0\n}",
+	} {
+		p := New(lexer.New(input))
+		p.ParseProgram()
+		if len(p.Errors()) == 0 {
+			t.Fatalf("parser accepted struct values without commas: %q", input)
+		}
 	}
 }

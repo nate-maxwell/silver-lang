@@ -34,14 +34,27 @@ func (p *Parser) parseIdentifier() ast.Expression {
 	return &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
 }
 
-// parseExpressionStatement wraps a top-level expression and validates its
-// newline-delimited statement boundary.
-func (p *Parser) parseExpressionStatement() *ast.ExpressionStatement {
-	stmt := &ast.ExpressionStatement{Token: p.curToken}
-	stmt.Expression = p.parseExpression(LOWEST)
+// parseExpressionStatement parses an expression or a struct-member assignment
+// and validates its newline-delimited statement boundary.
+func (p *Parser) parseExpressionStatement() ast.Statement {
+	firstToken := p.curToken
+	expression := p.parseExpression(LOWEST)
 
+	if p.peekTokenIs(token.ASSIGN) {
+		target, ok := expression.(*ast.MemberExpression)
+		p.nextToken()
+		statement := &ast.MemberAssignmentStatement{Token: p.curToken, Target: target}
+		if !ok {
+			p.addError(firstToken.Position, "invalid assignment target; expected struct member")
+		}
+		p.nextToken()
+		statement.Value = p.parseExpression(LOWEST)
+		p.consumeStatementEnd()
+		return statement
+	}
+
+	stmt := &ast.ExpressionStatement{Token: firstToken, Expression: expression}
 	p.consumeStatementEnd()
-
 	return stmt
 }
 
@@ -198,16 +211,15 @@ func (p *Parser) parseExpressionList(end token.TokenType) []ast.Expression {
 	p.nextToken()
 	list = append(list, p.parseExpression(LOWEST))
 
-	for p.peekTokenIs(token.COMMA) {
-		p.nextToken()
+	for !p.peekTokenIs(end) {
+		if !p.expectPeek(token.COMMA) {
+			return nil
+		}
 		p.nextToken()
 		list = append(list, p.parseExpression(LOWEST))
 	}
 
-	if !p.expectPeek(end) {
-		return nil
-	}
-
+	p.nextToken()
 	return list
 }
 
@@ -216,4 +228,12 @@ func (p *Parser) parseCallExpression(function ast.Expression) ast.Expression {
 	exp := &ast.CallExpression{Token: p.curToken, Function: function}
 	exp.Arguments = p.parseExpressionList(token.RPAREN)
 	return exp
+}
+
+// parseStructLiteral constructs a struct value using brace-delimited,
+// comma-separated positional field values.
+func (p *Parser) parseStructLiteral(structType ast.Expression) ast.Expression {
+	literal := &ast.StructLiteral{Token: p.curToken, StructType: structType}
+	literal.Values = p.parseExpressionList(token.RBRACE)
+	return literal
 }

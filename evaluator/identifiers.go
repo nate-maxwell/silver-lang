@@ -1,9 +1,45 @@
 package evaluator
 
 import (
+	"fmt"
 	"silver/ast"
 	"silver/object"
 )
+
+// evalMemberAssignment mutates one field on an existing struct instance after
+// enforcing the field's declared type.
+func (e *Evaluator) evalMemberAssignment(node *ast.MemberAssignmentStatement, env *object.Environment) object.Object {
+	target := e.Eval(node.Target.Object, env)
+	if isError(target) {
+		return target
+	}
+	instance, ok := target.(*object.StructInstance)
+	if !ok {
+		return newError("member assignment not supported on %s", runtimeTypeName(target))
+	}
+
+	member := node.Target.Member.Value
+	fieldIndex := -1
+	for index, field := range instance.Struct.Fields {
+		if field == member {
+			fieldIndex = index
+			break
+		}
+	}
+	if fieldIndex < 0 {
+		return newError("struct %q has no field %q", instance.Struct.Name, member)
+	}
+
+	value := e.Eval(node.Value, env)
+	if isError(value) {
+		return value
+	}
+	if err := e.requireType(instance.Struct.FieldTypes[fieldIndex], value, instance.Struct.Env, fmt.Sprintf("field %q", instance.Struct.Name+"."+member)); err != nil {
+		return err
+	}
+	instance.Values[member] = value
+	return NULL
+}
 
 // evalMember resolves members on modules, enum namespaces, and struct values.
 func evalMember(value object.Object, member string) object.Object {

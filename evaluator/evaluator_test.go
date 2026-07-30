@@ -77,8 +77,8 @@ func TestPrintBuiltinUsesEvaluatorOutput(t *testing.T) {
 
 func TestClosures(t *testing.T) {
 	input := `
-		let newAdder = fn(x) call = {
-			fn(y) int = { x + y };
+		let newAdder = fn(x) call {
+			fn(y) int { x + y };
 		};
 
 		let addTwo = newAdder(2);
@@ -93,12 +93,12 @@ func TestFunctionApplication(t *testing.T) {
 		input    string
 		expected int64
 	}{
-		{"let identity = fn(x) int = { x; }; identity(5);", 5},
-		{"let identity = fn(x) int = { return x; }; identity(5);", 5},
-		{"let double = fn(x) int = { x * 2; }; double(5);", 10},
-		{"let add = fn(x, y) int = { x + y; }; add(5, 5);", 10},
-		{"let add = fn(x, y) int = { x + y; }; add(5 + 5, add(5, 5));", 20},
-		{"fn(x) int = { x; }(5)", 5},
+		{"let identity = fn(x) int { x; }; identity(5);", 5},
+		{"let identity = fn(x) int { return x; }; identity(5);", 5},
+		{"let double = fn(x) int { x * 2; }; double(5);", 10},
+		{"let add = fn(x, y) int { x + y; }; add(5, 5);", 10},
+		{"let add = fn(x, y) int { x + y; }; add(5 + 5, add(5, 5));", 20},
+		{"fn(x) int { x; }(5)", 5},
 	}
 
 	for _, tt := range tests {
@@ -112,7 +112,7 @@ func TestEnclosingEnvironments(t *testing.T) {
 			let second = 10;
 			let third = 10;
 
-			let ourFunction = fn(first) int = {
+			let ourFunction = fn(first) int {
 			let second = 20;
 
 			first + second + third;
@@ -124,7 +124,7 @@ func TestEnclosingEnvironments(t *testing.T) {
 }
 
 func TestFunctionObject(t *testing.T) {
-	input := "fn(x) int = { x + 2;};"
+	input := "fn(x) int { x + 2;};"
 
 	evaluated := testEval(input)
 	fn, ok := evaluated.(*object.Function)
@@ -214,7 +214,7 @@ func TestErrorHandling(t *testing.T) {
 			"unknown operator: STRING - STRING",
 		},
 		{
-			`{"name": "Monkey"}[fn(x) = { x }];`,
+			`{"name": "Monkey"}[fn(x) { x }];`,
 			"unusable as hash key: FUNCTION",
 		},
 	}

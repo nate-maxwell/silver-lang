@@ -4,7 +4,7 @@ import "silver/ast"
 import "silver/token"
 
 // parseFunctionLitearl parses an fn expression, including its parameter list,
-// optional return type, and equals-prefixed brace-delimited body.
+// optional return type, and brace-delimited body.
 func (p *Parser) parseFunctionLitearl() ast.Expression {
 	lit := &ast.FunctionLiteral{Token: p.curToken}
 
@@ -18,10 +18,6 @@ func (p *Parser) parseFunctionLitearl() ast.Expression {
 		if lit.ReturnType == nil {
 			return nil
 		}
-	}
-
-	if !p.expectPeek(token.ASSIGN) {
-		return nil
 	}
 
 	if !p.expectPeek(token.LBRACE) {

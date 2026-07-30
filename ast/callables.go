@@ -42,7 +42,7 @@ func (fl *FunctionLiteral) String() string {
 		out.WriteString(" ")
 		out.WriteString(fl.ReturnType.String())
 	}
-	out.WriteString(" = ")
+	out.WriteString(" ")
 	out.WriteString(fl.Body.String())
 
 	return out.String()

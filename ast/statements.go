@@ -78,6 +78,44 @@ func (es *ExpressionStatement) String() string {
 }
 
 /* ----------------------------------------------------------------------------------------------------------
+Member assignment statements
+---------------------------------------------------------------------------------------------------------- */
+
+// MemberAssignmentStatement replaces one field on an existing struct value.
+type MemberAssignmentStatement struct {
+	Token  token.Token // the = token
+	Target *MemberExpression
+	Value  Expression
+}
+
+// statementNode marks MemberAssignmentStatement as a Statement.
+func (mas *MemberAssignmentStatement) statementNode() {}
+
+// TokenLiteral returns the assignment operator.
+func (mas *MemberAssignmentStatement) TokenLiteral() string { return mas.Token.Literal }
+
+// Position points at the assignment target.
+func (mas *MemberAssignmentStatement) Position() token.Position {
+	if mas.Target != nil {
+		return mas.Target.Position()
+	}
+	return mas.Token.Position
+}
+
+// String renders the target and replacement value.
+func (mas *MemberAssignmentStatement) String() string {
+	var out bytes.Buffer
+	if mas.Target != nil {
+		out.WriteString(mas.Target.String())
+	}
+	out.WriteString(" = ")
+	if mas.Value != nil {
+		out.WriteString(mas.Value.String())
+	}
+	return out.String()
+}
+
+/* ----------------------------------------------------------------------------------------------------------
 Let statements
 ---------------------------------------------------------------------------------------------------------- */
 

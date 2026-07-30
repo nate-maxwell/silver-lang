@@ -19,7 +19,7 @@ func TestEvalIntegerExpression(t *testing.T) {
 		{"(-2) ** 2", 4},
 		{"2 * 3 ** 2", 18},
 		{"0 ** 0", 1},
-		{"let pow = fn(x: int, y: int) int = { return x ** y }; pow(2, 8)", 256},
+		{"let pow = fn(x: int, y: int) int { return x ** y }; pow(2, 8)", 256},
 		{"-50 + 100 + -50", 0},
 		{"5 * 2 + 10", 20},
 		{"5 + 2 * 10", 25},

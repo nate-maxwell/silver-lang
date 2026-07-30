@@ -1,19 +1,47 @@
 package ast
 
 import (
+	"bytes"
 	"silver/token"
 	"strings"
 )
 
 // TypeAnnotation is a primitive or qualified nominal type name, such as int
-// or geometry.Point.
+// or geometry.Point. Callable signatures use ParameterTypes and ReturnType;
+// a nil ParameterTypes slice distinguishes bare call from call().
 type TypeAnnotation struct {
-	Token token.Token // the first identifier in the type name
-	Parts []string
+	Token          token.Token // the first identifier in the type name
+	Parts          []string
+	ParameterTypes []*TypeAnnotation
+	ReturnType     *TypeAnnotation
 }
 
 // Position returns the first type-name component's position.
 func (ta *TypeAnnotation) Position() token.Position { return ta.Token.Position }
 
-// String renders the complete qualified type name.
-func (ta *TypeAnnotation) String() string { return strings.Join(ta.Parts, ".") }
+// IsCallSignature reports whether the annotation includes a callable
+// parameter and return signature rather than naming the broad call type.
+func (ta *TypeAnnotation) IsCallSignature() bool {
+	return ta != nil && len(ta.Parts) == 1 && ta.Parts[0] == "call" && ta.ParameterTypes != nil
+}
+
+// String renders the complete qualified type or callable signature.
+func (ta *TypeAnnotation) String() string {
+	if !ta.IsCallSignature() {
+		return strings.Join(ta.Parts, ".")
+	}
+
+	var out bytes.Buffer
+	out.WriteString("call(")
+	for index, parameterType := range ta.ParameterTypes {
+		if index > 0 {
+			out.WriteString(", ")
+		}
+		out.WriteString(parameterType.String())
+	}
+	out.WriteString(") ")
+	if ta.ReturnType != nil {
+		out.WriteString(ta.ReturnType.String())
+	}
+	return out.String()
+}

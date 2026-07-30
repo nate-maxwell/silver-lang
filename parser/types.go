@@ -17,7 +17,8 @@ func (p *Parser) parseDeclarationIdentifier() *ast.Identifier {
 }
 
 // parseTypeAnnotation parses the identifier following the current token and
-// any dot-qualified components. Type names are resolved by the evaluator.
+// any dot-qualified components. A call type may additionally declare a
+// signature using call(parameterType, ...) returnType.
 func (p *Parser) parseTypeAnnotation() *ast.TypeAnnotation {
 	if !p.expectPeek(token.IDENT) {
 		return nil
@@ -33,6 +34,35 @@ func (p *Parser) parseTypeAnnotation() *ast.TypeAnnotation {
 			return nil
 		}
 		annotation.Parts = append(annotation.Parts, p.curToken.Literal)
+	}
+	if len(annotation.Parts) == 1 && annotation.Parts[0] == "call" && p.peekTokenIs(token.LPAREN) {
+		annotation.ParameterTypes = make([]*ast.TypeAnnotation, 0)
+		p.nextToken()
+		if p.peekTokenIs(token.RPAREN) {
+			p.nextToken()
+		} else {
+			parameterType := p.parseTypeAnnotation()
+			if parameterType == nil {
+				return nil
+			}
+			annotation.ParameterTypes = append(annotation.ParameterTypes, parameterType)
+			for p.peekTokenIs(token.COMMA) {
+				p.nextToken()
+				parameterType = p.parseTypeAnnotation()
+				if parameterType == nil {
+					return nil
+				}
+				annotation.ParameterTypes = append(annotation.ParameterTypes, parameterType)
+			}
+			if !p.expectPeek(token.RPAREN) {
+				return nil
+			}
+		}
+
+		annotation.ReturnType = p.parseTypeAnnotation()
+		if annotation.ReturnType == nil {
+			return nil
+		}
 	}
 	return annotation
 }

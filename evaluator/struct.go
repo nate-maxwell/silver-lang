@@ -60,7 +60,7 @@ func resolveMethodReceiver(annotation *ast.TypeAnnotation, env *object.Environme
 		return nil, newError("method receiver type is missing")
 	}
 	if len(annotation.Parts) == 1 {
-		if _, primitive := primitiveTypes[annotation.String()]; primitive {
+		if _, primitive := primitiveTypes[annotation.Parts[0]]; primitive {
 			return nil, newError("method receiver %q must name a struct type", annotation.String())
 		}
 	}

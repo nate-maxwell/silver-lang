@@ -77,7 +77,7 @@ func TestPrintBuiltinUsesEvaluatorOutput(t *testing.T) {
 
 func TestClosures(t *testing.T) {
 	input := `
-		let newAdder = fn(x) function = {
+		let newAdder = fn(x) call = {
 			fn(y) int = { x + y };
 		};
 

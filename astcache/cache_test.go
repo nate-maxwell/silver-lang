@@ -17,6 +17,7 @@ enum State { Ready, Waiting }
 struct Person { name: string, age: int }
 let values = [1, 2.5, True, "four", {"five": 5}]
 let choose = fn[Person](value: int) int = { if (value > 0) { return -value } else { return 0 } }
+let apply = fn(operation: call(int) int, value: int) int = { operation(value) }
 let module = import("./library.lib")
 module.member(choose(values[0]))
 `)

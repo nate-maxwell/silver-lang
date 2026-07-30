@@ -37,3 +37,30 @@ func TestTypedFunctionLiteral(t *testing.T) {
 		t.Fatalf("return type is %v, want str", function.ReturnType)
 	}
 }
+
+func TestCallSignatureTypeAnnotation(t *testing.T) {
+	p := New(lexer.New(`fn(transform: call(int, models.Person) str) call(str) bool = {}`))
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	expression := program.Statements[0].(*ast.ExpressionStatement)
+	function := expression.Expression.(*ast.FunctionLiteral)
+	parameterType := function.Parameters[0].Type
+	if got, want := parameterType.String(), "call(int, models.Person) str"; got != want {
+		t.Fatalf("parameter type is %q, want %q", got, want)
+	}
+	if len(parameterType.ParameterTypes) != 2 {
+		t.Fatalf("parameter signature has %d arguments, want 2", len(parameterType.ParameterTypes))
+	}
+	if got, want := function.ReturnType.String(), "call(str) bool"; got != want {
+		t.Fatalf("return type is %q, want %q", got, want)
+	}
+}
+
+func TestCallSignatureRequiresReturnType(t *testing.T) {
+	p := New(lexer.New(`let callback: call(int) = fn(value: int) int = { value }`))
+	p.ParseProgram()
+	if len(p.Errors()) == 0 {
+		t.Fatal("parser accepted a call signature without a return type")
+	}
+}

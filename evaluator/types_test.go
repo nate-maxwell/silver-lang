@@ -81,3 +81,72 @@ func TestFunctionWithoutReturnTypeReturnsNull(t *testing.T) {
 	evaluated := testEval("let noValue = fn() = {\nreturn 42\n}\nnoValue()")
 	testNullObject(t, evaluated)
 }
+
+func TestTypedHigherOrderFunction(t *testing.T) {
+	evaluated := testEval(`
+let apply = fn(operation: call(int) int, value: int) int = {
+	return operation(value)
+}
+apply(fn(value: int) int = { value * 2 }, 21)
+`)
+	testIntegerObject(t, evaluated, 42)
+}
+
+func TestCallSignatureRejectsWrongArgumentSignature(t *testing.T) {
+	evaluated := testEval(`
+let apply = fn(operation: call(int) int, value: int) int = {
+	return operation(value)
+}
+apply(fn(value: str) int = { 1 }, 21)
+`)
+	err, ok := evaluated.(*object.Error)
+	if !ok {
+		t.Fatalf("result is %T, want *object.Error", evaluated)
+	}
+	if got, want := err.Message, `type mismatch for parameter "operation": expected call(int) int, got call`; got != want {
+		t.Fatalf("error message is %q, want %q", got, want)
+	}
+}
+
+func TestCallSignatureRejectsWrongArity(t *testing.T) {
+	evaluated := testEval(`
+let apply = fn(operation: call(int) int, value: int) int = {
+	return operation(value)
+}
+apply(fn(left: int, right: int) int = { left + right }, 21)
+`)
+	err, ok := evaluated.(*object.Error)
+	if !ok {
+		t.Fatalf("result is %T, want *object.Error", evaluated)
+	}
+	if got, want := err.Message, `type mismatch for parameter "operation": expected call(int) int, got call`; got != want {
+		t.Fatalf("error message is %q, want %q", got, want)
+	}
+}
+
+func TestCallSignatureReturnTypeAndClosure(t *testing.T) {
+	evaluated := testEval(`
+let makeAdder = fn(amount: int) call(int) int = {
+	return fn(value: int) int = { value + amount }
+}
+let addTwo: call(int) int = makeAdder(2)
+addTwo(40)
+`)
+	testIntegerObject(t, evaluated, 42)
+}
+
+func TestCallSignatureRejectsWrongReturnedFunction(t *testing.T) {
+	evaluated := testEval(`
+let makeIdentity = fn() call(int) int = {
+	return fn(value: str) int = { 1 }
+}
+makeIdentity()
+`)
+	err, ok := evaluated.(*object.Error)
+	if !ok {
+		t.Fatalf("result is %T, want *object.Error", evaluated)
+	}
+	if got, want := err.Message, `type mismatch for return value of "makeIdentity": expected call(int) int, got call`; got != want {
+		t.Fatalf("error message is %q, want %q", got, want)
+	}
+}

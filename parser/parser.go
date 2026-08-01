@@ -33,8 +33,9 @@ type (
 // Parser implements a two-token-lookahead Pratt parser. Prefix and infix
 // parse-function tables keep syntax extension localized by token type.
 type Parser struct {
-	l      *lexer.Lexer // token source
-	errors []string     // accumulated diagnostics; parsing attempts to continue
+	l                *lexer.Lexer // token source
+	errors           []string     // accumulated diagnostics; parsing attempts to continue
+	stopAtBlockBrace bool         // top-level { terminates an unparenthesized if condition
 
 	curToken  token.Token // token currently being parsed
 	peekToken token.Token // one-token lookahead

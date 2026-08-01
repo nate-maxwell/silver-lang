@@ -15,7 +15,9 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
 	}
 	leftExp := prefix()
 
-	for !p.peekTokenIs(token.SEMICOLON) && !p.lineBreakBeforePeek() && precedence < p.peekPrecedence() {
+	for !p.peekTokenIs(token.SEMICOLON) &&
+		!(p.stopAtBlockBrace && p.peekTokenIs(token.LBRACE)) &&
+		!p.lineBreakBeforePeek() && precedence < p.peekPrecedence() {
 		infix := p.infixParseFns[p.peekToken.Type]
 		if infix == nil {
 			return leftExp
@@ -109,7 +111,7 @@ func (p *Parser) parsePowerExpression(left ast.Expression) ast.Expression {
 func (p *Parser) parseGroupedExpression() ast.Expression {
 	p.nextToken()
 
-	exp := p.parseExpression(LOWEST)
+	exp := p.parseNestedExpression(LOWEST)
 
 	if !p.expectPeek(token.RPAREN) {
 		return nil
@@ -121,17 +123,17 @@ func (p *Parser) parseGroupedExpression() ast.Expression {
 // parseIfExpression parses a condition, consequence, and optional else block.
 func (p *Parser) parseIfExpression() ast.Expression {
 	expression := &ast.IfExpression{Token: p.curToken}
+	previous := p.stopAtBlockBrace
+	defer func() { p.stopAtBlockBrace = previous }()
 
-	if !p.expectPeek(token.LPAREN) {
+	if p.peekTokenIs(token.LBRACE) {
+		p.addError(p.peekToken.Position, "expected condition before if body")
 		return nil
 	}
-
 	p.nextToken()
+	p.stopAtBlockBrace = true
 	expression.Condition = p.parseExpression(LOWEST)
-
-	if !p.expectPeek(token.RPAREN) {
-		return nil
-	}
+	p.stopAtBlockBrace = false
 
 	if !p.expectPeek(token.LBRACE) {
 		return nil
@@ -189,7 +191,7 @@ func (p *Parser) parseIndexExpression(left ast.Expression) ast.Expression {
 	exp := &ast.IndexExpression{Token: p.curToken, Left: left}
 
 	p.nextToken()
-	exp.Index = p.parseExpression(LOWEST)
+	exp.Index = p.parseNestedExpression(LOWEST)
 
 	if !p.expectPeek(token.RBRACKET) {
 		return nil
@@ -209,18 +211,28 @@ func (p *Parser) parseExpressionList(end token.TokenType) []ast.Expression {
 	}
 
 	p.nextToken()
-	list = append(list, p.parseExpression(LOWEST))
+	list = append(list, p.parseNestedExpression(LOWEST))
 
 	for !p.peekTokenIs(end) {
 		if !p.expectPeek(token.COMMA) {
 			return nil
 		}
 		p.nextToken()
-		list = append(list, p.parseExpression(LOWEST))
+		list = append(list, p.parseNestedExpression(LOWEST))
 	}
 
 	p.nextToken()
 	return list
+}
+
+// parseNestedExpression permits braces inside an explicitly delimited
+// expression while an enclosing unparenthesized if condition is being parsed.
+func (p *Parser) parseNestedExpression(precedence int) ast.Expression {
+	previous := p.stopAtBlockBrace
+	p.stopAtBlockBrace = false
+	expression := p.parseExpression(precedence)
+	p.stopAtBlockBrace = previous
+	return expression
 }
 
 // parseCallExpression extends function with a parenthesized argument list.

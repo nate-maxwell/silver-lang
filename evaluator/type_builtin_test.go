@@ -12,7 +12,7 @@ func TestTypeBuiltinReturnsPrimitiveTypeValues(t *testing.T) {
 		`type(1.5) == float`,
 		`type(True) == bool`,
 		`type("silver") == str`,
-		`type(if (False) { 1 }) == null`,
+		`type(if False { 1 }) == null`,
 		`type([1, 2]) == array`,
 		`type({"answer": 42}) == hash`,
 		`type(fn() {}) == call`,

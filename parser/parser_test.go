@@ -159,7 +159,7 @@ func TestFunctionLiteralRejectsEqualsBeforeBody(t *testing.T) {
 }
 
 func TestIfExpression(t *testing.T) {
-	input := `if (x < y) { x }`
+	input := `if x < y { x }`
 
 	l := lexer.New(input)
 	p := New(l)
@@ -208,7 +208,7 @@ func TestIfExpression(t *testing.T) {
 }
 
 func TestIfElseExpression(t *testing.T) {
-	input := `if (x < y) { x } else { y }`
+	input := `if x < y { x } else { y }`
 
 	l := lexer.New(input)
 	p := New(l)
@@ -264,6 +264,42 @@ func TestIfElseExpression(t *testing.T) {
 
 	if !testIdentifier(t, alternative.Expression, "y") {
 		return
+	}
+}
+
+func TestParenthesizedIfConditionRemainsValid(t *testing.T) {
+	p := New(lexer.New(`if (x < y) { x }`))
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	expression := program.Statements[0].(*ast.ExpressionStatement).Expression.(*ast.IfExpression)
+	if !testInfixExpression(t, expression.Condition, "x", "<", "y") {
+		t.FailNow()
+	}
+}
+
+func TestIfConditionMayContinueAfterGroupedExpression(t *testing.T) {
+	p := New(lexer.New(`if (x) == y { x }`))
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	expression := program.Statements[0].(*ast.ExpressionStatement).Expression.(*ast.IfExpression)
+	if !testInfixExpression(t, expression.Condition, "x", "==", "y") {
+		t.FailNow()
+	}
+}
+
+func TestIfConditionAllowsStructLiteralInsideCall(t *testing.T) {
+	p := New(lexer.New(`if valid(Point{1}) { True }`))
+	p.ParseProgram()
+	checkParserErrors(t, p)
+}
+
+func TestIfExpressionRequiresCondition(t *testing.T) {
+	p := New(lexer.New(`if { True }`))
+	p.ParseProgram()
+	if len(p.Errors()) == 0 {
+		t.Fatal("parser accepted an if expression without a condition")
 	}
 }
 

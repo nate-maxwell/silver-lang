@@ -12,7 +12,7 @@ func TestBooleanExpression(t *testing.T) {
 	for _, tt := range []struct {
 		input string
 		want  bool
-	}{{"True;", true}, {"False;", false}} {
+	}{{"True", true}, {"False", false}} {
 		p := New(lexer.New(tt.input))
 		program := p.ParseProgram()
 		checkParserErrors(t, p)

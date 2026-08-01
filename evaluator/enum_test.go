@@ -9,7 +9,7 @@ import (
 func TestEnumValue(t *testing.T) {
 	evaluated := testEval(`
 enum Direction { North, East, South, West }
-Direction.North;
+Direction.North
 `)
 
 	value, ok := evaluated.(*object.EnumValue)
@@ -45,8 +45,8 @@ func TestEnumEquality(t *testing.T) {
 func TestEnumValuesAreHashable(t *testing.T) {
 	evaluated := testEval(`
 enum Direction { North, South }
-let labels = { Direction.North: "north", Direction.South: "south" };
-labels[Direction.South];
+let labels = { Direction.North: "north", Direction.South: "south" }
+labels[Direction.South]
 `)
 
 	value, ok := evaluated.(*object.String)
@@ -75,8 +75,8 @@ func TestEnumExportedFromModule(t *testing.T) {
 	mainPath := filepath.Join(dir, "main.slvr")
 	writeMonkeyFile(t, libraryPath, `enum Status { Ready, Busy }`)
 	writeMonkeyFile(t, mainPath, `
-let library = import("./library.lib");
-library.Status.Ready;
+let library = import("./library.lib")
+library.Status.Ready
 `)
 
 	evaluated := New().EvalFile(mainPath, object.NewEnvironment())

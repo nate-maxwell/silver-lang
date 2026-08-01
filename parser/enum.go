@@ -7,7 +7,7 @@ import (
 )
 
 // parseEnumStatement parses enum Name { Member, ... }. Member names must be
-// unique identifiers; a legacy trailing semicolon remains accepted.
+// unique identifiers.
 func (p *Parser) parseEnumStatement() *ast.EnumStatement {
 	statement := &ast.EnumStatement{Token: p.curToken}
 

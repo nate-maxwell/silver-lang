@@ -7,7 +7,7 @@ import (
 )
 
 // parseStructStatement parses struct Name { field, ... }. Field names must be
-// unique identifiers; a legacy trailing semicolon remains accepted.
+// unique identifiers.
 func (p *Parser) parseStructStatement() *ast.StructStatement {
 	statement := &ast.StructStatement{Token: p.curToken}
 

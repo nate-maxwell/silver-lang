@@ -93,8 +93,8 @@ func TestFloatHashKeysRespectNumericEquality(t *testing.T) {
 		input string
 		want  string
 	}{
-		{`let values = {1: "integer"}; values[1.0];`, "integer"},
-		{`let values = {1.5: "float"}; values[1.5];`, "float"},
+		{"let values = {1: \"integer\"}\nvalues[1.0]", "integer"},
+		{"let values = {1.5: \"float\"}\nvalues[1.5]", "float"},
 	}
 
 	for _, tt := range tests {

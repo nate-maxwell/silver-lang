@@ -7,26 +7,26 @@ import (
 )
 
 func TestNextToken(t *testing.T) {
-	input := `let five = 5;
-	let ten = 10;
+	input := `let five = 5
+	let ten = 10
 	let add = fn(x, y) {
-	x + y;
-	};
-	let result = add(five, ten);
-	!-/*5;
-	5 < 10 > 5;
+	x + y
+	}
+	let result = add(five, ten)
+	!-/*5
+	5 < 10 > 5
 
 	if (5 < 10) {
-		return True;
+		return True
 		} else {
-		return False;
+		return False
 	}
 
-	10 == 10;
-	10 != 9;
+	10 == 10
+	10 != 9
 	"foobar"
 	"foo bar"
-	[1, 2];
+	[1, 2]
 	{"foo": "bar"}
 	`
 
@@ -38,12 +38,10 @@ func TestNextToken(t *testing.T) {
 		{token.IDENT, "five"},
 		{token.ASSIGN, "="},
 		{token.INT, "5"},
-		{token.SEMICOLON, ";"},
 		{token.LET, "let"},
 		{token.IDENT, "ten"},
 		{token.ASSIGN, "="},
 		{token.INT, "10"},
-		{token.SEMICOLON, ";"},
 		{token.LET, "let"},
 		{token.IDENT, "add"},
 		{token.ASSIGN, "="},
@@ -57,9 +55,7 @@ func TestNextToken(t *testing.T) {
 		{token.IDENT, "x"},
 		{token.PLUS, "+"},
 		{token.IDENT, "y"},
-		{token.SEMICOLON, ";"},
 		{token.RBRACE, "}"},
-		{token.SEMICOLON, ";"},
 		{token.LET, "let"},
 		{token.IDENT, "result"},
 		{token.ASSIGN, "="},
@@ -69,20 +65,17 @@ func TestNextToken(t *testing.T) {
 		{token.COMMA, ","},
 		{token.IDENT, "ten"},
 		{token.RPAREN, ")"},
-		{token.SEMICOLON, ";"},
 
 		{token.BANG, "!"},
 		{token.MINUS, "-"},
 		{token.SLASH, "/"},
 		{token.ASTERISK, "*"},
 		{token.INT, "5"},
-		{token.SEMICOLON, ";"},
 		{token.INT, "5"},
 		{token.LT, "<"},
 		{token.INT, "10"},
 		{token.GT, ">"},
 		{token.INT, "5"},
-		{token.SEMICOLON, ";"},
 
 		{token.IF, "if"},
 		{token.LPAREN, "("},
@@ -93,23 +86,19 @@ func TestNextToken(t *testing.T) {
 		{token.LBRACE, "{"},
 		{token.RETURN, "return"},
 		{token.TRUE, "True"},
-		{token.SEMICOLON, ";"},
 		{token.RBRACE, "}"},
 		{token.ELSE, "else"},
 		{token.LBRACE, "{"},
 		{token.RETURN, "return"},
 		{token.FALSE, "False"},
-		{token.SEMICOLON, ";"},
 		{token.RBRACE, "}"},
 
 		{token.INT, "10"},
 		{token.EQ, "=="},
 		{token.INT, "10"},
-		{token.SEMICOLON, ";"},
 		{token.INT, "10"},
 		{token.NOT_EQ, "!="},
 		{token.INT, "9"},
-		{token.SEMICOLON, ";"},
 		{token.STRING, "foobar"},
 		{token.STRING, "foo bar"},
 		{token.LBRACKET, "["},
@@ -117,7 +106,6 @@ func TestNextToken(t *testing.T) {
 		{token.COMMA, ","},
 		{token.INT, "2"},
 		{token.RBRACKET, "]"},
-		{token.SEMICOLON, ";"},
 		{token.LBRACE, "{"},
 		{token.STRING, "foo"},
 		{token.COLON, ":"},
@@ -146,8 +134,8 @@ func TestNextToken(t *testing.T) {
 func TestLineComments(t *testing.T) {
 	input := `
 	// A comment may occupy an entire line.
-	let value = 10; // It may also follow other tokens.
-	let half = value / 2;
+	let value = 10 // It may also follow other tokens.
+	let half = value / 2
 	// A single slash must remain the division operator.
 	half // A comment at EOF does not need a trailing newline.`
 
@@ -159,14 +147,12 @@ func TestLineComments(t *testing.T) {
 		{token.IDENT, "value"},
 		{token.ASSIGN, "="},
 		{token.INT, "10"},
-		{token.SEMICOLON, ";"},
 		{token.LET, "let"},
 		{token.IDENT, "half"},
 		{token.ASSIGN, "="},
 		{token.IDENT, "value"},
 		{token.SLASH, "/"},
 		{token.INT, "2"},
-		{token.SEMICOLON, ";"},
 		{token.IDENT, "half"},
 		{token.EOF, ""},
 	}
@@ -188,7 +174,7 @@ func TestLineComments(t *testing.T) {
 }
 
 func TestTokenPositions(t *testing.T) {
-	input := "let value = 1; // comment\n  value / 2"
+	input := "let value = 1 // comment\n  value / 2"
 	l := NewWithSource(input, "example.silver")
 
 	tests := []struct {
@@ -200,7 +186,6 @@ func TestTokenPositions(t *testing.T) {
 		{"value", 1, 5},
 		{"=", 1, 11},
 		{"1", 1, 13},
-		{";", 1, 14},
 		{"value", 2, 3},
 		{"/", 2, 9},
 		{"2", 2, 11},
@@ -214,6 +199,13 @@ func TestTokenPositions(t *testing.T) {
 		if tok.Position.Source != "example.silver" || tok.Position.Line != tt.line || tok.Position.Column != tt.column {
 			t.Fatalf("tests[%d] - position is %+v, want example.silver:%d:%d", i, tok.Position, tt.line, tt.column)
 		}
+	}
+}
+
+func TestSemicolonIsIllegal(t *testing.T) {
+	tok := New(";").NextToken()
+	if tok.Type != token.ILLEGAL || tok.Literal != ";" {
+		t.Fatalf("semicolon token is (%q, %q), want (ILLEGAL, %q)", tok.Type, tok.Literal, ";")
 	}
 }
 

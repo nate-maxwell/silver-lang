@@ -29,6 +29,15 @@ func TestSameLineStatementsRequireSeparator(t *testing.T) {
 	}
 }
 
+func TestSemicolonsAreRejected(t *testing.T) {
+	p := New(lexer.New("let first = 1;\nlet second = 2"))
+	p.ParseProgram()
+
+	if len(p.Errors()) == 0 {
+		t.Fatal("parser accepted a semicolon")
+	}
+}
+
 func TestNewlineEndsCallExpression(t *testing.T) {
 	p := New(lexer.New("callable\n(42)"))
 	program := p.ParseProgram()

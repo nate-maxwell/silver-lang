@@ -9,8 +9,8 @@ import (
 
 func TestEnumStatement(t *testing.T) {
 	p := New(lexer.New(`
-enum Direction { North, East, South, West, };
-let direction = Direction.North;
+enum Direction { North, East, South, West, }
+let direction = Direction.North
 `))
 	program := p.ParseProgram()
 	checkParserErrors(t, p)

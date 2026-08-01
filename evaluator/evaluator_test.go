@@ -78,11 +78,11 @@ func TestPrintBuiltinUsesEvaluatorOutput(t *testing.T) {
 func TestClosures(t *testing.T) {
 	input := `
 		let newAdder = fn(x) call {
-			fn(y) int { x + y };
-		};
+			fn(y) int { x + y }
+		}
 
-		let addTwo = newAdder(2);
-		addTwo(2);
+		let addTwo = newAdder(2)
+		addTwo(2)
 	`
 
 	testIntegerObject(t, testEval(input), 4)
@@ -93,12 +93,12 @@ func TestFunctionApplication(t *testing.T) {
 		input    string
 		expected int64
 	}{
-		{"let identity = fn(x) int { x; }; identity(5);", 5},
-		{"let identity = fn(x) int { return x; }; identity(5);", 5},
-		{"let double = fn(x) int { x * 2; }; double(5);", 10},
-		{"let add = fn(x, y) int { x + y; }; add(5, 5);", 10},
-		{"let add = fn(x, y) int { x + y; }; add(5 + 5, add(5, 5));", 20},
-		{"fn(x) int { x; }(5)", 5},
+		{"let identity = fn(x) int { x }\nidentity(5)", 5},
+		{"let identity = fn(x) int { return x }\nidentity(5)", 5},
+		{"let double = fn(x) int { x * 2 }\ndouble(5)", 10},
+		{"let add = fn(x, y) int { x + y }\nadd(5, 5)", 10},
+		{"let add = fn(x, y) int { x + y }\nadd(5 + 5, add(5, 5))", 20},
+		{"fn(x) int { x }(5)", 5},
 	}
 
 	for _, tt := range tests {
@@ -108,23 +108,23 @@ func TestFunctionApplication(t *testing.T) {
 
 func TestEnclosingEnvironments(t *testing.T) {
 	input := `
-			let first = 10;
-			let second = 10;
-			let third = 10;
+			let first = 10
+			let second = 10
+			let third = 10
 
 			let ourFunction = fn(first) int {
-			let second = 20;
+			let second = 20
 
-			first + second + third;
-			};
+			first + second + third
+			}
 
-			ourFunction(20) + first + second;`
+			ourFunction(20) + first + second`
 
 	testIntegerObject(t, testEval(input), 70)
 }
 
 func TestFunctionObject(t *testing.T) {
-	input := "fn(x) int { x + 2;};"
+	input := "fn(x) int { x + 2 }"
 
 	evaluated := testEval(input)
 	fn, ok := evaluated.(*object.Function)
@@ -153,10 +153,10 @@ func TestLetStatements(t *testing.T) {
 		input    string
 		expected int64
 	}{
-		{"let a = 5; a;", 5},
-		{"let a = 5 * 5; a;", 25},
-		{"let a = 5; let b = a; b;", 5},
-		{"let a = 5; let b = a; let c = a + b + 5; c;", 15},
+		{"let a = 5\na", 5},
+		{"let a = 5 * 5\na", 25},
+		{"let a = 5\nlet b = a\nb", 5},
+		{"let a = 5\nlet b = a\nlet c = a + b + 5\nc", 15},
 	}
 
 	for _, tt := range tests {
@@ -170,11 +170,11 @@ func TestErrorHandling(t *testing.T) {
 		expectedMessage string
 	}{
 		{
-			"5 + True;",
+			"5 + True",
 			"type mismatch: INTEGER + BOOLEAN",
 		},
 		{
-			"5 + True; 5;",
+			"5 + True\n5",
 			"type mismatch: INTEGER + BOOLEAN",
 		},
 		{
@@ -182,25 +182,25 @@ func TestErrorHandling(t *testing.T) {
 			"unknown operator: -BOOLEAN",
 		},
 		{
-			"True + False;",
+			"True + False",
 			"unknown operator: BOOLEAN + BOOLEAN",
 		},
 		{
-			"5; True + False; 5",
+			"5\nTrue + False\n5",
 			"unknown operator: BOOLEAN + BOOLEAN",
 		},
 		{
-			"if (10 > 1) { True + False; }",
+			"if (10 > 1) { True + False }",
 			"unknown operator: BOOLEAN + BOOLEAN",
 		},
 		{
 			`
 			if (10 > 1) {
 				if (10 > 1) {
-					return True + False;
+					return True + False
 				}
 
-				return 1;
+				return 1
 			}
 			`,
 			"unknown operator: BOOLEAN + BOOLEAN",
@@ -214,7 +214,7 @@ func TestErrorHandling(t *testing.T) {
 			"unknown operator: STRING - STRING",
 		},
 		{
-			`{"name": "Monkey"}[fn(x) { x }];`,
+			`{"name": "Monkey"}[fn(x) { x }]`,
 			"unusable as hash key: FUNCTION",
 		},
 	}
@@ -241,18 +241,18 @@ func TestReturnStatement(t *testing.T) {
 		input    string
 		expected int64
 	}{
-		{"return 10;", 10},
-		{"return 10; 9;", 10},
-		{"return 2 * 5; 9;", 10},
-		{"9; return 2 * 5; 9;", 10},
+		{"return 10", 10},
+		{"return 10\n9", 10},
+		{"return 2 * 5\n9", 10},
+		{"9\nreturn 2 * 5\n9", 10},
 		{
 			`
 			if (10 > 1) {
 				if (10 > 1) {
-					return 10;
+					return 10
 				}
 			
-				return 1;
+				return 1
 			}
 			`,
 			10,

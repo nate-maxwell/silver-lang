@@ -8,7 +8,7 @@ import (
 )
 
 func TestIntegerLiteralExpression(t *testing.T) {
-	p := New(lexer.New("5;"))
+	p := New(lexer.New("5"))
 	program := p.ParseProgram()
 	checkParserErrors(t, p)
 

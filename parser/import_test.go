@@ -7,7 +7,7 @@ import (
 )
 
 func TestImportAndMemberExpression(t *testing.T) {
-	p := New(lexer.New(`let math = import("./math.monkey"); math.add(1, 2);`))
+	p := New(lexer.New("let math = import(\"./math.monkey\")\nmath.add(1, 2)"))
 	program := p.ParseProgram()
 	if len(p.Errors()) != 0 {
 		t.Fatalf("parser errors: %v", p.Errors())

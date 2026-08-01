@@ -12,7 +12,7 @@ func TestHashIndexExpressions(t *testing.T) {
 	}{
 		{`{"foo": 5}["foo"]`, 5},
 		{`{"foo": 5}["bar"]`, nil},
-		{`let key = "foo"; {"foo": 5}[key]`, 5},
+		{"let key = \"foo\"\n{\"foo\": 5}[key]", 5},
 		{`{}["foo"]`, nil},
 		{`{5: 5}[5]`, 5},
 		{`{True: 5}[True]`, 5},
@@ -31,7 +31,7 @@ func TestHashIndexExpressions(t *testing.T) {
 }
 
 func TestHashLiterals(t *testing.T) {
-	input := `let two = "two";
+	input := `let two = "two"
 	{
 		"one": 10 - 9,
 		two: 1 + 1,

@@ -28,7 +28,7 @@ func TestParsingIndexExpressions(t *testing.T) {
 }
 
 func TestCallExpressionParsing(t *testing.T) {
-	input := "add(1, 2 * 3, 4 + 5);"
+	input := "add(1, 2 * 3, 4 + 5)"
 
 	l := lexer.New(input)
 	p := New(l)
@@ -70,9 +70,9 @@ func TestFunctionParameterParsing(t *testing.T) {
 		input          string
 		expectedParams []string
 	}{
-		{input: "fn() {};", expectedParams: []string{}},
-		{input: "fn(x) {};", expectedParams: []string{"x"}},
-		{input: "fn(x, y, z) {};", expectedParams: []string{"x", "y", "z"}},
+		{input: "fn() {}", expectedParams: []string{}},
+		{input: "fn(x) {}", expectedParams: []string{"x"}},
+		{input: "fn(x, y, z) {}", expectedParams: []string{"x", "y", "z"}},
 	}
 
 	for _, tt := range tests {
@@ -96,7 +96,7 @@ func TestFunctionParameterParsing(t *testing.T) {
 }
 
 func TestFunctionLiteralParsing(t *testing.T) {
-	input := `fn(x, y) int { x + y; }`
+	input := `fn(x, y) int { x + y }`
 
 	l := lexer.New(input)
 	p := New(l)
@@ -450,15 +450,15 @@ func TestParsingInfixExpressions(t *testing.T) {
 		operator   string
 		rightValue interface{}
 	}{
-		{"5 + 5;", 5, "+", 5},
-		{"5 - 5;", 5, "-", 5},
-		{"5 * 5;", 5, "*", 5},
-		{"5 ** 5;", 5, "**", 5},
-		{"5 / 5;", 5, "/", 5},
-		{"5 > 5;", 5, ">", 5},
-		{"5 < 5;", 5, "<", 5},
-		{"5 == 5;", 5, "==", 5},
-		{"5 != 5;", 5, "!=", 5},
+		{"5 + 5", 5, "+", 5},
+		{"5 - 5", 5, "-", 5},
+		{"5 * 5", 5, "*", 5},
+		{"5 ** 5", 5, "**", 5},
+		{"5 / 5", 5, "/", 5},
+		{"5 > 5", 5, ">", 5},
+		{"5 < 5", 5, "<", 5},
+		{"5 == 5", 5, "==", 5},
+		{"5 != 5", 5, "!=", 5},
 		{"True == True", true, "==", true},
 		{"True != False", true, "!=", false},
 		{"False == False", false, "==", false},
@@ -497,12 +497,12 @@ func TestParsingPrefixExpressions(t *testing.T) {
 		operator string
 		value    interface{}
 	}{
-		{"!5;", "!", 5},
-		{"-15;", "-", 15},
-		{"!foobar;", "!", "foobar"},
-		{"-foobar;", "-", "foobar"},
-		{"!True;", "!", true},
-		{"!False;", "!", false},
+		{"!5", "!", 5},
+		{"-15", "-", 15},
+		{"!foobar", "!", "foobar"},
+		{"-foobar", "-", "foobar"},
+		{"!True", "!", true},
+		{"!False", "!", false},
 	}
 
 	for _, tt := range prefixTests {
@@ -607,7 +607,7 @@ func testInfixExpression(t *testing.T, exp ast.Expression, left interface{},
 }
 
 func TestIdentifierExpression(t *testing.T) {
-	input := "foobar;"
+	input := "foobar"
 
 	l := lexer.New(input)
 	p := New(l)
@@ -641,9 +641,9 @@ func TestLetStatements(t *testing.T) {
 		expectedIdentifier string
 		expectedValue      interface{}
 	}{
-		{"let x = 5;", "x", 5},
-		{"let y = True;", "y", true},
-		{"let foobar = y;", "foobar", "y"},
+		{"let x = 5", "x", 5},
+		{"let y = True", "y", true},
+		{"let foobar = y", "foobar", "y"},
 	}
 	for _, tt := range tests {
 		l := lexer.New(tt.input)
@@ -691,9 +691,9 @@ func testLetStatement(t *testing.T, s ast.Statement, name string) bool {
 
 func TestReturnStatement(t *testing.T) {
 	input := `
-	return 5;
-	return 10;
-	return 993322;
+	return 5
+	return 10
+	return 993322
 	`
 
 	l := lexer.New(input)

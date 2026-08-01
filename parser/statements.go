@@ -21,14 +21,10 @@ func (p *Parser) parseStatement() ast.Statement {
 	}
 }
 
-// consumeStatementEnd accepts a physical newline, a closing delimiter, EOF,
-// or a legacy explicit semicolon. Adjacent statements on one line must retain
-// a semicolon so token adjacency cannot silently change program structure.
+// consumeStatementEnd accepts a physical newline, a closing delimiter, or
+// EOF. Adjacent statements on one line are rejected so token adjacency cannot
+// silently change program structure.
 func (p *Parser) consumeStatementEnd() {
-	if p.peekTokenIs(token.SEMICOLON) {
-		p.nextToken()
-		return
-	}
 	if p.peekTokenIs(token.EOF) || p.peekTokenIs(token.RBRACE) || p.lineBreakBeforePeek() {
 		return
 	}
@@ -69,7 +65,7 @@ func (p *Parser) parseLetStatement() *ast.LetStatement {
 func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
 	stmt := &ast.ReturnStatement{Token: p.curToken}
 
-	if p.peekTokenIs(token.SEMICOLON) || p.peekTokenIs(token.RBRACE) || p.peekTokenIs(token.EOF) || p.lineBreakBeforePeek() {
+	if p.peekTokenIs(token.RBRACE) || p.peekTokenIs(token.EOF) || p.lineBreakBeforePeek() {
 		p.consumeStatementEnd()
 		return stmt
 	}

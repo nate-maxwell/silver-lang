@@ -11,7 +11,7 @@ import (
 
 func TestRunFile(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "main.monkey")
-	if err := os.WriteFile(path, []byte(`let answer = 42;`), 0644); err != nil {
+	if err := os.WriteFile(path, []byte(`let answer = 42`), 0644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -39,9 +39,9 @@ func TestRunFileReportsErrors(t *testing.T) {
 func TestRunFileReportsTraceback(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "main.silver")
 	if err := os.WriteFile(path, []byte(`let fail = fn() {
-    1 + True;
-};
-fail();
+    1 + True
+}
+fail()
 `), 0644); err != nil {
 		t.Fatal(err)
 	}

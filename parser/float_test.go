@@ -7,7 +7,7 @@ import (
 )
 
 func TestFloatLiteralExpression(t *testing.T) {
-	p := New(lexer.New("12.25;"))
+	p := New(lexer.New("12.25"))
 	program := p.ParseProgram()
 	checkParserErrors(t, p)
 
@@ -22,7 +22,7 @@ func TestFloatLiteralExpression(t *testing.T) {
 }
 
 func TestNegativeFloatParsesAsPrefixExpression(t *testing.T) {
-	p := New(lexer.New("-1.5;"))
+	p := New(lexer.New("-1.5"))
 	program := p.ParseProgram()
 	checkParserErrors(t, p)
 

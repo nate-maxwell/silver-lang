@@ -18,15 +18,15 @@ func TestEvalFileWithNestedRelativeImport(t *testing.T) {
 	if err := os.Mkdir(libDir, 0755); err != nil {
 		t.Fatal(err)
 	}
-	writeMonkeyFile(t, filepath.Join(libDir, "base.monkey"), `let factor = 2;`)
+	writeMonkeyFile(t, filepath.Join(libDir, "base.monkey"), `let factor = 2`)
 	writeMonkeyFile(t, filepath.Join(libDir, "math.monkey"), `
-let base = import("./base.monkey");
-let double = fn(x) int { x * base.factor; };
+let base = import("./base.monkey")
+let double = fn(x) int { x * base.factor }
 `)
 	mainPath := filepath.Join(dir, "main.monkey")
 	writeMonkeyFile(t, mainPath, `
-let math = import("./lib/math.monkey");
-math.double(21);
+let math = import("./lib/math.monkey")
+math.double(21)
 `)
 
 	env := object.NewEnvironment()
@@ -102,7 +102,7 @@ func TestEvalFileRepairsDamagedASTCache(t *testing.T) {
 
 func TestImportsAreCached(t *testing.T) {
 	dir := t.TempDir()
-	writeMonkeyFile(t, filepath.Join(dir, "module.monkey"), `let value = 1;`)
+	writeMonkeyFile(t, filepath.Join(dir, "module.monkey"), `let value = 1`)
 	env := object.NewEnvironment()
 	env.SetSourceDir(dir)
 	engine := New()
@@ -116,7 +116,7 @@ func TestImportsAreCached(t *testing.T) {
 
 func TestMissingModuleMember(t *testing.T) {
 	dir := t.TempDir()
-	writeMonkeyFile(t, filepath.Join(dir, "module.monkey"), `let present = 1;`)
+	writeMonkeyFile(t, filepath.Join(dir, "module.monkey"), `let present = 1`)
 	env := object.NewEnvironment()
 	env.SetSourceDir(dir)
 
@@ -132,8 +132,8 @@ func TestMissingModuleMember(t *testing.T) {
 
 func TestCircularImport(t *testing.T) {
 	dir := t.TempDir()
-	writeMonkeyFile(t, filepath.Join(dir, "a.monkey"), `let b = import("./b.monkey");`)
-	writeMonkeyFile(t, filepath.Join(dir, "b.monkey"), `let a = import("./a.monkey");`)
+	writeMonkeyFile(t, filepath.Join(dir, "a.monkey"), `let b = import("./b.monkey")`)
+	writeMonkeyFile(t, filepath.Join(dir, "b.monkey"), `let a = import("./a.monkey")`)
 
 	result := New().EvalFile(filepath.Join(dir, "a.monkey"), object.NewEnvironment())
 	err, ok := result.(*object.Error)

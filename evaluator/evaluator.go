@@ -102,7 +102,10 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 				function.Name = node.Name.Value
 			}
 		}
-		env.Set(node.Name.Value, val)
+		env.SetTyped(node.Name.Value, val, node.Name.Type)
+
+	case *ast.AssignmentStatement:
+		return e.evalAssignment(node, env)
 
 	case *ast.MemberAssignmentStatement:
 		return e.evalMemberAssignment(node, env)
@@ -112,6 +115,12 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 
 	case *ast.StructStatement:
 		return e.evalStructStatement(node, env)
+
+	case *ast.ForStatement:
+		return e.evalForStatement(node, env)
+
+	case *ast.WhileStatement:
+		return e.evalWhileStatement(node, env)
 
 	case *ast.Identifier:
 		return e.evalIdentifier(node, env)

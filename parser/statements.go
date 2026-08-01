@@ -14,6 +14,10 @@ func (p *Parser) parseStatement() ast.Statement {
 		return p.parseEnumStatement()
 	case token.STRUCT:
 		return p.parseStructStatement()
+	case token.FOR:
+		return p.parseForStatement()
+	case token.WHILE:
+		return p.parseWhileStatement()
 	case token.RETURN:
 		return p.parseReturnStatement()
 	default:

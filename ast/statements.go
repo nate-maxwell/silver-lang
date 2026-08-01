@@ -78,6 +78,40 @@ func (es *ExpressionStatement) String() string {
 }
 
 /* ----------------------------------------------------------------------------------------------------------
+Variable assignment statements
+---------------------------------------------------------------------------------------------------------- */
+
+// AssignmentStatement replaces the value of an existing variable binding.
+type AssignmentStatement struct {
+	Token token.Token // the = token
+	Name  *Identifier
+	Value Expression
+}
+
+func (as *AssignmentStatement) statementNode() {}
+
+func (as *AssignmentStatement) TokenLiteral() string { return as.Token.Literal }
+
+func (as *AssignmentStatement) Position() token.Position {
+	if as.Name != nil {
+		return as.Name.Position()
+	}
+	return as.Token.Position
+}
+
+func (as *AssignmentStatement) String() string {
+	var out bytes.Buffer
+	if as.Name != nil {
+		out.WriteString(as.Name.String())
+	}
+	out.WriteString(" = ")
+	if as.Value != nil {
+		out.WriteString(as.Value.String())
+	}
+	return out.String()
+}
+
+/* ----------------------------------------------------------------------------------------------------------
 Member assignment statements
 ---------------------------------------------------------------------------------------------------------- */
 

@@ -6,6 +6,25 @@ import (
 	"silver/object"
 )
 
+// evalAssignment replaces the nearest existing lexical binding. Explicit type
+// annotations from the original declaration remain enforced.
+func (e *Evaluator) evalAssignment(node *ast.AssignmentStatement, env *object.Environment) object.Object {
+	annotation, declarationEnv, ok := env.AssignmentTarget(node.Name.Value)
+	if !ok {
+		return newError("identifier not found: %s", node.Name.Value)
+	}
+
+	value := e.Eval(node.Value, env)
+	if isError(value) {
+		return value
+	}
+	if err := e.requireType(annotation, value, declarationEnv, fmt.Sprintf("binding %q", node.Name.Value)); err != nil {
+		return err
+	}
+	env.Assign(node.Name.Value, value)
+	return NULL
+}
+
 // evalMemberAssignment mutates one field on an existing struct instance after
 // enforcing the field's declared type.
 func (e *Evaluator) evalMemberAssignment(node *ast.MemberAssignmentStatement, env *object.Environment) object.Object {

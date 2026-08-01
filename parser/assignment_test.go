@@ -26,10 +26,24 @@ func TestMemberAssignmentStatement(t *testing.T) {
 	}
 }
 
-func TestAssignmentRequiresMemberTarget(t *testing.T) {
+func TestVariableAssignmentStatement(t *testing.T) {
 	p := New(lexer.New(`value = 42`))
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	statement, ok := program.Statements[0].(*ast.AssignmentStatement)
+	if !ok {
+		t.Fatalf("statement is %T, want *ast.AssignmentStatement", program.Statements[0])
+	}
+	if statement.Name.Value != "value" || statement.Value.String() != "42" {
+		t.Fatalf("unexpected assignment: %s", statement.String())
+	}
+}
+
+func TestAssignmentRejectsNonAssignableExpression(t *testing.T) {
+	p := New(lexer.New(`call() = 42`))
 	p.ParseProgram()
 	if len(p.Errors()) == 0 {
-		t.Fatal("parser accepted assignment to a non-member target")
+		t.Fatal("parser accepted a call as an assignment target")
 	}
 }

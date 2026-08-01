@@ -42,16 +42,21 @@ func (p *Parser) parseExpressionStatement() ast.Statement {
 	expression := p.parseExpression(LOWEST)
 
 	if p.peekTokenIs(token.ASSIGN) {
-		target, ok := expression.(*ast.MemberExpression)
 		p.nextToken()
-		statement := &ast.MemberAssignmentStatement{Token: p.curToken, Target: target}
-		if !ok {
-			p.addError(firstToken.Position, "invalid assignment target; expected struct member")
-		}
+		assignmentToken := p.curToken
 		p.nextToken()
-		statement.Value = p.parseExpression(LOWEST)
+		value := p.parseExpression(LOWEST)
 		p.consumeStatementEnd()
-		return statement
+
+		switch target := expression.(type) {
+		case *ast.Identifier:
+			return &ast.AssignmentStatement{Token: assignmentToken, Name: target, Value: value}
+		case *ast.MemberExpression:
+			return &ast.MemberAssignmentStatement{Token: assignmentToken, Target: target, Value: value}
+		default:
+			p.addError(firstToken.Position, "invalid assignment target; expected identifier or struct member")
+			return &ast.ExpressionStatement{Token: firstToken, Expression: expression}
+		}
 	}
 
 	stmt := &ast.ExpressionStatement{Token: firstToken, Expression: expression}

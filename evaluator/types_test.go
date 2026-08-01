@@ -150,3 +150,119 @@ makeIdentity()
 		t.Fatalf("error message is %q, want %q", got, want)
 	}
 }
+
+func TestFunctionMayReturnDeclaredErrorStruct(t *testing.T) {
+	evaluated := testEval(`
+struct FileNotFound {
+	message: str
+}
+let open = fn(found: bool) str | FileNotFound {
+	if (found) { "contents" } else { FileNotFound{"missing"} }
+}
+let describe = fn(message: str) str { message }
+describe(open(False))
+`)
+	value, ok := evaluated.(*object.String)
+	if !ok || value.Value != "missing" {
+		t.Fatalf("result is %#v, want destructured error message", evaluated)
+	}
+}
+
+func TestFunctionMayReturnSuccessFromReturnUnion(t *testing.T) {
+	evaluated := testEval(`
+struct FileNotFound { message: str }
+let open = fn() str | FileNotFound { "contents" }
+open()
+`)
+	value, ok := evaluated.(*object.String)
+	if !ok || value.Value != "contents" {
+		t.Fatalf("result is %#v, want contents", evaluated)
+	}
+}
+
+func TestLeadingPipeDeclaresNullSuccess(t *testing.T) {
+	evaluated := testEval(`
+struct PermissionDenied { message: str }
+let writeFile = fn(allowed: bool) | PermissionDenied {
+	if (allowed) { return }
+	return PermissionDenied{"denied"}
+}
+writeFile(True)
+`)
+	testNullObject(t, evaluated)
+}
+
+func TestLeadingPipeTreatsEmptyBodyAsNullSuccess(t *testing.T) {
+	evaluated := testEval(`
+struct PermissionDenied { message: str }
+let writeFile = fn() | PermissionDenied {}
+writeFile()
+`)
+	testNullObject(t, evaluated)
+}
+
+func TestLeadingPipeMayReturnErrorStruct(t *testing.T) {
+	evaluated := testEval(`
+struct PermissionDenied { message: str }
+let writeFile = fn() | PermissionDenied {
+	return PermissionDenied{"denied"}
+}
+writeFile()
+`)
+	value, ok := evaluated.(*object.StructInstance)
+	if !ok || value.Struct.Name != "PermissionDenied" {
+		t.Fatalf("result is %#v, want PermissionDenied value", evaluated)
+	}
+}
+
+func TestReturnUnionRejectsUndeclaredValue(t *testing.T) {
+	evaluated := testEval(`
+struct FileNotFound { message: str }
+let open = fn() str | FileNotFound { 42 }
+open()
+`)
+	err, ok := evaluated.(*object.Error)
+	if !ok {
+		t.Fatalf("result is %T, want *object.Error", evaluated)
+	}
+	if got, want := err.Message, `type mismatch for return value of "open": expected str | FileNotFound, got int`; got != want {
+		t.Fatalf("error message is %q, want %q", got, want)
+	}
+}
+
+func TestErrorReturnAlternativeMustBeStruct(t *testing.T) {
+	evaluated := testEval(`let invalid = fn() int | str { 1 }`)
+	err, ok := evaluated.(*object.Error)
+	if !ok {
+		t.Fatalf("result is %T, want *object.Error", evaluated)
+	}
+	if got, want := err.Message, `error return type "str" must be a struct`; got != want {
+		t.Fatalf("error message is %q, want %q", got, want)
+	}
+}
+
+func TestCallableReturnUnionAcceptsFunctionWithFewerErrors(t *testing.T) {
+	evaluated := testEval(`
+struct FileNotFound { message: str }
+let opener: call() str | FileNotFound = fn() str { "contents" }
+opener()
+`)
+	value, ok := evaluated.(*object.String)
+	if !ok || value.Value != "contents" {
+		t.Fatalf("result is %#v, want contents", evaluated)
+	}
+}
+
+func TestCallableReturnUnionRejectsUndeclaredFunctionError(t *testing.T) {
+	evaluated := testEval(`
+struct FileNotFound { message: str }
+let opener: call() str = fn() str | FileNotFound { "contents" }
+`)
+	err, ok := evaluated.(*object.Error)
+	if !ok {
+		t.Fatalf("result is %T, want *object.Error", evaluated)
+	}
+	if got, want := err.Message, `type mismatch for binding "opener": expected call() str, got call`; got != want {
+		t.Fatalf("error message is %q, want %q", got, want)
+	}
+}

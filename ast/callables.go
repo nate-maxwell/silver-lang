@@ -10,7 +10,8 @@ import (
 type FunctionLiteral struct {
 	Token      token.Token // The 'fn' token
 	Parameters []*Identifier
-	ReturnType *TypeAnnotation
+	ReturnType *TypeAnnotation   // success type; nil means null
+	ErrorTypes []*TypeAnnotation // ordinary struct values returned on failure
 	Body       *BlockStatement
 }
 
@@ -41,6 +42,10 @@ func (fl *FunctionLiteral) String() string {
 	if fl.ReturnType != nil {
 		out.WriteString(" ")
 		out.WriteString(fl.ReturnType.String())
+	}
+	for _, errorType := range fl.ErrorTypes {
+		out.WriteString(" | ")
+		out.WriteString(errorType.String())
 	}
 	out.WriteString(" ")
 	out.WriteString(fl.Body.String())

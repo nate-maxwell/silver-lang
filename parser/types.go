@@ -83,6 +83,21 @@ func (p *Parser) parseTypeAnnotationFromCurrent() *ast.TypeAnnotation {
 		if p.peekTokenIs(token.IDENT) && !p.lineBreakBeforePeek() {
 			annotation.ReturnType = p.parseTypeAnnotation()
 		}
+		annotation.ErrorTypes = p.parseErrorTypeAlternatives()
 	}
 	return annotation
+}
+
+// parseErrorTypeAlternatives consumes zero or more `| StructType` suffixes.
+func (p *Parser) parseErrorTypeAlternatives() []*ast.TypeAnnotation {
+	errorTypes := make([]*ast.TypeAnnotation, 0)
+	for p.peekTokenIs(token.PIPE) {
+		p.nextToken()
+		errorType := p.parseTypeAnnotation()
+		if errorType == nil {
+			return nil
+		}
+		errorTypes = append(errorTypes, errorType)
+	}
+	return errorTypes
 }

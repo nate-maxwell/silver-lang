@@ -270,6 +270,20 @@ func TestPowerToken(t *testing.T) {
 	}
 }
 
+func TestPipeToken(t *testing.T) {
+	l := New(`fn() str | FileNotFound | PermissionDenied {}`)
+	want := []token.TokenType{
+		token.FUNCTION, token.LPAREN, token.RPAREN, token.IDENT,
+		token.PIPE, token.IDENT, token.PIPE, token.IDENT,
+		token.LBRACE, token.RBRACE, token.EOF,
+	}
+	for index, expected := range want {
+		if got := l.NextToken(); got.Type != expected {
+			t.Fatalf("token %d has type %q, want %q", index, got.Type, expected)
+		}
+	}
+}
+
 func TestStructKeyword(t *testing.T) {
 	l := New(`struct Point { x, y }`)
 	want := []struct {

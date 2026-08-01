@@ -60,13 +60,17 @@ func (e *Evaluator) applyUserFunction(fn *object.Function, args []object.Object,
 	if isError(evaluated) {
 		return evaluated
 	}
-	// An omitted return type declares a void function. Its body still runs and
-	// explicit returns still stop control flow, but no body value escapes.
-	if fn.ReturnType == nil {
+	// A completely omitted return declaration keeps the existing void-function
+	// behavior. A leading pipe instead declares null success plus one or more
+	// struct-valued error alternatives, so its actual result must escape.
+	if fn.ReturnType == nil && len(fn.ErrorTypes) == 0 {
 		return NULL
 	}
 	evaluated = unwrapReturnValue(evaluated)
-	if err := e.requireType(fn.ReturnType, evaluated, fn.Env, fmt.Sprintf("return value of %q", contextName)); err != nil {
+	if evaluated == nil {
+		evaluated = NULL
+	}
+	if err := e.requireReturnType(fn.ReturnType, fn.ErrorTypes, evaluated, fn.Env, fmt.Sprintf("return value of %q", contextName)); err != nil {
 		return err
 	}
 	return evaluated

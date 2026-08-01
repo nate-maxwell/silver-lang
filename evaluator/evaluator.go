@@ -173,11 +173,17 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 		if err := e.validateTypeAnnotation(node.ReturnType, env); err != nil {
 			return err
 		}
+		for _, errorType := range node.ErrorTypes {
+			if err := e.validateErrorTypeAnnotation(errorType, env); err != nil {
+				return err
+			}
+		}
 		params := node.Parameters
 		body := node.Body
 		return &object.Function{
 			Parameters: params,
 			ReturnType: node.ReturnType,
+			ErrorTypes: node.ErrorTypes,
 			Env:        env,
 			Body:       body,
 		}

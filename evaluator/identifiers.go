@@ -86,5 +86,8 @@ func (e *Evaluator) evalIdentifier(node *ast.Identifier, env *object.Environment
 	if builtin, ok := e.builtins.Lookup(node.Value); ok {
 		return builtin
 	}
+	if typeDefinition, ok := object.TypeDefinitionByName(node.Value); ok {
+		return typeDefinition
+	}
 	return newError("identifier not found: %s", node.Value)
 }

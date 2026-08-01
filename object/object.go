@@ -28,6 +28,7 @@ const (
 	ENUM_VALUE_OBJ   = "ENUM_VALUE"
 	STRUCT_OBJ       = "STRUCT"
 	STRUCT_VALUE_OBJ = "STRUCT_VALUE"
+	TYPE_OBJ         = "TYPE"
 )
 
 // Object is any value that can exist at runtime in a Silver program.
@@ -60,6 +61,7 @@ type Function struct {
 	Name       string
 	Parameters []*ast.Identifier
 	ReturnType *ast.TypeAnnotation
+	ErrorTypes []*ast.TypeAnnotation
 	Body       *ast.BlockStatement
 	Env        *Environment
 }
@@ -84,6 +86,10 @@ func (f *Function) Inspect() string {
 	if f.ReturnType != nil {
 		out.WriteString(" ")
 		out.WriteString(f.ReturnType.String())
+	}
+	for _, errorType := range f.ErrorTypes {
+		out.WriteString(" | ")
+		out.WriteString(errorType.String())
 	}
 	out.WriteString(" {\n")
 	out.WriteString(f.Body.String())

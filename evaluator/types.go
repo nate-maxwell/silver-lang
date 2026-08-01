@@ -37,7 +37,14 @@ func (e *Evaluator) validateTypeAnnotation(annotation *ast.TypeAnnotation, env *
 			}
 		}
 		if annotation.ReturnType != nil {
-			return e.validateTypeAnnotation(annotation.ReturnType, env)
+			if err := e.validateTypeAnnotation(annotation.ReturnType, env); err != nil {
+				return err
+			}
+		}
+		for _, errorType := range annotation.ErrorTypes {
+			if err := e.validateErrorTypeAnnotation(errorType, env); err != nil {
+				return err
+			}
 		}
 		return nil
 	}
@@ -56,6 +63,70 @@ func (e *Evaluator) validateTypeAnnotation(annotation *ast.TypeAnnotation, env *
 	default:
 		return newError("%q does not name a value type", annotation.String())
 	}
+}
+
+// validateErrorTypeAnnotation enforces that every failure alternative is a
+// nominal struct type. Error values themselves need no privileged runtime tag.
+func (e *Evaluator) validateErrorTypeAnnotation(annotation *ast.TypeAnnotation, env *object.Environment) *object.Error {
+	if annotation == nil {
+		return newError("error return type must be a struct")
+	}
+	if err := e.validateTypeAnnotation(annotation, env); err != nil {
+		return err
+	}
+	_, primitive := primitiveTypes[annotation.String()]
+	if annotation.IsCallSignature() || len(annotation.Parts) == 1 && primitive {
+		return newError("error return type %q must be a struct", annotation.String())
+	}
+	value, resolutionError := resolveNamedType(annotation, env)
+	if resolutionError != "" {
+		return newError("%s", resolutionError)
+	}
+	if _, ok := value.(*object.Struct); !ok {
+		return newError("error return type %q must be a struct", annotation.String())
+	}
+	return nil
+}
+
+// requireReturnType accepts the declared success type or any declared error
+// struct type. A nil success annotation in a union denotes null.
+func (e *Evaluator) requireReturnType(success *ast.TypeAnnotation, errorTypes []*ast.TypeAnnotation, value object.Object, env *object.Environment, subject string) *object.Error {
+	if success == nil {
+		if value == NULL {
+			return nil
+		}
+	} else {
+		matches, resolutionError := typeMatches(success, value, env)
+		if resolutionError != "" {
+			return newError("%s", resolutionError)
+		}
+		if matches {
+			return nil
+		}
+	}
+	for _, errorType := range errorTypes {
+		matches, resolutionError := typeMatches(errorType, value, env)
+		if resolutionError != "" {
+			return newError("%s", resolutionError)
+		}
+		if matches {
+			return nil
+		}
+	}
+	return newError("type mismatch for %s: expected %s, got %s", subject, returnTypesString(success, errorTypes), runtimeTypeName(value))
+}
+
+func returnTypesString(success *ast.TypeAnnotation, errorTypes []*ast.TypeAnnotation) string {
+	parts := make([]string, 0, len(errorTypes)+1)
+	if success == nil {
+		parts = append(parts, "null")
+	} else {
+		parts = append(parts, success.String())
+	}
+	for _, errorType := range errorTypes {
+		parts = append(parts, errorType.String())
+	}
+	return strings.Join(parts, " | ")
 }
 
 // typeMatches handles primitive aliases directly and resolves all other names
@@ -121,7 +192,7 @@ func runtimeFunctionMatches(expected *ast.TypeAnnotation, actual *object.Functio
 		}
 	}
 
-	return callReturnAssignable(expected.ReturnType, actual.ReturnType, expectedEnv, actual.Env)
+	return callReturnsAssignable(expected.ReturnType, expected.ErrorTypes, actual.ReturnType, actual.ErrorTypes, expectedEnv, actual.Env)
 }
 
 // annotationAssignable reports whether every value described by source is
@@ -148,7 +219,7 @@ func annotationAssignable(target, source *ast.TypeAnnotation, targetEnv, sourceE
 				return matches, resolutionError
 			}
 		}
-		return callReturnAssignable(target.ReturnType, source.ReturnType, targetEnv, sourceEnv)
+		return callReturnsAssignable(target.ReturnType, target.ErrorTypes, source.ReturnType, source.ErrorTypes, targetEnv, sourceEnv)
 	}
 	if source.IsCallSignature() {
 		return isPrimitiveAnnotation(target, "call"), ""
@@ -193,6 +264,33 @@ func callReturnAssignable(target, source *ast.TypeAnnotation, targetEnv, sourceE
 		return isPrimitiveAnnotation(target, "null"), ""
 	}
 	return annotationAssignable(target, source, targetEnv, sourceEnv)
+}
+
+// callReturnsAssignable is covariant across callable results. The source's
+// success value must fit the target success type, and every source error must
+// be included in the target's accepted error alternatives.
+func callReturnsAssignable(targetSuccess *ast.TypeAnnotation, targetErrors []*ast.TypeAnnotation, sourceSuccess *ast.TypeAnnotation, sourceErrors []*ast.TypeAnnotation, targetEnv, sourceEnv *object.Environment) (bool, string) {
+	matches, resolutionError := callReturnAssignable(targetSuccess, sourceSuccess, targetEnv, sourceEnv)
+	if resolutionError != "" || !matches {
+		return matches, resolutionError
+	}
+	for _, sourceError := range sourceErrors {
+		accepted := false
+		for _, targetError := range targetErrors {
+			matches, resolutionError = annotationAssignable(targetError, sourceError, targetEnv, sourceEnv)
+			if resolutionError != "" {
+				return false, resolutionError
+			}
+			if matches {
+				accepted = true
+				break
+			}
+		}
+		if !accepted {
+			return false, ""
+		}
+	}
+	return true, ""
 }
 
 func isPrimitiveAnnotation(annotation *ast.TypeAnnotation, name string) bool {
@@ -261,4 +359,5 @@ var sourceTypeNames = map[object.ObjectType]string{
 	object.HASH_OBJ:     "hash",
 	object.FUNCTION_OBJ: "call",
 	object.MODULE_OBJ:   "module",
+	object.TYPE_OBJ:     "type",
 }

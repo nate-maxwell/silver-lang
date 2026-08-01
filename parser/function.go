@@ -19,6 +19,10 @@ func (p *Parser) parseFunctionLitearl() ast.Expression {
 			return nil
 		}
 	}
+	lit.ErrorTypes = p.parseErrorTypeAlternatives()
+	if lit.ErrorTypes == nil && p.curTokenIs(token.PIPE) {
+		return nil
+	}
 
 	if !p.expectPeek(token.LBRACE) {
 		return nil

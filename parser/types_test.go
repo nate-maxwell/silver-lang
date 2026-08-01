@@ -74,3 +74,45 @@ func TestCallSignatureMayOmitNullReturnType(t *testing.T) {
 		t.Fatalf("signature is %q, want %q", got, want)
 	}
 }
+
+func TestFunctionReturnTypeAlternatives(t *testing.T) {
+	p := New(lexer.New(`fn(filepath: str) str | FileNotFound | io.PermissionDenied {}`))
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	function := program.Statements[0].(*ast.ExpressionStatement).Expression.(*ast.FunctionLiteral)
+	if got, want := function.ReturnType.String(), "str"; got != want {
+		t.Fatalf("success type is %q, want %q", got, want)
+	}
+	if len(function.ErrorTypes) != 2 || function.ErrorTypes[0].String() != "FileNotFound" || function.ErrorTypes[1].String() != "io.PermissionDenied" {
+		t.Fatalf("error types are %v", function.ErrorTypes)
+	}
+	if got, want := function.String(), "fn(filepath: str) str | FileNotFound | io.PermissionDenied "; len(got) < len(want) || got[:len(want)] != want {
+		t.Fatalf("function string is %q, want prefix %q", got, want)
+	}
+}
+
+func TestFunctionReturnUnionMayOmitNullSuccessType(t *testing.T) {
+	p := New(lexer.New(`fn(filepath: str) | PermissionDenied {}`))
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	function := program.Statements[0].(*ast.ExpressionStatement).Expression.(*ast.FunctionLiteral)
+	if function.ReturnType != nil {
+		t.Fatalf("success type is %v, want implicit null", function.ReturnType)
+	}
+	if len(function.ErrorTypes) != 1 || function.ErrorTypes[0].String() != "PermissionDenied" {
+		t.Fatalf("error types are %v", function.ErrorTypes)
+	}
+}
+
+func TestCallSignatureReturnTypeAlternatives(t *testing.T) {
+	p := New(lexer.New(`let opener: call(str) str | FileNotFound = fn(filepath: str) str { filepath }`))
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	signature := program.Statements[0].(*ast.LetStatement).Name.Type
+	if got, want := signature.String(), "call(str) str | FileNotFound"; got != want {
+		t.Fatalf("signature is %q, want %q", got, want)
+	}
+}

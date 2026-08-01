@@ -43,6 +43,7 @@ const (
 	// Operators
 	ASSIGN = "="
 	BANG   = "!"
+	PIPE   = "|"
 
 	PLUS     = "+"
 	MINUS    = "-"

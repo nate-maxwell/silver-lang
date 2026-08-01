@@ -8,14 +8,16 @@ import (
 
 // TypeAnnotation is a primitive or qualified nominal type name, such as int
 // or geometry.Point. Callable signatures may name parameters, and an omitted
-// ReturnType means null; a nil ParameterTypes slice distinguishes bare call
-// from call().
+// ReturnType means null; ErrorTypes are the ordinary struct-valued failure
+// alternatives following it. A nil ParameterTypes slice distinguishes bare
+// call from call().
 type TypeAnnotation struct {
 	Token          token.Token // the first identifier in the type name
 	Parts          []string
 	ParameterNames []string
 	ParameterTypes []*TypeAnnotation
 	ReturnType     *TypeAnnotation
+	ErrorTypes     []*TypeAnnotation
 }
 
 // Position returns the first type-name component's position.
@@ -49,6 +51,10 @@ func (ta *TypeAnnotation) String() string {
 	if ta.ReturnType != nil {
 		out.WriteString(" ")
 		out.WriteString(ta.ReturnType.String())
+	}
+	for _, errorType := range ta.ErrorTypes {
+		out.WriteString(" | ")
+		out.WriteString(errorType.String())
 	}
 	return out.String()
 }

@@ -7,7 +7,17 @@ import "silver/object"
 func coreDefinitions() []definition {
 	return []definition{
 		{name: "len", fn: builtinLen},
+		{name: "type", fn: builtinType},
 	}
+}
+
+// builtinType returns a first-class primitive type or the nominal definition
+// associated with a struct or enum value.
+func builtinType(args ...object.Object) object.Object {
+	if err := requireArgumentCount(args, 1); err != nil {
+		return err
+	}
+	return object.TypeOf(args[0])
 }
 
 // builtinLen returns the number of elements in an array or the number of bytes

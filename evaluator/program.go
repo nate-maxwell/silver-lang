@@ -8,6 +8,7 @@ import (
 // evalProgram evaluates top-level statements in order, stopping immediately on
 // a return or error object.
 func (e *Evaluator) evalProgram(program *ast.Program, env *object.Environment) object.Object {
+	defer e.finishTasks(env)
 	var result object.Object
 
 	for _, statement := range program.Statements {

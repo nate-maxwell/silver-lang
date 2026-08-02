@@ -360,4 +360,5 @@ var sourceTypeNames = map[object.ObjectType]string{
 	object.FUNCTION_OBJ: "call",
 	object.MODULE_OBJ:   "module",
 	object.TYPE_OBJ:     "type",
+	object.TASK_OBJ:     "task",
 }

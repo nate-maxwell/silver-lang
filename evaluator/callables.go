@@ -51,6 +51,7 @@ func (e *Evaluator) applyUserFunction(fn *object.Function, args []object.Object,
 		return err
 	}
 	extendedEnv := extendFunctionEnv(fn, boundArgs)
+	defer e.finishTasks(extendedEnv)
 	if contextName == "" {
 		contextName = "<anonymous>"
 	}
@@ -118,7 +119,7 @@ func (e *Evaluator) bindFunctionArguments(fn *object.Function, args []object.Obj
 				continue
 			}
 			candidate := fn.Parameters[index]
-			fieldValue, ok := structValue.Values[candidate.Value]
+			fieldValue, ok := structValue.Get(candidate.Value)
 			if !ok {
 				continue
 			}

@@ -82,24 +82,28 @@ const (
 	FOR      = "FOR"
 	IN       = "IN"
 	WHILE    = "WHILE"
+	TASK     = "TASK"
+	COLLECT  = "COLLECT"
 )
 
 // keywords maps reserved source words to their specialized token types. Any
 // word absent from this table is treated as an identifier.
 var keywords = map[string]TokenType{
-	"fn":     FUNCTION,
-	"let":    LET,
-	"True":   TRUE,
-	"False":  FALSE,
-	"if":     IF,
-	"else":   ELSE,
-	"return": RETURN,
-	"import": IMPORT,
-	"enum":   ENUM,
-	"struct": STRUCT,
-	"for":    FOR,
-	"in":     IN,
-	"while":  WHILE,
+	"fn":      FUNCTION,
+	"let":     LET,
+	"True":    TRUE,
+	"False":   FALSE,
+	"if":      IF,
+	"else":    ELSE,
+	"return":  RETURN,
+	"import":  IMPORT,
+	"enum":    ENUM,
+	"struct":  STRUCT,
+	"for":     FOR,
+	"in":      IN,
+	"while":   WHILE,
+	"task":    TASK,
+	"collect": COLLECT,
 }
 
 // LookupIdent classifies an identifier as a reserved keyword or a normal

@@ -56,7 +56,7 @@ func (e *Evaluator) evalMemberAssignment(node *ast.MemberAssignmentStatement, en
 	if err := e.requireType(instance.Struct.FieldTypes[fieldIndex], value, instance.Struct.Env, fmt.Sprintf("field %q", instance.Struct.Name+"."+member)); err != nil {
 		return err
 	}
-	instance.Values[member] = value
+	instance.Set(member, value)
 	return NULL
 }
 
@@ -76,12 +76,13 @@ func evalMember(value object.Object, member string) object.Object {
 		}
 		return enumValue
 	case *object.StructInstance:
-		field, ok := value.Values[member]
+		field, ok := value.Get(member)
 		if !ok {
 			return newError("struct %q has no field %q", value.Struct.Name, member)
 		}
 		for index, fieldName := range value.Struct.Fields {
-			if fieldName != member || !value.Struct.FieldTypes[index].IsCallSignature() {
+			fieldType := value.Struct.FieldTypes[index]
+			if fieldName != member || fieldType == nil || !fieldType.IsCallSignature() {
 				continue
 			}
 			function, ok := field.(*object.Function)

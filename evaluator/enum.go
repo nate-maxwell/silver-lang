@@ -14,11 +14,11 @@ func (e *Evaluator) evalEnumStatement(node *ast.EnumStatement, env *object.Envir
 		if _, exists := members[member.Value]; exists {
 			return newError("duplicate enum member %q", member.Value)
 		}
-		e.nextEnumValueID++
+		hashID := e.nextEnumValueID.Add(1)
 		members[member.Value] = &object.EnumValue{
 			EnumName: node.Name.Value,
 			Member:   member.Value,
-			HashID:   e.nextEnumValueID,
+			HashID:   hashID,
 			Enum:     enum,
 		}
 	}

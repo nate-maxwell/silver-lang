@@ -7,6 +7,8 @@ import (
 	"silver/ast"
 	builtinpkg "silver/evaluator/builtins"
 	"silver/object"
+	"sync"
+	"sync/atomic"
 )
 
 // NULL is the canonical null singleton used by identity-based truthiness.
@@ -21,9 +23,23 @@ type Evaluator struct {
 	modules   map[string]*object.Module // filepath to module
 	loading   map[string]bool           // module load state | circular import detection
 	contexts  []string                  // active Silver function/module names
+	warnings  io.Writer                 // scope-exit task diagnostics
 	// nextEnumValueID gives every evaluated enum member a session-unique hash
 	// identity, even when separate modules declare enums with the same names.
-	nextEnumValueID uint64
+	nextEnumValueID *atomic.Uint64
+}
+
+// synchronizedWriter makes builtin output and warnings safe when tasks write
+// from multiple goroutines.
+type synchronizedWriter struct {
+	mu sync.Mutex
+	w  io.Writer
+}
+
+func (w *synchronizedWriter) Write(p []byte) (int, error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.w.Write(p)
 }
 
 // New constructs an evaluator whose print builtin writes to standard output.
@@ -37,12 +53,52 @@ func NewWithOutput(out io.Writer) *Evaluator {
 	if out == nil {
 		out = io.Discard
 	}
+	safe := &synchronizedWriter{w: out}
+	return newEvaluator(safe, safe)
+}
+
+// NewWithWriters constructs an evaluator with separate program-output and
+// warning destinations. The CLI uses stderr for warnings while the REPL keeps
+// all diagnostics in its single output stream.
+func NewWithWriters(out, warnings io.Writer) *Evaluator {
+	if out == nil {
+		out = io.Discard
+	}
+	if warnings == nil {
+		warnings = io.Discard
+	}
+	safeOut := &synchronizedWriter{w: out}
+	safeWarnings := &synchronizedWriter{w: warnings}
+	return newEvaluator(safeOut, safeWarnings)
+}
+
+func newEvaluator(out, warnings io.Writer) *Evaluator {
 	return &Evaluator{
-		builtins:  builtinpkg.New(out, NULL),
-		constants: newConstantPool(),
-		modules:   make(map[string]*object.Module),
-		loading:   make(map[string]bool),
-		contexts:  make([]string, 0),
+		builtins:        builtinpkg.New(out, NULL),
+		constants:       newConstantPool(),
+		modules:         make(map[string]*object.Module),
+		loading:         make(map[string]bool),
+		contexts:        make([]string, 0),
+		warnings:        warnings,
+		nextEnumValueID: &atomic.Uint64{},
+	}
+}
+
+// fork gives a task independent mutable evaluator state while sharing the
+// immutable builtin registry, synchronized output, and enum identity source.
+func (e *Evaluator) fork() *Evaluator {
+	modules := make(map[string]*object.Module, len(e.modules))
+	for path, module := range e.modules {
+		modules[path] = module
+	}
+	return &Evaluator{
+		builtins:        e.builtins,
+		constants:       newConstantPool(),
+		modules:         modules,
+		loading:         make(map[string]bool),
+		contexts:        append([]string(nil), e.contexts...),
+		warnings:        e.warnings,
+		nextEnumValueID: e.nextEnumValueID,
 	}
 }
 
@@ -101,6 +157,9 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 			if function.Name == "" {
 				function.Name = node.Name.Value
 			}
+		}
+		if task, ok := val.(*object.Task); ok {
+			task.SetName(node.Name.Value)
 		}
 		env.SetTyped(node.Name.Value, val, node.Name.Type)
 
@@ -249,6 +308,12 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 
 	case *ast.HashLiteral:
 		return e.evalHashLiteral(node, env)
+
+	case *ast.TaskExpression:
+		return e.evalTaskExpression(node, env)
+
+	case *ast.CollectExpression:
+		return e.evalCollectExpression(node, env)
 	}
 
 	return nil

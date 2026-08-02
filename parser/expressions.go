@@ -1,9 +1,66 @@
 package parser
 
 import (
+	"fmt"
 	"silver/ast"
 	"silver/token"
 )
+
+// parseTaskExpression accepts task(call(...)) and task { ... }. Restricting
+// the parenthesized form to a call catches accidental eager-looking scalar
+// expressions before evaluation begins.
+func (p *Parser) parseTaskExpression() ast.Expression {
+	expression := &ast.TaskExpression{Token: p.curToken}
+
+	if p.peekTokenIs(token.LBRACE) {
+		p.nextToken()
+		expression.Body = p.parseBlockStatement()
+		return expression
+	}
+	if !p.expectPeek(token.LPAREN) {
+		return nil
+	}
+	arguments := p.parseExpressionList(token.RPAREN)
+	if len(arguments) != 1 {
+		p.addError(expression.Position(), fmt.Sprintf("TaskArgumentError: task expects exactly one function call, got %d", len(arguments)))
+		return expression
+	}
+	if _, ok := arguments[0].(*ast.CallExpression); !ok {
+		p.addError(arguments[0].Position(), "TaskArgumentError: task expects a function call or block")
+		return expression
+	}
+	expression.Call = arguments[0]
+	return expression
+}
+
+// parseCollectExpression requires identifier arguments so result field names
+// are known at the call site rather than synthesized at runtime.
+func (p *Parser) parseCollectExpression() ast.Expression {
+	expression := &ast.CollectExpression{Token: p.curToken}
+	if !p.expectPeek(token.LPAREN) {
+		return nil
+	}
+	arguments := p.parseExpressionList(token.RPAREN)
+	if len(arguments) == 0 {
+		p.addError(expression.Position(), "CollectArgumentError: collect expects at least one task handle")
+		return expression
+	}
+	seen := make(map[string]bool, len(arguments))
+	for _, argument := range arguments {
+		identifier, ok := argument.(*ast.Identifier)
+		if !ok {
+			p.addError(argument.Position(), "CannotCollectExpressionError: collect arguments must be named identifiers")
+			continue
+		}
+		if seen[identifier.Value] {
+			p.addError(identifier.Position(), fmt.Sprintf("TaskAlreadyCollectedError: task handle %q is collected more than once", identifier.Value))
+			continue
+		}
+		seen[identifier.Value] = true
+		expression.Handles = append(expression.Handles, identifier)
+	}
+	return expression
+}
 
 // parseExpression is the Pratt parser core. It parses one prefix expression,
 // then repeatedly consumes tighter-binding infix expressions.

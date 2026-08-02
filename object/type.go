@@ -24,6 +24,7 @@ var (
 	arrayType  = &TypeDefinition{Name: "array", ObjectType: ARRAY_OBJ}
 	hashType   = &TypeDefinition{Name: "hash", ObjectType: HASH_OBJ}
 	moduleType = &TypeDefinition{Name: "module", ObjectType: MODULE_OBJ}
+	taskType   = &TypeDefinition{Name: "task", ObjectType: TASK_OBJ}
 )
 
 var primitiveTypeDefinitions = map[ObjectType]*TypeDefinition{
@@ -37,6 +38,7 @@ var primitiveTypeDefinitions = map[ObjectType]*TypeDefinition{
 	ARRAY_OBJ:    arrayType,
 	HASH_OBJ:     hashType,
 	MODULE_OBJ:   moduleType,
+	TASK_OBJ:     taskType,
 }
 
 var namedTypeDefinitions = map[string]*TypeDefinition{

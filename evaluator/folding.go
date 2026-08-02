@@ -106,6 +106,15 @@ func foldExpressionConstants(expression ast.Expression) ast.Expression {
 
 	case *ast.MemberExpression:
 		node.Object = foldExpressionConstants(node.Object)
+
+	case *ast.TaskExpression:
+		node.Call = foldExpressionConstants(node.Call)
+		if node.Body != nil {
+			foldStatementConstants(node.Body)
+		}
+
+	case *ast.CollectExpression:
+		// Handles are identifiers, so there are no constant children to fold.
 	}
 
 	return expression

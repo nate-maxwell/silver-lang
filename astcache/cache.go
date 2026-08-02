@@ -18,7 +18,7 @@ import (
 const (
 	// Version must change whenever the serialized AST representation or the
 	// parse/optimization pipeline changes.
-	Version uint32 = 12
+	Version uint32 = 13
 
 	cacheSuffix   = ".astc"
 	maxPathLength = 1 << 20
@@ -57,6 +57,8 @@ func init() {
 	gob.Register(&ast.PrefixExpression{})
 	gob.Register(&ast.StringLiteral{})
 	gob.Register(&ast.StructLiteral{})
+	gob.Register(&ast.TaskExpression{})
+	gob.Register(&ast.CollectExpression{})
 }
 
 // Path returns the cache filename associated with a source file.

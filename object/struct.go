@@ -3,6 +3,7 @@ package object
 import (
 	"silver/ast"
 	"strings"
+	"sync"
 )
 
 // Struct is the constructor and field layout bound by a struct declaration.
@@ -24,6 +25,7 @@ func (s *Struct) Inspect() string { return "<struct " + s.Name + ">" }
 type StructInstance struct {
 	Struct *Struct
 	Values map[string]Object
+	mu     sync.RWMutex
 }
 
 // BoundMethod pairs a callable struct field with the instance that supplied
@@ -45,9 +47,26 @@ func (s *StructInstance) Type() ObjectType { return STRUCT_VALUE_OBJ }
 
 // Inspect renders a value using the struct's declared field order.
 func (s *StructInstance) Inspect() string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	fields := make([]string, 0, len(s.Struct.Fields))
 	for _, name := range s.Struct.Fields {
 		fields = append(fields, name+": "+s.Values[name].Inspect())
 	}
 	return s.Struct.Name + " { " + strings.Join(fields, ", ") + " }"
+}
+
+// Get returns one field using synchronization suitable for task sharing.
+func (s *StructInstance) Get(name string) (Object, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	value, ok := s.Values[name]
+	return value, ok
+}
+
+// Set replaces one field using synchronization suitable for task sharing.
+func (s *StructInstance) Set(name string, value Object) {
+	s.mu.Lock()
+	s.Values[name] = value
+	s.mu.Unlock()
 }

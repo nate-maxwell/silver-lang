@@ -10,10 +10,13 @@ import (
 func TestTaskCollectReturnsNamedNonNullResults(t *testing.T) {
 	result := testEval(`
 let double = fn(value: int) int { value * 2 }
-let a = task(double(2))
-let b = task { double(5) }
-let c = task(print("side effect"))
-let results = collect(a, b, c)
+let work_a = fn() int { double(2) }
+let work_b = fn() int { double(5) }
+let work_c = fn() { print("side effect") }
+let a = task work_a
+let b = task work_b
+let c = task work_c
+let results = collect a, b, c
 results
 `)
 	collected, ok := result.(*object.StructInstance)
@@ -39,20 +42,29 @@ func TestTaskPreservesErrorStructAsFieldValue(t *testing.T) {
 	result := testEval(`
 struct FileNotFound { message: str }
 let read = fn() str | FileNotFound { FileNotFound{"missing"} }
-let a = task(read())
-let results = collect(a)
+let a = task read
+let results = collect a
 type(results.a) == FileNotFound
 `)
 	testBooleanObject(t, result, true)
+}
+
+func TestTaskInvokesAnonymousFunction(t *testing.T) {
+	result := testEval(`
+let handle = task fn() int { 42 }
+let results = collect handle
+results.handle
+`)
+	testIntegerObject(t, result, 42)
 }
 
 func TestTaskHoldsRuntimeErrorUntilCollect(t *testing.T) {
 	var out bytes.Buffer
 	result := evalInput(t, NewWithOutput(&out), object.NewEnvironment(), `
 let fail = fn() int { 1 + True }
-let bad = task(fail())
+let bad = task fail
 print("continued")
-collect(bad)
+collect bad
 `)
 	err, ok := result.(*object.Error)
 	if !ok || !strings.Contains(err.Message, "type mismatch") {
@@ -67,7 +79,7 @@ func TestUncollectedTaskWarnsAndIsJoinedAtScopeExit(t *testing.T) {
 	var out, warnings bytes.Buffer
 	result := evalInput(t, NewWithWriters(&out, &warnings), object.NewEnvironment(), `
 let work = fn() { print("finished") }
-let abandoned = task(work())
+let abandoned = task work
 42
 `)
 	testIntegerObject(t, result, 42)

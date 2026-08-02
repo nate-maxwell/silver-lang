@@ -5,22 +5,18 @@ import (
 	"strings"
 )
 
-// TaskExpression launches either a call or a block concurrently.
+// TaskExpression launches a zero-argument callable reference concurrently.
 type TaskExpression struct {
 	Token token.Token
-	Call  Expression
-	Body  *BlockStatement
+	Work  Expression
 }
 
 func (te *TaskExpression) expressionNode()          {}
 func (te *TaskExpression) TokenLiteral() string     { return te.Token.Literal }
 func (te *TaskExpression) Position() token.Position { return te.Token.Position }
 func (te *TaskExpression) String() string {
-	if te.Body != nil {
-		return "task { " + te.Body.String() + " }"
-	}
-	if te.Call != nil {
-		return "task(" + te.Call.String() + ")"
+	if te.Work != nil {
+		return "task " + te.Work.String()
 	}
 	return "task"
 }
@@ -40,5 +36,5 @@ func (ce *CollectExpression) String() string {
 	for index, handle := range ce.Handles {
 		names[index] = handle.String()
 	}
-	return "collect(" + strings.Join(names, ", ") + ")"
+	return "collect " + strings.Join(names, ", ")
 }

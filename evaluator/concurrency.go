@@ -18,11 +18,14 @@ func (e *Evaluator) evalTaskExpression(node *ast.TaskExpression, env *object.Env
 		// Handshake before evaluation makes task start order match declaration
 		// order without waiting for any task to complete.
 		close(started)
-		var result object.Object
-		if node.Body != nil {
-			result = taskEvaluator.Eval(node.Body, env)
-		} else {
-			result = taskEvaluator.Eval(node.Call, env)
+		callable := taskEvaluator.Eval(node.Work, env)
+		var result object.Object = callable
+		if !isError(callable) {
+			result = taskEvaluator.applyFunction(callable, nil)
+			taskEvaluator.prependCallerFrame(result, node)
+			if err, ok := result.(*object.Error); ok {
+				err.SetOrigin(taskEvaluator.traceFrame(node))
+			}
 		}
 		result = unwrapReturnValue(result)
 		if result == nil {

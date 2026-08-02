@@ -76,10 +76,7 @@ func (p *Parser) validateTaskExpression(expression ast.Expression, bindings map[
 	}
 	switch node := expression.(type) {
 	case *ast.TaskExpression:
-		p.validateTaskExpression(node.Call, cloneTaskBindings(bindings))
-		if node.Body != nil {
-			p.validateTaskStatements(node.Body.Statements, cloneTaskBindings(bindings))
-		}
+		p.validateTaskExpression(node.Work, cloneTaskBindings(bindings))
 	case *ast.CollectExpression:
 		for _, identifier := range node.Handles {
 			handle, ok := bindings[identifier.Value]

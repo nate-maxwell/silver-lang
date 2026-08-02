@@ -6,58 +6,73 @@ import (
 	"silver/token"
 )
 
-// parseTaskExpression accepts task(call(...)) and task { ... }. Restricting
-// the parenthesized form to a call catches accidental eager-looking scalar
-// expressions before evaluation begins.
+// parseTaskExpression accepts an unparenthesized callable reference, such as
+// task work or task service.work. The evaluator invokes it with no arguments.
 func (p *Parser) parseTaskExpression() ast.Expression {
 	expression := &ast.TaskExpression{Token: p.curToken}
-
-	if p.peekTokenIs(token.LBRACE) {
-		p.nextToken()
-		expression.Body = p.parseBlockStatement()
-		return expression
-	}
-	if !p.expectPeek(token.LPAREN) {
+	if p.peekTokenIs(token.LPAREN) || p.peekTokenIs(token.LBRACE) {
+		p.addError(p.peekToken.Position, "TaskTargetError: task expects an unparenthesized callable name")
 		return nil
 	}
-	arguments := p.parseExpressionList(token.RPAREN)
-	if len(arguments) != 1 {
-		p.addError(expression.Position(), fmt.Sprintf("TaskArgumentError: task expects exactly one function call, got %d", len(arguments)))
+	if p.peekTokenIs(token.EOF) || p.peekTokenIs(token.RBRACE) || p.lineBreakBeforePeek() {
+		p.addError(expression.Position(), "TaskTargetError: task expects a callable name")
+		return nil
+	}
+	p.nextToken()
+	expression.Work = p.parseExpression(PREFIX)
+	if expression.Work == nil {
+		p.addError(expression.Position(), "TaskTargetError: task expects a callable name")
 		return expression
 	}
-	if _, ok := arguments[0].(*ast.CallExpression); !ok {
-		p.addError(arguments[0].Position(), "TaskArgumentError: task expects a function call or block")
+	switch expression.Work.(type) {
+	case *ast.Identifier, *ast.MemberExpression:
+		return expression
+	case *ast.FunctionLiteral:
+		function := expression.Work.(*ast.FunctionLiteral)
+		if len(function.Parameters) != 0 {
+			p.addError(function.Position(), "TaskTargetError: anonymous task functions must have no parameters")
+		}
+		return expression
+	default:
+		p.addError(expression.Work.Position(), "TaskTargetError: task expects a callable name")
 		return expression
 	}
-	expression.Call = arguments[0]
-	return expression
 }
 
-// parseCollectExpression requires identifier arguments so result field names
-// are known at the call site rather than synthesized at runtime.
+// parseCollectExpression accepts an unparenthesized, comma-separated list of
+// identifiers so their names can become result fields.
 func (p *Parser) parseCollectExpression() ast.Expression {
 	expression := &ast.CollectExpression{Token: p.curToken}
-	if !p.expectPeek(token.LPAREN) {
+	if p.peekTokenIs(token.LPAREN) {
+		p.addError(p.peekToken.Position, "CollectSyntaxError: collect handles must not be parenthesized")
 		return nil
 	}
-	arguments := p.parseExpressionList(token.RPAREN)
-	if len(arguments) == 0 {
+	if p.peekTokenIs(token.EOF) || p.peekTokenIs(token.RBRACE) || p.lineBreakBeforePeek() {
 		p.addError(expression.Position(), "CollectArgumentError: collect expects at least one task handle")
 		return expression
 	}
-	seen := make(map[string]bool, len(arguments))
-	for _, argument := range arguments {
-		identifier, ok := argument.(*ast.Identifier)
-		if !ok {
-			p.addError(argument.Position(), "CannotCollectExpressionError: collect arguments must be named identifiers")
-			continue
+
+	seen := make(map[string]bool)
+	for {
+		if !p.expectPeek(token.IDENT) {
+			p.addError(p.peekToken.Position, "CannotCollectExpressionError: collect arguments must be named identifiers")
+			return expression
 		}
+		identifier := &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
 		if seen[identifier.Value] {
 			p.addError(identifier.Position(), fmt.Sprintf("TaskAlreadyCollectedError: task handle %q is collected more than once", identifier.Value))
-			continue
+		} else {
+			seen[identifier.Value] = true
+			expression.Handles = append(expression.Handles, identifier)
 		}
-		seen[identifier.Value] = true
-		expression.Handles = append(expression.Handles, identifier)
+
+		if !p.peekTokenIs(token.COMMA) {
+			break
+		}
+		p.nextToken()
+	}
+	if p.peekTokenIs(token.LPAREN) || p.peekTokenIs(token.DOT) || p.peekTokenIs(token.LBRACKET) {
+		p.addError(p.peekToken.Position, "CannotCollectExpressionError: collect arguments must be named identifiers")
 	}
 	return expression
 }

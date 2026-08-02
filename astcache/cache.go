@@ -18,7 +18,7 @@ import (
 const (
 	// Version must change whenever the serialized AST representation or the
 	// parse/optimization pipeline changes.
-	Version uint32 = 13
+	Version uint32 = 14
 
 	cacheSuffix   = ".astc"
 	maxPathLength = 1 << 20

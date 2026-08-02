@@ -9,13 +9,18 @@ import (
 // Adding or replacing an entry here changes only struct dispatch; primitive
 // operator behavior remains in the existing type-specific evaluators.
 var structInfixOperatorMethods = map[string]string{
-	"+":  "add",
-	"-":  "sub",
-	"*":  "mul",
-	"/":  "div",
+	// Arithmetic operators
+	"+": "add",
+	"-": "sub",
+	"*": "mul",
+	"/": "div",
+
 	"**": "pow",
+
+	// Comparison operators
 	"==": "eq",
 	"!=": "not_eq",
+
 	"<":  "lt",
 	">":  "gt",
 	"<=": "lte",

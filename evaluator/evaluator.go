@@ -221,7 +221,7 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 			return right
 		}
 
-		return evalInfixExpression(node.Operator, left, right)
+		return e.evalInfixExpression(node, left, right)
 
 	case *ast.IntegerLiteral:
 		return e.constants.integer(node.Value)

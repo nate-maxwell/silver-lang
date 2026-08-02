@@ -16,6 +16,8 @@ func TestFoldConstants(t *testing.T) {
 		{"1 + 2 * 3", expectFoldedInteger(7)},
 		{"(1 + 2) * 3.0", expectFoldedFloat(9)},
 		{"1 < 2 == True", expectFoldedBoolean(true)},
+		{"2 <= 2", expectFoldedBoolean(true)},
+		{"3 >= 4", expectFoldedBoolean(false)},
 		{`"silver" + "lang"`, expectFoldedString("silverlang")},
 		{"!!5", expectFoldedBoolean(true)},
 		{"5 / 2", expectFoldedInteger(2)},

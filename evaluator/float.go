@@ -35,7 +35,7 @@ func evalFloatInfixExpression(operator string, left, right object.Object) object
 			return newError("division by zero")
 		}
 		return &object.Float{Value: leftValue / rightValue}
-	case "<", ">", "==", "!=":
+	case "<", ">", "<=", ">=", "==", "!=":
 		return nativeBoolToBooleanObject(compareNumeric(operator, left, right))
 	default:
 		return newError("unknown operator: %s %s %s", left.Type(), operator, right.Type())
@@ -66,6 +66,10 @@ func compareNumeric(operator string, left, right object.Object) bool {
 		return comparison < 0
 	case ">":
 		return comparison > 0
+	case "<=":
+		return comparison <= 0
+	case ">=":
+		return comparison >= 0
 	case "==":
 		return comparison == 0
 	case "!=":
@@ -91,6 +95,10 @@ func compareFloat64(operator string, left, right float64) bool {
 		return left < right
 	case ">":
 		return left > right
+	case "<=":
+		return left <= right
+	case ">=":
+		return left >= right
 	case "==":
 		return left == right
 	case "!=":

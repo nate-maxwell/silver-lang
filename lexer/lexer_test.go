@@ -262,6 +262,30 @@ func TestPowerToken(t *testing.T) {
 	}
 }
 
+func TestInclusiveComparisonTokens(t *testing.T) {
+	l := NewWithSource("left <= right >= value", "compare.silver")
+	want := []struct {
+		tokenType token.TokenType
+		literal   string
+		column    int
+	}{
+		{token.IDENT, "left", 1},
+		{token.LTE, "<=", 6},
+		{token.IDENT, "right", 9},
+		{token.GTE, ">=", 15},
+		{token.IDENT, "value", 18},
+		{token.EOF, "", 23},
+	}
+	for index, expected := range want {
+		got := l.NextToken()
+		if got.Type != expected.tokenType || got.Literal != expected.literal || got.Position.Column != expected.column {
+			t.Fatalf("token %d is (%q, %q, column %d), want (%q, %q, column %d)",
+				index, got.Type, got.Literal, got.Position.Column,
+				expected.tokenType, expected.literal, expected.column)
+		}
+	}
+}
+
 func TestPipeToken(t *testing.T) {
 	l := New(`fn() str | FileNotFound | PermissionDenied {}`)
 	want := []token.TokenType{

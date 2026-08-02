@@ -29,8 +29,27 @@ func TestFloatEvaluation(t *testing.T) {
 	}
 }
 
-func TestIntegerDivisionRemainsIntegerDivision(t *testing.T) {
-	testIntegerObject(t, testEval("5 / 2"), 2)
+func TestSlashDivisionWithIntegersReturnsFloat(t *testing.T) {
+	testFloatObject(t, testEval("5 / 2"), 2.5)
+}
+
+func TestIntegerDivisionAcceptsAllNumericOperands(t *testing.T) {
+	tests := []struct {
+		input string
+		want  int64
+	}{
+		{"5 // 2", 2},
+		{"3.1 // 0.5", 6},
+		{"7 // 2.0", 3},
+		{"7.5 // 2", 3},
+		{"-7.5 // 2", -3},
+		{"7.5 // -2", -3},
+	}
+	for _, test := range tests {
+		t.Run(test.input, func(t *testing.T) {
+			testIntegerObject(t, testEval(test.input), test.want)
+		})
+	}
 }
 
 func TestMixedNumericComparisons(t *testing.T) {
@@ -65,6 +84,16 @@ func TestFloatDivisionByZero(t *testing.T) {
 	}
 	if err.Message != "division by zero" {
 		t.Fatalf("error message is %q, want division by zero", err.Message)
+	}
+}
+
+func TestIntegerDivisionByNumericZero(t *testing.T) {
+	for _, input := range []string{"1 // 0", "1.0 // 0", "1 // 0.0"} {
+		evaluated := testEval(input)
+		err, ok := evaluated.(*object.Error)
+		if !ok || err.Message != "division by zero" {
+			t.Fatalf("%s result is %#v, want division-by-zero error", input, evaluated)
+		}
 	}
 }
 

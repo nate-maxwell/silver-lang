@@ -92,7 +92,11 @@ func (l *Lexer) NextToken() token.Token {
 			tok = newToken(token.ASTERISK, l.ch, position)
 		}
 	case '/':
-		tok = newToken(token.SLASH, l.ch, position)
+		if l.peekChar() == '/' {
+			tok = l.makeTwoCharToken(token.INT_DIV)
+		} else {
+			tok = newToken(token.SLASH, l.ch, position)
+		}
 	case '<':
 		if l.peekChar() == '=' {
 			tok = l.makeTwoCharToken(token.LTE)
@@ -166,14 +170,14 @@ func (l *Lexer) currentPosition() token.Position {
 func (l *Lexer) skipIgnoredCharacters() {
 	for {
 		l.skipWhitespace()
-		if l.ch != '/' || l.peekChar() != '/' {
+		if l.ch != '#' {
 			return
 		}
 		l.skipLineComment()
 	}
 }
 
-// skipLineComment consumes a // comment up to, but not including, its line
+// skipLineComment consumes a # comment up to, but not including, its line
 // ending. EOF also terminates a comment, allowing comments on the final line.
 func (l *Lexer) skipLineComment() {
 	for l.ch != '\n' && l.ch != '\r' && l.ch != 0 {

@@ -50,6 +50,7 @@ const (
 	ASTERISK = "*"
 	POWER    = "**"
 	SLASH    = "/"
+	INT_DIV  = "//"
 
 	LT     = "<"
 	GT     = ">"

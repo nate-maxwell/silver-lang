@@ -133,11 +133,11 @@ func TestNextToken(t *testing.T) {
 
 func TestLineComments(t *testing.T) {
 	input := `
-	// A comment may occupy an entire line.
-	let value = 10 // It may also follow other tokens.
+	# A comment may occupy an entire line.
+	let value = 10 # It may also follow other tokens.
 	let half = value / 2
-	// A single slash must remain the division operator.
-	half // A comment at EOF does not need a trailing newline.`
+	# Slash operators must remain available.
+	half # A comment at EOF does not need a trailing newline.`
 
 	tests := []struct {
 		expectedType    token.TokenType
@@ -174,7 +174,7 @@ func TestLineComments(t *testing.T) {
 }
 
 func TestTokenPositions(t *testing.T) {
-	input := "let value = 1 // comment\n  value / 2"
+	input := "let value = 1 # comment\n  value / 2"
 	l := NewWithSource(input, "example.silver")
 
 	tests := []struct {
@@ -198,6 +198,30 @@ func TestTokenPositions(t *testing.T) {
 		}
 		if tok.Position.Source != "example.silver" || tok.Position.Line != tt.line || tok.Position.Column != tt.column {
 			t.Fatalf("tests[%d] - position is %+v, want example.silver:%d:%d", i, tok.Position, tt.line, tt.column)
+		}
+	}
+}
+
+func TestIntegerDivideToken(t *testing.T) {
+	l := NewWithSource("10 // 3 / 2", "divide.silver")
+	want := []struct {
+		tokenType token.TokenType
+		literal   string
+		column    int
+	}{
+		{token.INT, "10", 1},
+		{token.INT_DIV, "//", 4},
+		{token.INT, "3", 7},
+		{token.SLASH, "/", 9},
+		{token.INT, "2", 11},
+		{token.EOF, "", 12},
+	}
+	for index, expected := range want {
+		got := l.NextToken()
+		if got.Type != expected.tokenType || got.Literal != expected.literal || got.Position.Column != expected.column {
+			t.Fatalf("token %d is (%q, %q, column %d), want (%q, %q, column %d)",
+				index, got.Type, got.Literal, got.Position.Column,
+				expected.tokenType, expected.literal, expected.column)
 		}
 	}
 }

@@ -16,6 +16,7 @@ var structInfixOperatorMethods = map[string]string{
 	"/": "div",
 
 	"**": "pow",
+	"//": "int_div",
 
 	// Comparison operators
 	"==": "eq",

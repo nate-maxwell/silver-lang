@@ -20,7 +20,8 @@ func TestFoldConstants(t *testing.T) {
 		{"3 >= 4", expectFoldedBoolean(false)},
 		{`"silver" + "lang"`, expectFoldedString("silverlang")},
 		{"!!5", expectFoldedBoolean(true)},
-		{"5 / 2", expectFoldedInteger(2)},
+		{"5 / 2", expectFoldedFloat(2.5)},
+		{"5 // 2", expectFoldedInteger(2)},
 		{"2 ** 3", expectFoldedInteger(8)},
 	}
 
@@ -37,7 +38,7 @@ func TestFoldConstantsThroughoutTree(t *testing.T) {
 	program := parseForFolding(t, `
 let calculate = fn(value) hash {
     let numbers = [1 + 2, value + (3 * 4)]
-    return {1 + 1: numbers[6 / 2]}
+    return {1 + 1: numbers[6 // 2]}
 }
 calculate(10 - 5)
 `)
@@ -67,6 +68,7 @@ func TestFoldConstantsLeavesRuntimeErrors(t *testing.T) {
 		want  string
 	}{
 		{"1 / 0", "division by zero"},
+		{"1 // 0", "division by zero"},
 		{"1 + True", "type mismatch: INTEGER + BOOLEAN"},
 		{`"left" - "right"`, "unknown operator: STRING - STRING"},
 	}

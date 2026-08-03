@@ -5,7 +5,11 @@ import (
 	"strings"
 )
 
-// TraceFrame is one user-visible execution frame. Frames store structured data
+// If Silver can see the problem before running your code, it tells you immediately.
+// If your code expects a failure, it returns an error value.
+// If something unexpected goes wrong at runtime, you get a traceback.
+
+// TraceFrame is one user-visible execution frame. Frames store structured data,
 // so alternate frontends can render tracebacks differently without parsing a
 // preformatted error string.
 type TraceFrame struct {
@@ -20,7 +24,7 @@ func (f TraceFrame) IsValid() bool {
 	return f.Line > 0 && f.Column > 0
 }
 
-// Error is a Silver runtime failure. Message remains separate from Frames so
+// Error is a Silver runtime failure. Message remains separate from Frames, so
 // frontends can render structured traceback data in their preferred format.
 type Error struct {
 	Message string

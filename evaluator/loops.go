@@ -26,7 +26,7 @@ func (e *Evaluator) evalForStatement(statement *ast.ForStatement, env *object.En
 		if statement.Value == nil {
 			return newError("map for loop requires key and value bindings")
 		}
-		for _, pair := range collection.Pairs {
+		for _, pair := range collection.Snapshot() {
 			env.Set(statement.Key.Value, pair.Key)
 			env.Set(statement.Value.Value, pair.Value)
 			if result := e.Eval(statement.Body, env); loopMustStop(result) {

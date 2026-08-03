@@ -60,8 +60,38 @@ func (e *Evaluator) evalMemberAssignment(node *ast.MemberAssignmentStatement, en
 	return NULL
 }
 
-// evalMember resolves members on modules, enum namespaces, and struct values.
-func evalMember(value object.Object, member string) object.Object {
+// evalIndexAssignment creates or replaces a map entry. Maps are reference
+// values, so the mutation is visible through every alias of the same map.
+func (e *Evaluator) evalIndexAssignment(node *ast.IndexAssignmentStatement, env *object.Environment) object.Object {
+	target := e.Eval(node.Target.Left, env)
+	if isError(target) {
+		return target
+	}
+	mapping, ok := target.(*object.Hash)
+	if !ok {
+		return newError("index assignment not supported on %s", runtimeTypeName(target))
+	}
+
+	key := e.Eval(node.Target.Index, env)
+	if isError(key) {
+		return key
+	}
+	hashable, ok := key.(object.Hashable)
+	if !ok {
+		return newError("unusable as hash key: %s", key.Type())
+	}
+
+	value := e.Eval(node.Value, env)
+	if isError(value) {
+		return value
+	}
+	mapping.Set(hashable.HashKey(), object.HashPair{Key: key, Value: value})
+	return NULL
+}
+
+// evalMember resolves members on modules, enum namespaces, structs, and
+// primitive values with registered builtin methods.
+func (e *Evaluator) evalMember(value object.Object, member string) object.Object {
 	switch value := value.(type) {
 	case *object.Module:
 		export, ok := value.Exports[member]
@@ -93,8 +123,22 @@ func evalMember(value object.Object, member string) object.Object {
 		}
 		return field
 	default:
+		if builtin, ok := e.builtins.LookupMethod(value.Type(), member); ok {
+			return bindBuiltinReceiver(builtin, value)
+		}
 		return newError("member access not supported on %s", value.Type())
 	}
+}
+
+// bindBuiltinReceiver produces a normal builtin value that injects receiver
+// ahead of the arguments supplied by the Silver call expression.
+func bindBuiltinReceiver(builtin *object.Builtin, receiver object.Object) *object.Builtin {
+	return &object.Builtin{Fn: func(args ...object.Object) object.Object {
+		boundArgs := make([]object.Object, 0, len(args)+1)
+		boundArgs = append(boundArgs, receiver)
+		boundArgs = append(boundArgs, args...)
+		return builtin.Fn(boundArgs...)
+	}}
 }
 
 // evalIdentifier resolves lexical bindings before falling back to the native
@@ -108,6 +152,9 @@ func (e *Evaluator) evalIdentifier(node *ast.Identifier, env *object.Environment
 	}
 	if typeDefinition, ok := object.TypeDefinitionByName(node.Value); ok {
 		return typeDefinition
+	}
+	if structDefinition, ok := object.BuiltinStructDefinitionByName(node.Value); ok {
+		return structDefinition
 	}
 	return newError("identifier not found: %s", node.Value)
 }

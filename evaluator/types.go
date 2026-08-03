@@ -133,16 +133,19 @@ func returnTypesString(success *ast.TypeAnnotation, errorTypes []*ast.TypeAnnota
 // as nominal struct or enum types in the declaration's lexical environment.
 func typeMatches(annotation *ast.TypeAnnotation, value object.Object, env *object.Environment) (bool, string) {
 	if annotation.IsCallSignature() {
-		var function *object.Function
 		switch value := value.(type) {
 		case *object.Function:
-			function = value
+			return runtimeFunctionMatches(annotation, value, env)
 		case *object.BoundMethod:
-			function = value.Method
+			return runtimeFunctionMatches(annotation, value.Method, env)
+		case *object.Builtin:
+			if value.Signature == nil {
+				return false, ""
+			}
+			return annotationAssignable(annotation, value.Signature, env, env)
 		default:
 			return false, ""
 		}
-		return runtimeFunctionMatches(annotation, function, env)
 	}
 
 	name := annotation.String()
@@ -316,6 +319,9 @@ func resolveNamedType(annotation *ast.TypeAnnotation, env *object.Environment) (
 		return nil, "empty type annotation"
 	}
 	value, ok := env.Get(annotation.Parts[0])
+	if !ok {
+		value, ok = object.BuiltinStructDefinitionByName(annotation.Parts[0])
+	}
 	if !ok {
 		return nil, fmt.Sprintf("unknown type %q", annotation.String())
 	}

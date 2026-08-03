@@ -107,8 +107,8 @@ func (p *Parser) parseIdentifier() ast.Expression {
 	return &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
 }
 
-// parseExpressionStatement parses an expression or a struct-member assignment
-// and validates its newline-delimited statement boundary.
+// parseExpressionStatement parses an expression, binding assignment, member
+// assignment, or map-index assignment and validates its statement boundary.
 func (p *Parser) parseExpressionStatement() ast.Statement {
 	firstToken := p.curToken
 	expression := p.parseExpression(LOWEST)
@@ -125,8 +125,10 @@ func (p *Parser) parseExpressionStatement() ast.Statement {
 			return &ast.AssignmentStatement{Token: assignmentToken, Name: target, Value: value}
 		case *ast.MemberExpression:
 			return &ast.MemberAssignmentStatement{Token: assignmentToken, Target: target, Value: value}
+		case *ast.IndexExpression:
+			return &ast.IndexAssignmentStatement{Token: assignmentToken, Target: target, Value: value}
 		default:
-			p.addError(firstToken.Position, "invalid assignment target; expected identifier or struct member")
+			p.addError(firstToken.Position, "invalid assignment target; expected identifier, struct member, or map index")
 			return &ast.ExpressionStatement{Token: firstToken, Expression: expression}
 		}
 	}

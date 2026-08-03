@@ -101,7 +101,8 @@ func (f *Function) Inspect() string {
 
 // Builtin wraps a Go function so it can participate in Silver calls.
 type Builtin struct {
-	Fn BuiltinFunction
+	Fn        BuiltinFunction
+	Signature *ast.TypeAnnotation
 }
 
 // Type returns the native function runtime tag.

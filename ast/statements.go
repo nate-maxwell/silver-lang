@@ -150,6 +150,44 @@ func (mas *MemberAssignmentStatement) String() string {
 }
 
 /* ----------------------------------------------------------------------------------------------------------
+Index assignment statements
+---------------------------------------------------------------------------------------------------------- */
+
+// IndexAssignmentStatement replaces or creates one entry in a map value.
+type IndexAssignmentStatement struct {
+	Token  token.Token // the = token
+	Target *IndexExpression
+	Value  Expression
+}
+
+// statementNode marks IndexAssignmentStatement as a Statement.
+func (ias *IndexAssignmentStatement) statementNode() {}
+
+// TokenLiteral returns the assignment operator.
+func (ias *IndexAssignmentStatement) TokenLiteral() string { return ias.Token.Literal }
+
+// Position points at the indexed assignment target.
+func (ias *IndexAssignmentStatement) Position() token.Position {
+	if ias.Target != nil {
+		return ias.Target.Position()
+	}
+	return ias.Token.Position
+}
+
+// String renders the target and replacement value.
+func (ias *IndexAssignmentStatement) String() string {
+	var out bytes.Buffer
+	if ias.Target != nil {
+		out.WriteString(ias.Target.String())
+	}
+	out.WriteString(" = ")
+	if ias.Value != nil {
+		out.WriteString(ias.Value.String())
+	}
+	return out.String()
+}
+
+/* ----------------------------------------------------------------------------------------------------------
 Let statements
 ---------------------------------------------------------------------------------------------------------- */
 

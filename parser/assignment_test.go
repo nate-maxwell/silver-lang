@@ -40,6 +40,29 @@ func TestVariableAssignmentStatement(t *testing.T) {
 	}
 }
 
+func TestIndexAssignmentStatement(t *testing.T) {
+	p := New(lexer.New(`contacts["other"] = "something@mail.com"`))
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	statement, ok := program.Statements[0].(*ast.IndexAssignmentStatement)
+	if !ok {
+		t.Fatalf("statement is %T, want *ast.IndexAssignmentStatement", program.Statements[0])
+	}
+	if got, want := statement.Target.Left.String(), "contacts"; got != want {
+		t.Fatalf("target object is %q, want %q", got, want)
+	}
+	if got, want := statement.Target.Index.String(), "other"; got != want {
+		t.Fatalf("target index is %q, want %q", got, want)
+	}
+	if got, want := statement.Value.String(), "something@mail.com"; got != want {
+		t.Fatalf("value is %q, want %q", got, want)
+	}
+	if got, want := statement.String(), `(contacts[other]) = something@mail.com`; got != want {
+		t.Fatalf("statement is %q, want %q", got, want)
+	}
+}
+
 func TestAssignmentRejectsNonAssignableExpression(t *testing.T) {
 	p := New(lexer.New(`call() = 42`))
 	p.ParseProgram()

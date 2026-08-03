@@ -15,7 +15,7 @@ func evalHashIndexExpression(hash, index object.Object) object.Object {
 		return newError("unusable as hash key: %s", index.Type())
 	}
 
-	pair, ok := hashObject.Pairs[key.HashKey()]
+	pair, ok := hashObject.Get(key.HashKey())
 	if !ok {
 		return NULL
 	}

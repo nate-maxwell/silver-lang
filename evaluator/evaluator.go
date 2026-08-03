@@ -74,7 +74,7 @@ func NewWithWriters(out, warnings io.Writer) *Evaluator {
 
 func newEvaluator(out, warnings io.Writer) *Evaluator {
 	return &Evaluator{
-		builtins:        builtinpkg.New(out, NULL),
+		builtins:        builtinpkg.New(out, NULL, TRUE, FALSE),
 		constants:       newConstantPool(),
 		modules:         make(map[string]*object.Module),
 		loading:         make(map[string]bool),
@@ -169,6 +169,9 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 	case *ast.MemberAssignmentStatement:
 		return e.evalMemberAssignment(node, env)
 
+	case *ast.IndexAssignmentStatement:
+		return e.evalIndexAssignment(node, env)
+
 	case *ast.EnumStatement:
 		return e.evalEnumStatement(node, env)
 
@@ -194,7 +197,7 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 		if isError(value) {
 			return value
 		}
-		return evalMember(value, node.Member.Value)
+		return e.evalMember(value, node.Member.Value)
 
 	// Expressions
 	case *ast.IfExpression:

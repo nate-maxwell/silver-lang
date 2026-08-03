@@ -35,6 +35,7 @@ func init() {
 	gob.Register(&ast.LetStatement{})
 	gob.Register(&ast.AssignmentStatement{})
 	gob.Register(&ast.MemberAssignmentStatement{})
+	gob.Register(&ast.IndexAssignmentStatement{})
 	gob.Register(&ast.ReturnStatement{})
 	gob.Register(&ast.EnumStatement{})
 	gob.Register(&ast.StructStatement{})

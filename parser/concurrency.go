@@ -128,7 +128,7 @@ func (p *Parser) validateTaskExpression(expression ast.Expression, bindings map[
 	case *ast.IndexExpression:
 		p.validateTaskExpression(node.Left, bindings)
 		p.validateTaskExpression(node.Index, bindings)
-	case *ast.HashLiteral:
+	case *ast.MapLiteral:
 		for key, value := range node.Pairs {
 			p.validateTaskExpression(key, bindings)
 			p.validateTaskExpression(value, bindings)

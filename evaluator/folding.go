@@ -97,7 +97,7 @@ func foldExpressionConstants(expression ast.Expression) ast.Expression {
 		node.Left = foldExpressionConstants(node.Left)
 		node.Index = foldExpressionConstants(node.Index)
 
-	case *ast.HashLiteral:
+	case *ast.MapLiteral:
 		pairs := make(map[ast.Expression]ast.Expression, len(node.Pairs))
 		for key, value := range node.Pairs {
 			pairs[foldExpressionConstants(key)] = foldExpressionConstants(value)

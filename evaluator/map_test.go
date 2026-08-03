@@ -30,7 +30,7 @@ func TestHashIndexExpressions(t *testing.T) {
 	}
 }
 
-func TestHashLiterals(t *testing.T) {
+func TestMapLiterals(t *testing.T) {
 	input := `let two = "two"
 	{
 		"one": 10 - 9,

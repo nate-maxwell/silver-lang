@@ -306,8 +306,8 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 		}
 		return evalIndexExpression(left, index)
 
-	case *ast.HashLiteral:
-		return e.evalHashLiteral(node, env)
+	case *ast.MapLiteral:
+		return e.evalMapLiteral(node, env)
 
 	case *ast.TaskExpression:
 		return e.evalTaskExpression(node, env)

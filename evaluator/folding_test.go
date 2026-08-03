@@ -53,7 +53,7 @@ calculate(10 - 5)
 	expectFoldedInteger(12)(t, partial.Right)
 
 	returnStatement := function.Body.Statements[1].(*ast.ReturnStatement)
-	for key, value := range returnStatement.ReturnValue.(*ast.HashLiteral).Pairs {
+	for key, value := range returnStatement.ReturnValue.(*ast.MapLiteral).Pairs {
 		expectFoldedInteger(2)(t, key)
 		expectFoldedInteger(3)(t, value.(*ast.IndexExpression).Index)
 	}

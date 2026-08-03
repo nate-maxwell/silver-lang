@@ -9,7 +9,7 @@ func arrayDefinitions(null *object.Null) []definition {
 		{name: "first", fn: builtinFirst(null)},
 		{name: "last", fn: builtinLast(null)},
 		{name: "rest", fn: builtinRest(null)},
-		{name: "push", fn: builtinPush},
+		{name: "append", fn: builtinAppend},
 	}
 }
 
@@ -70,13 +70,13 @@ func builtinRest(null *object.Null) object.BuiltinFunction {
 	}
 }
 
-// builtinPush returns a new array with the supplied value appended. The input
+// builtinAppend returns a new array with the supplied value appended. The input
 // array is not mutated.
-func builtinPush(args ...object.Object) object.Object {
+func builtinAppend(args ...object.Object) object.Object {
 	if err := requireArgumentCount(args, 2); err != nil {
 		return err
 	}
-	array, err := requireArray("push", args[0])
+	array, err := requireArray("append", args[0])
 	if err != nil {
 		return err
 	}

@@ -22,9 +22,9 @@ func evalHashIndexExpression(hash, index object.Object) object.Object {
 	return pair.Value
 }
 
-// evalHashLiteral evaluates key/value pairs and rejects keys that do not
+// evalMapLiteral evaluates key/value pairs and rejects keys that do not
 // implement object.Hashable.
-func (e *Evaluator) evalHashLiteral(node *ast.HashLiteral, env *object.Environment) object.Object {
+func (e *Evaluator) evalMapLiteral(node *ast.MapLiteral, env *object.Environment) object.Object {
 	pairs := make(map[object.HashKey]object.HashPair)
 
 	for keyNode, valueNode := range node.Pairs {

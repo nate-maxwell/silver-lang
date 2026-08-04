@@ -6,6 +6,40 @@ import (
 	"silver/token"
 )
 
+// parseTryExpression parses a value-producing try body followed by one or
+// more typed catch clauses. Each clause explicitly names the local variable
+// that receives the caught struct: catch ErrorType binding { ... }.
+func (p *Parser) parseTryExpression() ast.Expression {
+	expression := &ast.TryExpression{Token: p.curToken}
+	if !p.expectPeek(token.LBRACE) {
+		return nil
+	}
+	expression.Body = p.parseBlockStatement()
+
+	for p.peekTokenIs(token.CATCH) {
+		p.nextToken()
+		clause := &ast.CatchClause{Token: p.curToken}
+		clause.ErrorType = p.parseTypeAnnotation()
+		if clause.ErrorType == nil {
+			return nil
+		}
+		if !p.expectPeek(token.IDENT) {
+			return nil
+		}
+		clause.Binding = &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal, Type: clause.ErrorType}
+		if !p.expectPeek(token.LBRACE) {
+			return nil
+		}
+		clause.Body = p.parseBlockStatement()
+		expression.Catches = append(expression.Catches, clause)
+	}
+
+	if len(expression.Catches) == 0 {
+		p.addError(expression.Position(), "try requires at least one catch clause")
+	}
+	return expression
+}
+
 // parseTaskExpression accepts an unparenthesized callable reference, such as
 // task work or task service.work. The evaluator invokes it with no arguments.
 func (p *Parser) parseTaskExpression() ast.Expression {

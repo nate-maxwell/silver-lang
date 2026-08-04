@@ -7,8 +7,8 @@ import (
 	"strings"
 )
 
-// requireType enforces an explicit annotation. Declarations without an
-// annotation retain Silver's existing inference-compatible behavior.
+// requireType enforces an explicit annotation. Unannotated declarations accept
+// any runtime value.
 func (e *Evaluator) requireType(annotation *ast.TypeAnnotation, value object.Object, env *object.Environment, subject string) *object.Error {
 	if annotation == nil {
 		return nil
@@ -16,12 +16,12 @@ func (e *Evaluator) requireType(annotation *ast.TypeAnnotation, value object.Obj
 
 	matches, resolutionError := typeMatches(annotation, value, env)
 	if resolutionError != "" {
-		return newError("%s", resolutionError)
+		return newError(object.RuntimeErrorKindName, "%s", resolutionError)
 	}
 	if matches {
 		return nil
 	}
-	return newError("type mismatch for %s: expected %s, got %s", subject, annotation.String(), runtimeTypeName(value))
+	return newError(object.RuntimeErrorKindType, "type mismatch for %s: expected %s, got %s", subject, annotation.String(), runtimeTypeName(value))
 }
 
 // validateTypeAnnotation rejects unknown names at declaration time, even when
@@ -49,47 +49,48 @@ func (e *Evaluator) validateTypeAnnotation(annotation *ast.TypeAnnotation, env *
 		return nil
 	}
 	if len(annotation.Parts) == 1 {
-		if _, ok := primitiveTypes[annotation.String()]; ok {
+		if _, ok := object.TypeDefinitionByName(annotation.String()); ok {
 			return nil
 		}
 	}
 	value, resolutionError := resolveNamedType(annotation, env)
 	if resolutionError != "" {
-		return newError("%s", resolutionError)
+		return newError(object.RuntimeErrorKindName, "%s", resolutionError)
 	}
 	switch value.(type) {
 	case *object.Struct, *object.Enum:
 		return nil
 	default:
-		return newError("%q does not name a value type", annotation.String())
+		return newError(object.RuntimeErrorKindType, "%q does not name a value type", annotation.String())
 	}
 }
 
 // validateErrorTypeAnnotation enforces that every failure alternative is a
-// nominal struct type. Error values themselves need no privileged runtime tag.
+// nominal struct type. Returned instances are wrapped for unwinding only at a
+// callable boundary, leaving structs ordinary values everywhere else.
 func (e *Evaluator) validateErrorTypeAnnotation(annotation *ast.TypeAnnotation, env *object.Environment) *object.Error {
 	if annotation == nil {
-		return newError("error return type must be a struct")
+		return newError(object.RuntimeErrorKindType, "error return type must be a struct")
 	}
 	if err := e.validateTypeAnnotation(annotation, env); err != nil {
 		return err
 	}
-	_, primitive := primitiveTypes[annotation.String()]
+	_, primitive := object.TypeDefinitionByName(annotation.String())
 	if annotation.IsCallSignature() || len(annotation.Parts) == 1 && primitive {
-		return newError("error return type %q must be a struct", annotation.String())
+		return newError(object.RuntimeErrorKindType, "error return type %q must be a struct", annotation.String())
 	}
 	value, resolutionError := resolveNamedType(annotation, env)
 	if resolutionError != "" {
-		return newError("%s", resolutionError)
+		return newError(object.RuntimeErrorKindName, "%s", resolutionError)
 	}
 	if _, ok := value.(*object.Struct); !ok {
-		return newError("error return type %q must be a struct", annotation.String())
+		return newError(object.RuntimeErrorKindType, "error return type %q must be a struct", annotation.String())
 	}
 	return nil
 }
 
-// requireReturnType accepts the declared success type or any declared error
-// struct type. A nil success annotation in a union denotes null.
+// requireReturnType accepts the declared success type or any declared struct
+// error type. A nil success annotation in a union denotes null.
 func (e *Evaluator) requireReturnType(success *ast.TypeAnnotation, errorTypes []*ast.TypeAnnotation, value object.Object, env *object.Environment, subject string) *object.Error {
 	if success == nil {
 		if value == NULL {
@@ -98,7 +99,7 @@ func (e *Evaluator) requireReturnType(success *ast.TypeAnnotation, errorTypes []
 	} else {
 		matches, resolutionError := typeMatches(success, value, env)
 		if resolutionError != "" {
-			return newError("%s", resolutionError)
+			return newError(object.RuntimeErrorKindName, "%s", resolutionError)
 		}
 		if matches {
 			return nil
@@ -107,13 +108,48 @@ func (e *Evaluator) requireReturnType(success *ast.TypeAnnotation, errorTypes []
 	for _, errorType := range errorTypes {
 		matches, resolutionError := typeMatches(errorType, value, env)
 		if resolutionError != "" {
-			return newError("%s", resolutionError)
+			return newError(object.RuntimeErrorKindName, "%s", resolutionError)
 		}
 		if matches {
 			return nil
 		}
 	}
-	return newError("type mismatch for %s: expected %s, got %s", subject, returnTypesString(success, errorTypes), runtimeTypeName(value))
+	return newError(object.RuntimeErrorKindType, "type mismatch for %s: expected %s, got %s", subject, returnTypesString(success, errorTypes), runtimeTypeName(value))
+}
+
+// matchesDeclaredError reports whether value is one of a callable's declared
+// struct failure alternatives.
+func matchesDeclaredError(errorTypes []*ast.TypeAnnotation, value object.Object, env *object.Environment) (bool, *object.Error) {
+	for _, errorType := range errorTypes {
+		matches, resolutionError := typeMatches(errorType, value, env)
+		if resolutionError != "" {
+			return false, newError(object.RuntimeErrorKindName, "%s", resolutionError)
+		}
+		if matches {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// matchesBuiltinDeclaredError uses the native definition's nominal identity,
+// so a user binding that shadows names such as FileNotFound cannot turn a
+// builtin error back into an ordinary return value.
+func matchesBuiltinDeclaredError(errorTypes []*ast.TypeAnnotation, value object.Object) bool {
+	instance, ok := value.(*object.StructInstance)
+	if !ok {
+		return false
+	}
+	for _, errorType := range errorTypes {
+		if errorType == nil || len(errorType.Parts) != 1 {
+			continue
+		}
+		definition, ok := object.BuiltinStructDefinitionByName(errorType.Parts[0])
+		if ok && instance.Struct == definition {
+			return true
+		}
+	}
+	return false
 }
 
 func returnTypesString(success *ast.TypeAnnotation, errorTypes []*ast.TypeAnnotation) string {
@@ -150,8 +186,9 @@ func typeMatches(annotation *ast.TypeAnnotation, value object.Object, env *objec
 
 	name := annotation.String()
 	if len(annotation.Parts) == 1 {
-		if expected, ok := primitiveTypes[name]; ok {
-			if expected == object.FUNCTION_OBJ && value != nil && value.Type() == object.BUILTINT_OBJ {
+		if definition, ok := object.TypeDefinitionByName(name); ok {
+			expected := definition.RuntimeType
+			if expected == object.FUNCTION_OBJ && value != nil && value.Type() == object.BUILTIN_OBJ {
 				return true, ""
 			}
 			return value != nil && value.Type() == expected, ""
@@ -229,16 +266,16 @@ func annotationAssignable(target, source *ast.TypeAnnotation, targetEnv, sourceE
 	}
 
 	if len(target.Parts) == 1 {
-		if targetType, ok := primitiveTypes[target.String()]; ok {
+		if targetDefinition, ok := object.TypeDefinitionByName(target.String()); ok {
 			if len(source.Parts) != 1 {
 				return false, ""
 			}
-			sourceType, ok := primitiveTypes[source.String()]
-			return ok && targetType == sourceType, ""
+			sourceDefinition, ok := object.TypeDefinitionByName(source.String())
+			return ok && targetDefinition.RuntimeType == sourceDefinition.RuntimeType, ""
 		}
 	}
 	if len(source.Parts) == 1 {
-		if _, primitive := primitiveTypes[source.String()]; primitive {
+		if _, primitive := object.TypeDefinitionByName(source.String()); primitive {
 			return false, ""
 		}
 	}
@@ -300,18 +337,6 @@ func isPrimitiveAnnotation(annotation *ast.TypeAnnotation, name string) bool {
 	return annotation != nil && !annotation.IsCallSignature() && len(annotation.Parts) == 1 && annotation.Parts[0] == name
 }
 
-var primitiveTypes = map[string]object.ObjectType{
-	"int":    object.INTEGER_OBJ,
-	"float":  object.FLOAT_OBJ,
-	"bool":   object.BOOLEAN_OBJ,
-	"str":    object.STRING_OBJ,
-	"null":   object.NULL_OBJ,
-	"array":  object.ARRAY_OBJ,
-	"hash":   object.HASH_OBJ,
-	"call":   object.FUNCTION_OBJ,
-	"module": object.MODULE_OBJ,
-}
-
 // resolveNamedType follows module members in a qualified annotation and
 // returns the declaration object represented by the final component.
 func resolveNamedType(annotation *ast.TypeAnnotation, env *object.Environment) (object.Object, string) {
@@ -349,22 +374,8 @@ func runtimeTypeName(value object.Object) string {
 	case *object.EnumValue:
 		return value.EnumName
 	}
-	if name, ok := sourceTypeNames[value.Type()]; ok {
+	if name, ok := object.RuntimeTypeName(value.Type()); ok {
 		return name
 	}
 	return strings.ToLower(string(value.Type()))
-}
-
-var sourceTypeNames = map[object.ObjectType]string{
-	object.INTEGER_OBJ:  "int",
-	object.FLOAT_OBJ:    "float",
-	object.BOOLEAN_OBJ:  "bool",
-	object.STRING_OBJ:   "str",
-	object.NULL_OBJ:     "null",
-	object.ARRAY_OBJ:    "array",
-	object.HASH_OBJ:     "hash",
-	object.FUNCTION_OBJ: "call",
-	object.MODULE_OBJ:   "module",
-	object.TYPE_OBJ:     "type",
-	object.TASK_OBJ:     "task",
 }

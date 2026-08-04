@@ -29,7 +29,7 @@ value = "wrong"
 	if !ok {
 		t.Fatalf("result is %T, want *object.Error", result)
 	}
-	if got, want := err.Message, `type mismatch for binding "value": expected int, got str`; got != want {
+	if got, want := err.MessageText(), `type mismatch for binding "value": expected int, got str`; got != want {
 		t.Fatalf("error is %q, want %q", got, want)
 	}
 }
@@ -40,7 +40,7 @@ func TestAssignmentRequiresExistingBinding(t *testing.T) {
 	if !ok {
 		t.Fatalf("result is %T, want *object.Error", result)
 	}
-	if got, want := err.Message, "identifier not found: missing"; got != want {
+	if got, want := err.MessageText(), "identifier not found: missing"; got != want {
 		t.Fatalf("error is %q, want %q", got, want)
 	}
 }

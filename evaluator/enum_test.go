@@ -64,18 +64,18 @@ func TestMissingEnumMember(t *testing.T) {
 	if !ok {
 		t.Fatalf("result is %T, want *object.Error", evaluated)
 	}
-	if err.Message != `enum "Direction" has no member "South"` {
-		t.Fatalf("error message is %q", err.Message)
+	if err.MessageText() != `enum "Direction" has no member "South"` {
+		t.Fatalf("error message is %q", err.MessageText())
 	}
 }
 
 func TestEnumExportedFromModule(t *testing.T) {
 	dir := t.TempDir()
-	libraryPath := filepath.Join(dir, "library.lib")
-	mainPath := filepath.Join(dir, "main.slvr")
-	writeMonkeyFile(t, libraryPath, `enum Status { Ready, Busy }`)
-	writeMonkeyFile(t, mainPath, `
-let library = import("./library.lib")
+	libraryPath := filepath.Join(dir, "library.slv")
+	mainPath := filepath.Join(dir, "main.slv")
+	writeSilverFile(t, libraryPath, `enum Status { Ready, Busy }`)
+	writeSilverFile(t, mainPath, `
+let library = import("./library.slv")
 library.Status.Ready
 `)
 

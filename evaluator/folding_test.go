@@ -36,7 +36,7 @@ func TestFoldConstants(t *testing.T) {
 
 func TestFoldConstantsThroughoutTree(t *testing.T) {
 	program := parseForFolding(t, `
-let calculate = fn(value) hash {
+let calculate = fn(value) map {
     let numbers = [1 + 2, value + (3 * 4)]
     return {1 + 1: numbers[6 // 2]}
 }
@@ -87,8 +87,8 @@ func TestFoldConstantsLeavesRuntimeErrors(t *testing.T) {
 			if !ok {
 				t.Fatalf("result is %T, want *object.Error", result)
 			}
-			if err.Message != test.want {
-				t.Fatalf("error is %q, want %q", err.Message, test.want)
+			if err.MessageText() != test.want {
+				t.Fatalf("error is %q, want %q", err.MessageText(), test.want)
 			}
 		})
 	}
@@ -107,7 +107,7 @@ func TestFoldedLiteralRetainsExpressionPosition(t *testing.T) {
 
 func parseForFolding(t *testing.T, input string) *ast.Program {
 	t.Helper()
-	p := parser.New(lexer.NewWithSource(input, "folding.slvr"))
+	p := parser.New(lexer.NewWithSource(input, "folding.slv"))
 	program := p.ParseProgram()
 	if len(p.Errors()) != 0 {
 		t.Fatalf("parser errors: %v", p.Errors())

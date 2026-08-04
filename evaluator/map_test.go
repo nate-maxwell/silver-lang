@@ -11,9 +11,7 @@ func TestHashIndexExpressions(t *testing.T) {
 		expected interface{}
 	}{
 		{`{"foo": 5}["foo"]`, 5},
-		{`{"foo": 5}["bar"]`, nil},
 		{"let key = \"foo\"\n{\"foo\": 5}[key]", 5},
-		{`{}["foo"]`, nil},
 		{`{5: 5}[5]`, 5},
 		{`{True: 5}[True]`, 5},
 		{`{False: 5}[False]`, 5},
@@ -30,6 +28,15 @@ func TestHashIndexExpressions(t *testing.T) {
 	}
 }
 
+func TestMissingMapIndexProducesKeyError(t *testing.T) {
+	for _, input := range []string{`{"foo": 5}["bar"]`, `{}["foo"]`} {
+		err, ok := testEval(input).(*object.Error)
+		if !ok || err.Value.Struct.Name != "KeyError" {
+			t.Fatalf("%s returned %#v, want KeyError", input, err)
+		}
+	}
+}
+
 func TestMapLiterals(t *testing.T) {
 	input := `let two = "two"
 	{
@@ -42,9 +49,9 @@ func TestMapLiterals(t *testing.T) {
 	}`
 
 	evaluated := testEval(input)
-	result, ok := evaluated.(*object.Hash)
+	result, ok := evaluated.(*object.Map)
 	if !ok {
-		t.Fatalf("Eval didn't return Hash. got=%T (%+v)", evaluated, evaluated)
+		t.Fatalf("Eval didn't return Map. got=%T (%+v)", evaluated, evaluated)
 	}
 
 	expected := map[object.HashKey]int64{
@@ -57,7 +64,7 @@ func TestMapLiterals(t *testing.T) {
 	}
 
 	if len(result.Pairs) != len(expected) {
-		t.Fatalf("Hash has wrong num of pairs. got=%d", len(result.Pairs))
+		t.Fatalf("Map has wrong num of pairs. got=%d", len(result.Pairs))
 	}
 
 	for expectedKey, expectedValue := range expected {
@@ -138,8 +145,8 @@ values[0] = 1`, message: "index assignment not supported on array"},
 			if !ok {
 				t.Fatalf("result is %T, want *object.Error", result)
 			}
-			if result.Message != tt.message {
-				t.Fatalf("error is %q, want %q", result.Message, tt.message)
+			if result.MessageText() != tt.message {
+				t.Fatalf("error is %q, want %q", result.MessageText(), tt.message)
 			}
 		})
 	}

@@ -68,8 +68,8 @@ func TestForLoopValidatesCollectionShape(t *testing.T) {
 		if !ok {
 			t.Fatalf("result for %q is %T, want *object.Error", test.input, result)
 		}
-		if err.Message != test.want {
-			t.Fatalf("error for %q is %q, want %q", test.input, err.Message, test.want)
+		if err.MessageText() != test.want {
+			t.Fatalf("error for %q is %q, want %q", test.input, err.MessageText(), test.want)
 		}
 	}
 }

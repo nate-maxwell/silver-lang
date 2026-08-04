@@ -18,14 +18,14 @@ func TestEvalFileWithNestedRelativeImport(t *testing.T) {
 	if err := os.Mkdir(libDir, 0755); err != nil {
 		t.Fatal(err)
 	}
-	writeMonkeyFile(t, filepath.Join(libDir, "base.monkey"), `let factor = 2`)
-	writeMonkeyFile(t, filepath.Join(libDir, "math.monkey"), `
-let base = import("./base.monkey")
+	writeSilverFile(t, filepath.Join(libDir, "base.slv"), `let factor = 2`)
+	writeSilverFile(t, filepath.Join(libDir, "math.slv"), `
+let base = import("./base.slv")
 let double = fn(x) int { x * base.factor }
 `)
-	mainPath := filepath.Join(dir, "main.monkey")
-	writeMonkeyFile(t, mainPath, `
-let math = import("./lib/math.monkey")
+	mainPath := filepath.Join(dir, "main.slv")
+	writeSilverFile(t, mainPath, `
+let math = import("./lib/math.slv")
 math.double(21)
 `)
 
@@ -45,9 +45,9 @@ math.double(21)
 
 func TestEvalFileCreatesAndRefreshesASTCache(t *testing.T) {
 	dir := t.TempDir()
-	path := filepath.Join(dir, "main.slvr")
+	path := filepath.Join(dir, "main.slv")
 	source := []byte("let answer = 41\nanswer")
-	writeMonkeyFile(t, path, string(source))
+	writeSilverFile(t, path, string(source))
 
 	result := New().EvalFile(path, object.NewEnvironment())
 	assertInteger(t, result, 41)
@@ -56,7 +56,7 @@ func TestEvalFileCreatesAndRefreshesASTCache(t *testing.T) {
 	}
 
 	changedSource := []byte("let answer = 42\nanswer")
-	writeMonkeyFile(t, path, string(changedSource))
+	writeSilverFile(t, path, string(changedSource))
 	result = New().EvalFile(path, object.NewEnvironment())
 	assertInteger(t, result, 42)
 	if _, ok := astcache.Load(path, changedSource); !ok {
@@ -68,9 +68,9 @@ func TestEvalFileCreatesAndRefreshesASTCache(t *testing.T) {
 }
 
 func TestEvalFileCachesFoldedAST(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "main.slvr")
+	path := filepath.Join(t.TempDir(), "main.slv")
 	source := []byte("1 + 2 * 3")
-	writeMonkeyFile(t, path, string(source))
+	writeSilverFile(t, path, string(source))
 
 	result := New().EvalFile(path, object.NewEnvironment())
 	assertInteger(t, result, 7)
@@ -86,9 +86,9 @@ func TestEvalFileCachesFoldedAST(t *testing.T) {
 }
 
 func TestEvalFileRepairsDamagedASTCache(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "main.slvr")
+	path := filepath.Join(t.TempDir(), "main.slv")
 	source := []byte("42")
-	writeMonkeyFile(t, path, string(source))
+	writeSilverFile(t, path, string(source))
 	if err := os.WriteFile(astcache.Path(path), []byte("damaged"), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -102,13 +102,13 @@ func TestEvalFileRepairsDamagedASTCache(t *testing.T) {
 
 func TestImportsAreCached(t *testing.T) {
 	dir := t.TempDir()
-	writeMonkeyFile(t, filepath.Join(dir, "module.monkey"), `let value = 1`)
+	writeSilverFile(t, filepath.Join(dir, "module.slv"), `let value = 1`)
 	env := object.NewEnvironment()
 	env.SetSourceDir(dir)
 	engine := New()
 
-	first := evalInput(t, engine, env, `import("./module.monkey")`)
-	second := evalInput(t, engine, env, `import("./module.monkey")`)
+	first := evalInput(t, engine, env, `import("./module.slv")`)
+	second := evalInput(t, engine, env, `import("./module.slv")`)
 	if first != second {
 		t.Fatal("the same module was evaluated more than once")
 	}
@@ -116,32 +116,32 @@ func TestImportsAreCached(t *testing.T) {
 
 func TestMissingModuleMember(t *testing.T) {
 	dir := t.TempDir()
-	writeMonkeyFile(t, filepath.Join(dir, "module.monkey"), `let present = 1`)
+	writeSilverFile(t, filepath.Join(dir, "module.slv"), `let present = 1`)
 	env := object.NewEnvironment()
 	env.SetSourceDir(dir)
 
-	result := evalInput(t, New(), env, `import("./module.monkey").missing`)
+	result := evalInput(t, New(), env, `import("./module.slv").missing`)
 	err, ok := result.(*object.Error)
 	if !ok {
 		t.Fatalf("result is %T, want *object.Error", result)
 	}
-	if !strings.Contains(err.Message, `has no member "missing"`) {
-		t.Fatalf("unexpected error: %s", err.Message)
+	if !strings.Contains(err.MessageText(), `has no member "missing"`) {
+		t.Fatalf("unexpected error: %s", err.MessageText())
 	}
 }
 
 func TestCircularImport(t *testing.T) {
 	dir := t.TempDir()
-	writeMonkeyFile(t, filepath.Join(dir, "a.monkey"), `let b = import("./b.monkey")`)
-	writeMonkeyFile(t, filepath.Join(dir, "b.monkey"), `let a = import("./a.monkey")`)
+	writeSilverFile(t, filepath.Join(dir, "a.slv"), `let b = import("./b.slv")`)
+	writeSilverFile(t, filepath.Join(dir, "b.slv"), `let a = import("./a.slv")`)
 
-	result := New().EvalFile(filepath.Join(dir, "a.monkey"), object.NewEnvironment())
+	result := New().EvalFile(filepath.Join(dir, "a.slv"), object.NewEnvironment())
 	err, ok := result.(*object.Error)
 	if !ok {
 		t.Fatalf("result is %T, want *object.Error", result)
 	}
-	if !strings.Contains(err.Message, "circular import detected") {
-		t.Fatalf("unexpected error: %s", err.Message)
+	if !strings.Contains(err.MessageText(), "circular import detected") {
+		t.Fatalf("unexpected error: %s", err.MessageText())
 	}
 }
 
@@ -155,7 +155,7 @@ func evalInput(t *testing.T, engine *Evaluator, env *object.Environment, input s
 	return engine.Eval(program, env)
 }
 
-func writeMonkeyFile(t *testing.T, path, contents string) {
+func writeSilverFile(t *testing.T, path, contents string) {
 	t.Helper()
 	if err := os.WriteFile(path, []byte(contents), 0644); err != nil {
 		t.Fatal(err)

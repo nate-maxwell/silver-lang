@@ -20,19 +20,26 @@ func (e *Evaluator) applyFunction(fn object.Object, args []object.Object) object
 		return e.applyUserFunction(fn.Method, boundArgs, fn.Receiver.Struct.Name+"."+fn.Name)
 
 	case *object.Builtin:
-		return fn.Fn(args...)
+		result := fn.Fn(args...)
+		if isError(result) || fn.Signature == nil || len(fn.Signature.ErrorTypes) == 0 {
+			return result
+		}
+		if matchesBuiltinDeclaredError(fn.Signature.ErrorTypes, result) {
+			return &object.Error{Value: result.(*object.StructInstance)}
+		}
+		return result
 
 	case *object.Struct:
 		return e.applyStruct(fn, args)
 
 	default:
-		return newError("not a function: %s", fn.Type())
+		return newError(object.RuntimeErrorKindType, "not a function: %s", fn.Type())
 	}
 }
 
 func (e *Evaluator) applyStruct(definition *object.Struct, values []object.Object) object.Object {
 	if len(values) != len(definition.Fields) {
-		return newError("wrong number of arguments for struct %s. got=%d, want=%d", definition.Name, len(values), len(definition.Fields))
+		return newError(object.RuntimeErrorKindType, "wrong number of arguments for struct %s. got=%d, want=%d", definition.Name, len(values), len(definition.Fields))
 	}
 	fields := make(map[string]object.Object, len(definition.Fields))
 	for index, field := range definition.Fields {
@@ -58,12 +65,27 @@ func (e *Evaluator) applyUserFunction(fn *object.Function, args []object.Object,
 	e.pushContext(contextName)
 	defer e.popContext()
 	evaluated := e.Eval(fn.Body, extendedEnv)
-	if isError(evaluated) {
-		return evaluated
+	if error, ok := evaluated.(*object.Error); ok {
+		if error.IsRuntimeError() {
+			return error
+		}
+		matches, matchError := matchesDeclaredError(fn.ErrorTypes, error.Value, fn.Env)
+		if matchError != nil {
+			return matchError
+		}
+		if !matches {
+			return newError(
+				object.RuntimeErrorKindRuntime,
+				"error %s escaped %q but is not declared in its return union",
+				error.Value.Struct.Name,
+				contextName,
+			)
+		}
+		return error
 	}
-	// A completely omitted return declaration keeps the existing void-function
-	// behavior. A leading pipe instead declares null success plus one or more
-	// struct-valued error alternatives, so its actual result must escape.
+	// A completely omitted return declaration denotes a void function. A leading
+	// pipe instead declares null success plus one or more
+	// struct error alternatives, so its actual result must escape.
 	if fn.ReturnType == nil && len(fn.ErrorTypes) == 0 {
 		return NULL
 	}
@@ -74,6 +96,13 @@ func (e *Evaluator) applyUserFunction(fn *object.Function, args []object.Object,
 	if err := e.requireReturnType(fn.ReturnType, fn.ErrorTypes, evaluated, fn.Env, fmt.Sprintf("return value of %q", contextName)); err != nil {
 		return err
 	}
+	if matches, err := matchesDeclaredError(fn.ErrorTypes, evaluated, fn.Env); err != nil {
+		return err
+	} else if matches {
+		error := &object.Error{Value: evaluated.(*object.StructInstance)}
+		error.SetOrigin(e.traceFrame(fn.Body))
+		return error
+	}
 	return evaluated
 }
 
@@ -83,7 +112,7 @@ func (e *Evaluator) applyUserFunction(fn *object.Function, args []object.Object,
 // therefore kept intact instead of being destructured.
 func (e *Evaluator) bindFunctionArguments(fn *object.Function, args []object.Object) ([]object.Object, *object.Error) {
 	if len(args) > len(fn.Parameters) {
-		return nil, newError("wrong number of arguments. got=%d, want=%d", len(args), len(fn.Parameters))
+		return nil, newError(object.RuntimeErrorKindType, "wrong number of arguments. got=%d, want=%d", len(args), len(fn.Parameters))
 	}
 
 	bound := make([]object.Object, len(fn.Parameters))
@@ -93,13 +122,13 @@ func (e *Evaluator) bindFunctionArguments(fn *object.Function, args []object.Obj
 	for _, argument := range args {
 		parameterIndex := nextUnassignedParameter(assigned)
 		if parameterIndex == len(fn.Parameters) {
-			return nil, newError("wrong number of arguments. got=%d, want=%d", boundCount+1, len(fn.Parameters))
+			return nil, newError(object.RuntimeErrorKindType, "wrong number of arguments. got=%d, want=%d", boundCount+1, len(fn.Parameters))
 		}
 
 		parameter := fn.Parameters[parameterIndex]
 		matches, resolutionError := parameterTypeMatches(parameter, argument, fn.Env)
 		if resolutionError != "" {
-			return nil, newError("%s", resolutionError)
+			return nil, newError(object.RuntimeErrorKindName, "%s", resolutionError)
 		}
 		if matches {
 			bound[parameterIndex] = argument
@@ -137,7 +166,7 @@ func (e *Evaluator) bindFunctionArguments(fn *object.Function, args []object.Obj
 	}
 
 	if boundCount != len(fn.Parameters) {
-		return nil, newError("wrong number of arguments. got=%d, want=%d", boundCount, len(fn.Parameters))
+		return nil, newError(object.RuntimeErrorKindType, "wrong number of arguments. got=%d, want=%d", boundCount, len(fn.Parameters))
 	}
 	return bound, nil
 }

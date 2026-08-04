@@ -175,7 +175,7 @@ func TestLineComments(t *testing.T) {
 
 func TestTokenPositions(t *testing.T) {
 	input := "let value = 1 # comment\n  value / 2"
-	l := NewWithSource(input, "example.silver")
+	l := NewWithSource(input, "example.slv")
 
 	tests := []struct {
 		literal string
@@ -196,14 +196,14 @@ func TestTokenPositions(t *testing.T) {
 		if tok.Literal != tt.literal {
 			t.Fatalf("tests[%d] - literal is %q, want %q", i, tok.Literal, tt.literal)
 		}
-		if tok.Position.Source != "example.silver" || tok.Position.Line != tt.line || tok.Position.Column != tt.column {
-			t.Fatalf("tests[%d] - position is %+v, want example.silver:%d:%d", i, tok.Position, tt.line, tt.column)
+		if tok.Position.Source != "example.slv" || tok.Position.Line != tt.line || tok.Position.Column != tt.column {
+			t.Fatalf("tests[%d] - position is %+v, want example.slv:%d:%d", i, tok.Position, tt.line, tt.column)
 		}
 	}
 }
 
 func TestIntegerDivideToken(t *testing.T) {
-	l := NewWithSource("10 // 3 / 2", "divide.silver")
+	l := NewWithSource("10 // 3 / 2", "divide.slv")
 	want := []struct {
 		tokenType token.TokenType
 		literal   string
@@ -262,7 +262,7 @@ func TestFloatTokens(t *testing.T) {
 }
 
 func TestPowerToken(t *testing.T) {
-	l := NewWithSource("2 ** 3 * 4", "power.silver")
+	l := NewWithSource("2 ** 3 * 4", "power.slv")
 	want := []struct {
 		tokenType token.TokenType
 		literal   string
@@ -287,7 +287,7 @@ func TestPowerToken(t *testing.T) {
 }
 
 func TestInclusiveComparisonTokens(t *testing.T) {
-	l := NewWithSource("left <= right >= value", "compare.silver")
+	l := NewWithSource("left <= right >= value", "compare.slv")
 	want := []struct {
 		tokenType token.TokenType
 		literal   string

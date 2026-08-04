@@ -20,9 +20,9 @@ const (
 	RETURN_VALUE_OBJ = "RETURN_VALUE"
 	ERROR_OBJ        = "ERROR"
 	FUNCTION_OBJ     = "FUNCTION"
-	BUILTINT_OBJ     = "BUILTIN"
+	BUILTIN_OBJ      = "BUILTIN"
 	ARRAY_OBJ        = "ARRAY"
-	HASH_OBJ         = "HASH"
+	MAP_OBJ          = "MAP"
 	MODULE_OBJ       = "MODULE"
 	ENUM_OBJ         = "ENUM"
 	ENUM_VALUE_OBJ   = "ENUM_VALUE"
@@ -52,8 +52,8 @@ func (m *Module) Type() ObjectType { return MODULE_OBJ }
 func (m *Module) Inspect() string { return "<module " + m.Path + ">" }
 
 // BuiltinFunction is the Go calling convention used by native Silver
-// functions. Language errors are returned as Error objects rather than Go
-// errors so they propagate through normal evaluation.
+// functions. Language failures are returned as Error objects rather than
+// Go errors so they propagate through normal evaluation.
 type BuiltinFunction func(args ...Object) Object
 
 // Function is a Silver closure. Env captures the lexical environment active at
@@ -106,7 +106,7 @@ type Builtin struct {
 }
 
 // Type returns the native function runtime tag.
-func (b *Builtin) Type() ObjectType { return BUILTINT_OBJ }
+func (b *Builtin) Type() ObjectType { return BUILTIN_OBJ }
 
 // Inspect returns a generic description because builtin names live in the
 // evaluator registry rather than on the value itself.

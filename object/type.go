@@ -4,8 +4,8 @@ package object
 // singletons so ordinary Silver identity equality can compare type() results
 // directly with names such as int, str, and array.
 type TypeDefinition struct {
-	Name       string
-	ObjectType ObjectType
+	Name        string
+	RuntimeType ObjectType
 }
 
 // Type returns the runtime tag shared by primitive type values.
@@ -15,16 +15,16 @@ func (t *TypeDefinition) Type() ObjectType { return TYPE_OBJ }
 func (t *TypeDefinition) Inspect() string { return t.Name }
 
 var (
-	intType    = &TypeDefinition{Name: "int", ObjectType: INTEGER_OBJ}
-	floatType  = &TypeDefinition{Name: "float", ObjectType: FLOAT_OBJ}
-	boolType   = &TypeDefinition{Name: "bool", ObjectType: BOOLEAN_OBJ}
-	stringType = &TypeDefinition{Name: "str", ObjectType: STRING_OBJ}
-	nullType   = &TypeDefinition{Name: "null", ObjectType: NULL_OBJ}
-	callType   = &TypeDefinition{Name: "call", ObjectType: FUNCTION_OBJ}
-	arrayType  = &TypeDefinition{Name: "array", ObjectType: ARRAY_OBJ}
-	hashType   = &TypeDefinition{Name: "hash", ObjectType: HASH_OBJ}
-	moduleType = &TypeDefinition{Name: "module", ObjectType: MODULE_OBJ}
-	taskType   = &TypeDefinition{Name: "task", ObjectType: TASK_OBJ}
+	intType    = &TypeDefinition{Name: "int", RuntimeType: INTEGER_OBJ}
+	floatType  = &TypeDefinition{Name: "float", RuntimeType: FLOAT_OBJ}
+	boolType   = &TypeDefinition{Name: "bool", RuntimeType: BOOLEAN_OBJ}
+	stringType = &TypeDefinition{Name: "str", RuntimeType: STRING_OBJ}
+	nullType   = &TypeDefinition{Name: "null", RuntimeType: NULL_OBJ}
+	callType   = &TypeDefinition{Name: "call", RuntimeType: FUNCTION_OBJ}
+	arrayType  = &TypeDefinition{Name: "array", RuntimeType: ARRAY_OBJ}
+	mapType    = &TypeDefinition{Name: "map", RuntimeType: MAP_OBJ}
+	moduleType = &TypeDefinition{Name: "module", RuntimeType: MODULE_OBJ}
+	taskType   = &TypeDefinition{Name: "task", RuntimeType: TASK_OBJ}
 )
 
 var primitiveTypeDefinitions = map[ObjectType]*TypeDefinition{
@@ -34,9 +34,9 @@ var primitiveTypeDefinitions = map[ObjectType]*TypeDefinition{
 	STRING_OBJ:   stringType,
 	NULL_OBJ:     nullType,
 	FUNCTION_OBJ: callType,
-	BUILTINT_OBJ: callType,
+	BUILTIN_OBJ:  callType,
 	ARRAY_OBJ:    arrayType,
-	HASH_OBJ:     hashType,
+	MAP_OBJ:      mapType,
 	MODULE_OBJ:   moduleType,
 	TASK_OBJ:     taskType,
 }
@@ -49,7 +49,7 @@ var namedTypeDefinitions = map[string]*TypeDefinition{
 	"null":   nullType,
 	"call":   callType,
 	"array":  arrayType,
-	"hash":   hashType,
+	"map":    mapType,
 	"module": moduleType,
 }
 
@@ -58,6 +58,18 @@ var namedTypeDefinitions = map[string]*TypeDefinition{
 func TypeDefinitionByName(name string) (*TypeDefinition, bool) {
 	definition, ok := namedTypeDefinitions[name]
 	return definition, ok
+}
+
+// RuntimeTypeName returns the Silver spelling for a primitive runtime tag.
+func RuntimeTypeName(objectType ObjectType) (string, bool) {
+	if objectType == TYPE_OBJ {
+		return "type", true
+	}
+	definition, ok := primitiveTypeDefinitions[objectType]
+	if !ok {
+		return "", false
+	}
+	return definition.Name, true
 }
 
 // TypeOf returns the first-class type of value. Nominal definitions are

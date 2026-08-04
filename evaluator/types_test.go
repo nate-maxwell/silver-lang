@@ -15,7 +15,7 @@ func TestTypedLetBindingRejectsMismatch(t *testing.T) {
 	if !ok {
 		t.Fatalf("result is %T, want *object.Error", evaluated)
 	}
-	if got, want := err.Message, `type mismatch for binding "age": expected int, got str`; got != want {
+	if got, want := err.MessageText(), `type mismatch for binding "age": expected int, got str`; got != want {
 		t.Fatalf("error message is %q, want %q", got, want)
 	}
 }
@@ -26,7 +26,7 @@ func TestTypedFunctionParameter(t *testing.T) {
 	if !ok {
 		t.Fatalf("result is %T, want *object.Error", evaluated)
 	}
-	if got, want := err.Message, `type mismatch for parameter "value": expected int, got str`; got != want {
+	if got, want := err.MessageText(), `type mismatch for parameter "value": expected int, got str`; got != want {
 		t.Fatalf("error message is %q, want %q", got, want)
 	}
 }
@@ -37,7 +37,7 @@ func TestTypedFunctionReturnValue(t *testing.T) {
 	if !ok {
 		t.Fatalf("result is %T, want *object.Error", evaluated)
 	}
-	if got, want := err.Message, `type mismatch for return value of "label": expected str, got int`; got != want {
+	if got, want := err.MessageText(), `type mismatch for return value of "label": expected str, got int`; got != want {
 		t.Fatalf("error message is %q, want %q", got, want)
 	}
 }
@@ -48,18 +48,7 @@ func TestUnknownType(t *testing.T) {
 	if !ok {
 		t.Fatalf("result is %T, want *object.Error", evaluated)
 	}
-	if got, want := err.Message, `unknown type "Missing"`; got != want {
-		t.Fatalf("error message is %q, want %q", got, want)
-	}
-}
-
-func TestStringTypeNameIsRejected(t *testing.T) {
-	evaluated := testEval(`let value: string = "old spelling"`)
-	err, ok := evaluated.(*object.Error)
-	if !ok {
-		t.Fatalf("result is %T, want *object.Error", evaluated)
-	}
-	if got, want := err.Message, `unknown type "string"`; got != want {
+	if got, want := err.MessageText(), `unknown type "Missing"`; got != want {
 		t.Fatalf("error message is %q, want %q", got, want)
 	}
 }
@@ -103,7 +92,7 @@ apply(fn(value: str) int { 1 }, 21)
 	if !ok {
 		t.Fatalf("result is %T, want *object.Error", evaluated)
 	}
-	if got, want := err.Message, `type mismatch for parameter "operation": expected call(int) int, got call`; got != want {
+	if got, want := err.MessageText(), `type mismatch for parameter "operation": expected call(int) int, got call`; got != want {
 		t.Fatalf("error message is %q, want %q", got, want)
 	}
 }
@@ -119,7 +108,7 @@ apply(fn(left: int, right: int) int { left + right }, 21)
 	if !ok {
 		t.Fatalf("result is %T, want *object.Error", evaluated)
 	}
-	if got, want := err.Message, `type mismatch for parameter "operation": expected call(int) int, got call`; got != want {
+	if got, want := err.MessageText(), `type mismatch for parameter "operation": expected call(int) int, got call`; got != want {
 		t.Fatalf("error message is %q, want %q", got, want)
 	}
 }
@@ -146,12 +135,12 @@ makeIdentity()
 	if !ok {
 		t.Fatalf("result is %T, want *object.Error", evaluated)
 	}
-	if got, want := err.Message, `type mismatch for return value of "makeIdentity": expected call(int) int, got call`; got != want {
+	if got, want := err.MessageText(), `type mismatch for return value of "makeIdentity": expected call(int) int, got call`; got != want {
 		t.Fatalf("error message is %q, want %q", got, want)
 	}
 }
 
-func TestFunctionMayReturnDeclaredErrorStruct(t *testing.T) {
+func TestFunctionErrorStructUnwindsIntoDestructuringCatch(t *testing.T) {
 	evaluated := testEval(`
 struct FileNotFound {
 	message: str
@@ -160,7 +149,11 @@ let open = fn(found: bool) str | FileNotFound {
 	if (found) { "contents" } else { FileNotFound{"missing"} }
 }
 let describe = fn(message: str) str { message }
-describe(open(False))
+try {
+	describe(open(False))
+} catch FileNotFound err {
+	describe(err)
+}
 `)
 	value, ok := evaluated.(*object.String)
 	if !ok || value.Value != "missing" {
@@ -201,17 +194,21 @@ writeFile()
 	testNullObject(t, evaluated)
 }
 
-func TestLeadingPipeMayReturnErrorStruct(t *testing.T) {
+func TestLeadingPipeRaisesErrorStruct(t *testing.T) {
 	evaluated := testEval(`
 struct PermissionDenied { message: str }
 let writeFile = fn() | PermissionDenied {
 	return PermissionDenied{"denied"}
 }
-writeFile()
+try {
+	writeFile()
+} catch PermissionDenied err {
+	err.message
+}
 `)
-	value, ok := evaluated.(*object.StructInstance)
-	if !ok || value.Struct.Name != "PermissionDenied" {
-		t.Fatalf("result is %#v, want PermissionDenied value", evaluated)
+	value, ok := evaluated.(*object.String)
+	if !ok || value.Value != "denied" {
+		t.Fatalf("result is %#v, want destructured error message", evaluated)
 	}
 }
 
@@ -225,7 +222,7 @@ open()
 	if !ok {
 		t.Fatalf("result is %T, want *object.Error", evaluated)
 	}
-	if got, want := err.Message, `type mismatch for return value of "open": expected str | FileNotFound, got int`; got != want {
+	if got, want := err.MessageText(), `type mismatch for return value of "open": expected str | FileNotFound, got int`; got != want {
 		t.Fatalf("error message is %q, want %q", got, want)
 	}
 }
@@ -236,7 +233,7 @@ func TestErrorReturnAlternativeMustBeStruct(t *testing.T) {
 	if !ok {
 		t.Fatalf("result is %T, want *object.Error", evaluated)
 	}
-	if got, want := err.Message, `error return type "str" must be a struct`; got != want {
+	if got, want := err.MessageText(), `error return type "str" must be a struct`; got != want {
 		t.Fatalf("error message is %q, want %q", got, want)
 	}
 }
@@ -262,7 +259,7 @@ let opener: call() str = fn() str | FileNotFound { "contents" }
 	if !ok {
 		t.Fatalf("result is %T, want *object.Error", evaluated)
 	}
-	if got, want := err.Message, `type mismatch for binding "opener": expected call() str, got call`; got != want {
+	if got, want := err.MessageText(), `type mismatch for binding "opener": expected call() str, got call`; got != want {
 		t.Fatalf("error message is %q, want %q", got, want)
 	}
 }

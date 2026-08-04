@@ -13,7 +13,7 @@ func (e *Evaluator) evalStructStatement(node *ast.StructStatement, env *object.E
 	seen := make(map[string]bool, len(node.Fields))
 	for _, field := range node.Fields {
 		if seen[field.Value] {
-			return newError("duplicate struct field %q", field.Value)
+			return newError(object.RuntimeErrorKindValue, "duplicate struct field %q", field.Value)
 		}
 		seen[field.Value] = true
 		fields = append(fields, field.Value)

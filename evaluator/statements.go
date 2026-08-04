@@ -13,11 +13,9 @@ func (e *Evaluator) evalBlockStatement(block *ast.BlockStatement, env *object.En
 	for _, statement := range block.Statements {
 		result = e.Eval(statement, env)
 
-		if result != nil {
-			rt := result.Type()
-			if rt == object.RETURN_VALUE_OBJ || rt == object.ERROR_OBJ {
-				return result
-			}
+		switch result.(type) {
+		case *object.ReturnValue, *object.Error:
+			return result
 		}
 	}
 

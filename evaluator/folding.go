@@ -83,6 +83,12 @@ func foldExpressionConstants(expression ast.Expression) ast.Expression {
 			foldStatementConstants(node.Alternative)
 		}
 
+	case *ast.TryExpression:
+		foldStatementConstants(node.Body)
+		for _, clause := range node.Catches {
+			foldStatementConstants(clause.Body)
+		}
+
 	case *ast.FunctionLiteral:
 		foldStatementConstants(node.Body)
 

@@ -38,13 +38,16 @@ results
 	}
 }
 
-func TestTaskPreservesErrorStructAsFieldValue(t *testing.T) {
+func TestTaskErrorUnwindsWhenCollected(t *testing.T) {
 	result := testEval(`
 struct FileNotFound { message: str }
 let read = fn() str | FileNotFound { FileNotFound{"missing"} }
 let a = task read
-let results = collect a
-type(results.a) == FileNotFound
+try {
+	collect a
+} catch FileNotFound err {
+	err.message == "missing"
+}
 `)
 	testBooleanObject(t, result, true)
 }
@@ -67,7 +70,7 @@ print("continued")
 collect bad
 `)
 	err, ok := result.(*object.Error)
-	if !ok || !strings.Contains(err.Message, "type mismatch") {
+	if !ok || !strings.Contains(err.MessageText(), "type mismatch") {
 		t.Fatalf("result is %#v, want retained task runtime error", result)
 	}
 	if !strings.Contains(out.String(), "continued") {

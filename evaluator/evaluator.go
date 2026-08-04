@@ -102,20 +102,13 @@ func (e *Evaluator) fork() *Evaluator {
 	}
 }
 
-// Eval preserves the original package API. Callers that evaluate more than
-// one program, such as the REPL, should reuse an Evaluator returned by New so
-// imported modules remain cached.
-func Eval(node ast.Node, env *object.Environment) object.Object {
-	return New().Eval(node, env)
-}
-
 // Eval annotates a newly-created runtime error with the current AST location.
 // Errors that are merely propagating already have an origin, so SetOrigin
 // leaves their traceback unchanged.
 func (e *Evaluator) Eval(node ast.Node, env *object.Environment) object.Object {
 	result := e.eval(node, env)
-	if err, ok := result.(*object.Error); ok {
-		err.SetOrigin(e.traceFrame(node))
+	if failure, ok := result.(*object.Error); ok {
+		failure.SetOrigin(e.traceFrame(node))
 	}
 	return result
 }
@@ -203,6 +196,9 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 	case *ast.IfExpression:
 		return e.evalIfExpression(node, env)
 
+	case *ast.TryExpression:
+		return e.evalTryExpression(node, env)
+
 	case *ast.ExpressionStatement:
 		return e.Eval(node.Expression, env)
 
@@ -280,7 +276,7 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 		}
 		definition, ok := structType.(*object.Struct)
 		if !ok {
-			return newError("not a struct: %s", runtimeTypeName(structType))
+			return newError(object.RuntimeErrorKindType, "not a struct: %s", runtimeTypeName(structType))
 		}
 		values := e.evalExpressions(node.Values, env)
 		if len(values) == 1 && isError(values[0]) {

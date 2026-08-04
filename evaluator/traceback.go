@@ -22,9 +22,10 @@ func (e *Evaluator) traceFrame(node ast.Node) object.TraceFrame {
 // origin in deeper Silver code. An error created by the call itself has no
 // origin yet and will be annotated once by Eval, avoiding duplicate frames.
 func (e *Evaluator) prependCallerFrame(result object.Object, node ast.Node) {
-	err, ok := result.(*object.Error)
-	if ok && err.HasTraceback() {
-		err.PrependFrame(e.traceFrame(node))
+	if failure, ok := result.(*object.Error); ok {
+		if failure.HasTraceback() {
+			failure.PrependFrame(e.traceFrame(node))
+		}
 	}
 }
 

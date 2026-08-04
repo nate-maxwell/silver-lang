@@ -11,7 +11,7 @@ import (
 )
 
 func TestRoundTrip(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "all.slvr")
+	path := filepath.Join(t.TempDir(), "all.slv")
 	source := []byte(`
 enum State { Ready, Waiting }
 struct Person { name: string, age: int }
@@ -21,10 +21,13 @@ let person = Person{"Ada", 36}
 person.age = 37
 let choose = fn(value: int) int { if (value > 0) { return -value } else { return 0 } }
 let apply = fn(operation: call(int) int, value: int) int { operation(value) }
+struct Missing { message: str }
+let read = fn() str | Missing { Missing{"missing"} }
+try { read() } catch Missing err { err.message }
 for value in values { print(value) }
 for key, value in ({"answer": 42}) { print(key, value) }
 while False { print("never") }
-let module = import("./library.lib")
+let module = import("./library.slv")
 module.member(choose(values[0]))
 `)
 	program := parse(t, path, source)
@@ -45,7 +48,7 @@ module.member(choose(values[0]))
 }
 
 func TestSourceChangeInvalidatesCache(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "main.slvr")
+	path := filepath.Join(t.TempDir(), "main.slv")
 	source := []byte("let answer = 42")
 	if err := astcache.Store(path, source, parse(t, path, source)); err != nil {
 		t.Fatal(err)
@@ -57,7 +60,7 @@ func TestSourceChangeInvalidatesCache(t *testing.T) {
 }
 
 func TestDamagedCacheIsAMiss(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "main.slvr")
+	path := filepath.Join(t.TempDir(), "main.slv")
 	if err := os.WriteFile(astcache.Path(path), []byte("not an AST cache"), 0600); err != nil {
 		t.Fatal(err)
 	}

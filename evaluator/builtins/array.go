@@ -69,7 +69,7 @@ func builtinRemove(null *object.Null) object.BuiltinFunction {
 		}
 		index, ok := args[1].(*object.Integer)
 		if !ok {
-			return newError("index argument to `remove` must be INTEGER, got %s", args[1].Type())
+			return newError(object.RuntimeErrorKindType, "index argument to `remove` must be INTEGER, got %s", args[1].Type())
 		}
 		if index.Value < 0 || index.Value >= int64(len(array.Elements)) {
 			return null
@@ -156,11 +156,11 @@ func builtinSort(args ...object.Object) object.Object {
 	numeric := isNumber(elements[0])
 	strings := elements[0].Type() == object.STRING_OBJ
 	if !numeric && !strings {
-		return newError("argument to `sort` contains unsortable type %s", elements[0].Type())
+		return newError(object.RuntimeErrorKindType, "argument to `sort` contains unsortable type %s", elements[0].Type())
 	}
 	for _, element := range elements[1:] {
 		if numeric && !isNumber(element) || strings && element.Type() != object.STRING_OBJ {
-			return newError("argument to `sort` must contain only numbers or only strings, got %s and %s", elements[0].Type(), element.Type())
+			return newError(object.RuntimeErrorKindType, "argument to `sort` must contain only numbers or only strings, got %s and %s", elements[0].Type(), element.Type())
 		}
 	}
 	if len(elements) == 1 {

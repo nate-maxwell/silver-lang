@@ -55,9 +55,9 @@ func TestBuiltinFunctions(t *testing.T) {
 					evaluated, evaluated)
 				continue
 			}
-			if errObj.Message != expected {
+			if errObj.MessageText() != expected {
 				t.Errorf("wrong error message. expected=%q, got=%q",
-					expected, errObj.Message)
+					expected, errObj.MessageText())
 			}
 		case nil:
 			testNullObject(t, evaluated)
@@ -214,7 +214,7 @@ func TestErrorHandling(t *testing.T) {
 			"unknown operator: STRING - STRING",
 		},
 		{
-			`{"name": "Monkey"}[fn(x) { x }]`,
+			`{"name": "Silver"}[fn(x) { x }]`,
 			"unusable as hash key: FUNCTION",
 		},
 	}
@@ -229,9 +229,9 @@ func TestErrorHandling(t *testing.T) {
 			continue
 		}
 
-		if errObj.Message != tt.expectedMessage {
+		if errObj.MessageText() != tt.expectedMessage {
 			t.Errorf("wrong error message. expected=%q, got =%q",
-				tt.expectedMessage, errObj.Message)
+				tt.expectedMessage, errObj.MessageText())
 		}
 	}
 }

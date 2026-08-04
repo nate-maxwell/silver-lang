@@ -11,7 +11,7 @@ type FunctionLiteral struct {
 	Token      token.Token // The 'fn' token
 	Parameters []*Identifier
 	ReturnType *TypeAnnotation   // success type; nil means null
-	ErrorTypes []*TypeAnnotation // ordinary struct values returned on failure
+	ErrorTypes []*TypeAnnotation // struct errors declared after |
 	Body       *BlockStatement
 }
 

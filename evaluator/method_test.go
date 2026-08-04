@@ -64,7 +64,7 @@ Transform{Scale{1}, wrong}
 	if !ok {
 		t.Fatalf("result is %T, want *object.Error", evaluated)
 	}
-	if got, want := err.Message, `type mismatch for field "Transform.grow": expected call(scale: Scale, amount: int), got call`; got != want {
+	if got, want := err.MessageText(), `type mismatch for field "Transform.grow": expected call(scale: Scale, amount: int), got call`; got != want {
 		t.Fatalf("error message is %q, want %q", got, want)
 	}
 }

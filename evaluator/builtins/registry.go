@@ -25,27 +25,14 @@ type Registry struct {
 	methods map[object.ObjectType]map[string]*object.Builtin
 }
 
-// New constructs the standard builtin registry. null must be the evaluator's
-// canonical null value so builtin results obey the same identity-based
-// truthiness rules as values created directly by the evaluator. Evaluators
-// should also supply their canonical true and false values; omitting them is
-// retained for callers that use the registry independently.
-func New(out io.Writer, null *object.Null, booleanValues ...*object.Boolean) *Registry {
+// New constructs the standard builtin registry from the evaluator's canonical
+// null and boolean singletons.
+func New(out io.Writer, null *object.Null, trueValue, falseValue *object.Boolean) *Registry {
 	if out == nil {
 		out = io.Discard
 	}
 	if null == nil {
 		panic("builtins: canonical null value must not be nil")
-	}
-	trueValue := &object.Boolean{Value: true}
-	falseValue := &object.Boolean{Value: false}
-	switch len(booleanValues) {
-	case 0:
-	case 2:
-		trueValue = booleanValues[0]
-		falseValue = booleanValues[1]
-	default:
-		panic("builtins: expected both canonical boolean values or neither")
 	}
 	if trueValue == nil || falseValue == nil {
 		panic("builtins: canonical boolean values must not be nil")
@@ -60,7 +47,7 @@ func New(out io.Writer, null *object.Null, booleanValues ...*object.Boolean) *Re
 		ioDefinitions(out, null),
 	)
 	registry.addMethods(object.ARRAY_OBJ, arrays)
-	registry.addMethods(object.HASH_OBJ, maps)
+	registry.addMethods(object.MAP_OBJ, maps)
 	return registry
 }
 
@@ -118,20 +105,20 @@ func requireArgumentCount(args []object.Object, want int) *object.Error {
 	if len(args) == want {
 		return nil
 	}
-	return newError("wrong number of arguments. got=%d, want=%d", len(args), want)
+	return newError(object.RuntimeErrorKindType, "wrong number of arguments. got=%d, want=%d", len(args), want)
 }
 
 // requireArray performs the shared runtime type check for array builtins.
 func requireArray(name string, value object.Object) (*object.Array, *object.Error) {
 	array, ok := value.(*object.Array)
 	if !ok {
-		return nil, newError("argument to `%s` must be ARRAY, got %s", name, value.Type())
+		return nil, newError(object.RuntimeErrorKindType, "argument to `%s` must be ARRAY, got %s", name, value.Type())
 	}
 	return array, nil
 }
 
 // newError creates a runtime error that the evaluator will annotate with the
 // Silver call site's traceback information.
-func newError(format string, args ...interface{}) *object.Error {
-	return &object.Error{Message: fmt.Sprintf(format, args...)}
+func newError(kind object.RuntimeErrorKind, format string, args ...interface{}) *object.Error {
+	return object.NewError(kind, fmt.Sprintf(format, args...))
 }

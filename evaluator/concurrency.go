@@ -23,8 +23,8 @@ func (e *Evaluator) evalTaskExpression(node *ast.TaskExpression, env *object.Env
 		if !isError(callable) {
 			result = taskEvaluator.applyFunction(callable, nil)
 			taskEvaluator.prependCallerFrame(result, node)
-			if err, ok := result.(*object.Error); ok {
-				err.SetOrigin(taskEvaluator.traceFrame(node))
+			if failure, ok := result.(*object.Error); ok {
+				failure.SetOrigin(taskEvaluator.traceFrame(node))
 			}
 		}
 		result = unwrapReturnValue(result)
@@ -46,11 +46,11 @@ func (e *Evaluator) evalCollectExpression(node *ast.CollectExpression, env *obje
 	for index, identifier := range node.Handles {
 		value, ok := env.Get(identifier.Value)
 		if !ok {
-			return newError("identifier not found: %s", identifier.Value)
+			return newError(object.RuntimeErrorKindName, "identifier not found: %s", identifier.Value)
 		}
 		handle, ok := value.(*object.Task)
 		if !ok {
-			return newError("CannotCollectExpressionError: %q is not a task handle", identifier.Value)
+			return newError(object.RuntimeErrorKindType, "%q is not a task handle", identifier.Value)
 		}
 		handles[index] = handle
 	}
@@ -60,20 +60,20 @@ func (e *Evaluator) evalCollectExpression(node *ast.CollectExpression, env *obje
 			for prior := 0; prior < index; prior++ {
 				handles[prior].Await()
 			}
-			return newError("TaskAlreadyCollectedError: task handle %q may only be collected once", node.Handles[index].Value)
+			return newError(object.RuntimeErrorKindTask, "task handle %q may only be collected once", node.Handles[index].Value)
 		}
 	}
 
 	results := make([]object.Object, len(handles))
-	var firstError *object.Error
+	var firstFailure object.Object
 	for index, handle := range handles {
 		results[index] = handle.Await()
-		if firstError == nil {
-			firstError, _ = results[index].(*object.Error)
+		if firstFailure == nil && isError(results[index]) {
+			firstFailure = results[index]
 		}
 	}
-	if firstError != nil {
-		return firstError
+	if firstFailure != nil {
+		return firstFailure
 	}
 
 	fields := make([]string, 0, len(results))

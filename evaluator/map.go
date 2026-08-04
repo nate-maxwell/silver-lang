@@ -5,19 +5,19 @@ import (
 	"silver/object"
 )
 
-// evalHashIndexExpression normalizes a hashable key and returns null when the
-// key is absent.
-func evalHashIndexExpression(hash, index object.Object) object.Object {
-	hashObject := hash.(*object.Hash)
+// evalMapIndexExpression normalizes a hashable key and returns KeyError when
+// the key is absent. The map get builtin remains the nullable lookup API.
+func evalMapIndexExpression(mapping, index object.Object) object.Object {
+	mapObject := mapping.(*object.Map)
 
 	key, ok := index.(object.Hashable)
 	if !ok {
-		return newError("unusable as hash key: %s", index.Type())
+		return newError(object.RuntimeErrorKindType, "unusable as hash key: %s", index.Type())
 	}
 
-	pair, ok := hashObject.Get(key.HashKey())
+	pair, ok := mapObject.Get(key.HashKey())
 	if !ok {
-		return NULL
+		return newError(object.RuntimeErrorKindKey, "key not found: %s", index.Inspect())
 	}
 	return pair.Value
 }
@@ -25,7 +25,7 @@ func evalHashIndexExpression(hash, index object.Object) object.Object {
 // evalMapLiteral evaluates key/value pairs and rejects keys that do not
 // implement object.Hashable.
 func (e *Evaluator) evalMapLiteral(node *ast.MapLiteral, env *object.Environment) object.Object {
-	pairs := make(map[object.HashKey]object.HashPair)
+	pairs := make(map[object.HashKey]object.MapPair)
 
 	for keyNode, valueNode := range node.Pairs {
 		key := e.Eval(keyNode, env)
@@ -33,9 +33,9 @@ func (e *Evaluator) evalMapLiteral(node *ast.MapLiteral, env *object.Environment
 			return key
 		}
 
-		hashKey, ok := key.(object.Hashable)
+		hashable, ok := key.(object.Hashable)
 		if !ok {
-			return newError("unusable as hash key: %s", key.Type())
+			return newError(object.RuntimeErrorKindType, "unusable as hash key: %s", key.Type())
 		}
 
 		value := e.Eval(valueNode, env)
@@ -43,7 +43,7 @@ func (e *Evaluator) evalMapLiteral(node *ast.MapLiteral, env *object.Environment
 			return value
 		}
 
-		pairs[hashKey.HashKey()] = object.HashPair{Key: key, Value: value}
+		pairs[hashable.HashKey()] = object.MapPair{Key: key, Value: value}
 	}
-	return &object.Hash{Pairs: pairs}
+	return &object.Map{Pairs: pairs}
 }

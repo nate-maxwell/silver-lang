@@ -82,8 +82,8 @@ func TestFloatDivisionByZero(t *testing.T) {
 	if !ok {
 		t.Fatalf("result is %T, want *object.Error", evaluated)
 	}
-	if err.Message != "division by zero" {
-		t.Fatalf("error message is %q, want division by zero", err.Message)
+	if err.MessageText() != "division by zero" {
+		t.Fatalf("error message is %q, want division by zero", err.MessageText())
 	}
 }
 
@@ -91,7 +91,7 @@ func TestIntegerDivisionByNumericZero(t *testing.T) {
 	for _, input := range []string{"1 // 0", "1.0 // 0", "1 // 0.0"} {
 		evaluated := testEval(input)
 		err, ok := evaluated.(*object.Error)
-		if !ok || err.Message != "division by zero" {
+		if !ok || err.MessageText() != "division by zero" {
 			t.Fatalf("%s result is %#v, want division-by-zero error", input, evaluated)
 		}
 	}
@@ -104,8 +104,8 @@ func TestZeroToNegativePowerIsDivisionByZero(t *testing.T) {
 		if !ok {
 			t.Fatalf("%s result is %T, want *object.Error", input, evaluated)
 		}
-		if err.Message != "division by zero" {
-			t.Fatalf("%s error message is %q, want division by zero", input, err.Message)
+		if err.MessageText() != "division by zero" {
+			t.Fatalf("%s error message is %q, want division by zero", input, err.MessageText())
 		}
 	}
 }
@@ -116,8 +116,8 @@ func TestFloatTypeMismatch(t *testing.T) {
 	if !ok {
 		t.Fatalf("result is %T, want *object.Error", evaluated)
 	}
-	if err.Message != "type mismatch: FLOAT + BOOLEAN" {
-		t.Fatalf("error message is %q", err.Message)
+	if err.MessageText() != "type mismatch: FLOAT + BOOLEAN" {
+		t.Fatalf("error message is %q", err.MessageText())
 	}
 }
 

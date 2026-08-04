@@ -744,14 +744,14 @@ func checkParserErrors(t *testing.T, p *Parser) {
 }
 
 func TestParserErrorsIncludeSourcePosition(t *testing.T) {
-	p := New(lexer.NewWithSource("let value = ;", "broken.silver"))
+	p := New(lexer.NewWithSource("let value = ;", "broken.slv"))
 	p.ParseProgram()
 
 	errors := p.Errors()
 	if len(errors) == 0 {
 		t.Fatal("parser returned no errors")
 	}
-	if !strings.Contains(errors[0], "broken.silver:1:13:") {
+	if !strings.Contains(errors[0], "broken.slv:1:13:") {
 		t.Fatalf("parser error has no source position: %q", errors[0])
 	}
 }

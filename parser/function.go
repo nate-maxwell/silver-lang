@@ -3,9 +3,9 @@ package parser
 import "silver/ast"
 import "silver/token"
 
-// parseFunctionLitearl parses an fn expression, including its parameter list,
+// parseFunctionLiteral parses an fn expression, including its parameter list,
 // optional return type, and brace-delimited body.
-func (p *Parser) parseFunctionLitearl() ast.Expression {
+func (p *Parser) parseFunctionLiteral() ast.Expression {
 	lit := &ast.FunctionLiteral{Token: p.curToken}
 
 	if !p.expectPeek(token.LPAREN) {

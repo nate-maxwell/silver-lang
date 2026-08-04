@@ -27,14 +27,46 @@ func TestBuiltinFileStructShape(t *testing.T) {
 	}
 }
 
-func TestBuiltinIOErrorStructsExposeMessage(t *testing.T) {
-	for _, name := range []string{"IOError", "FileNotFound", "PermissionDenied"} {
+func TestBuiltinErrorStructsExposeMessage(t *testing.T) {
+	names := []string{"IOError", "FileNotFound", "PermissionDenied"}
+	for _, name := range runtimeErrorStructNames {
+		names = append(names, name)
+	}
+	for _, name := range names {
 		definition, ok := BuiltinStructDefinitionByName(name)
 		if !ok {
 			t.Fatalf("%s definition is not registered", name)
 		}
 		if len(definition.Fields) != 1 || definition.Fields[0] != "message" || definition.FieldTypes[0].String() != "str" {
 			t.Fatalf("%s does not have the expected message: str field", name)
+		}
+	}
+}
+
+func TestRuntimeErrorStructTableConstructsEveryKind(t *testing.T) {
+	want := map[RuntimeErrorKind]string{
+		RuntimeErrorKindRuntime:      "RuntimeError",
+		RuntimeErrorKindType:         "TypeError",
+		RuntimeErrorKindValue:        "ValueError",
+		RuntimeErrorKindZeroDivision: "ZeroDivisionError",
+		RuntimeErrorKindName:         "NameError",
+		RuntimeErrorKindAttribute:    "AttributeError",
+		RuntimeErrorKindImport:       "ImportError",
+		RuntimeErrorKindSyntax:       "SyntaxError",
+		RuntimeErrorKindKey:          "KeyError",
+		RuntimeErrorKindIndex:        "IndexError",
+		RuntimeErrorKindTask:         "TaskError",
+	}
+	if len(runtimeErrorStructNames) != len(want) {
+		t.Fatalf("runtime error table has %d entries, want %d", len(runtimeErrorStructNames), len(want))
+	}
+	for kind, name := range want {
+		if got := runtimeErrorStructNames[kind]; got != name {
+			t.Fatalf("runtime error kind %q maps to %q, want %q", kind, got, name)
+		}
+		err := NewError(kind, "boom")
+		if err.Value.Struct.Name != name || err.MessageText() != "boom" || !err.IsRuntimeError() {
+			t.Fatalf("constructed %q as %#v", kind, err)
 		}
 	}
 }

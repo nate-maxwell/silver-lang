@@ -16,7 +16,7 @@ import (
 func (e *Evaluator) EvalFile(path string, env *object.Environment) object.Object {
 	absolutePath, err := filepath.Abs(path)
 	if err != nil {
-		return newError("could not resolve file %q: %s", path, err)
+		return newError(object.RuntimeErrorKindValue, "could not resolve file %q: %s", path, err)
 	}
 	absolutePath = filepath.Clean(absolutePath)
 
@@ -34,14 +34,14 @@ func (e *Evaluator) EvalFile(path string, env *object.Environment) object.Object
 func (e *Evaluator) importModule(path string, env *object.Environment) object.Object {
 	absolutePath, err := resolveImportPath(path, env.SourceDir())
 	if err != nil {
-		return newError("could not resolve import %q: %s", path, err)
+		return newError(object.RuntimeErrorKindImport, "could not resolve import %q: %s", path, err)
 	}
 
 	if module, ok := e.modules[absolutePath]; ok {
 		return module
 	}
 	if e.loading[absolutePath] {
-		return newError("circular import detected while loading %q", absolutePath)
+		return newError(object.RuntimeErrorKindImport, "circular import detected while loading %q", absolutePath)
 	}
 
 	e.loading[absolutePath] = true
@@ -92,7 +92,7 @@ func resolveImportPath(path, sourceDir string) (string, error) {
 func parseFile(path string) (*ast.Program, *object.Error) {
 	input, err := os.ReadFile(path)
 	if err != nil {
-		return nil, newError("could not read %q: %s", path, err)
+		return nil, newError(object.RuntimeErrorKindImport, "could not read %q: %s", path, err)
 	}
 	if program, ok := astcache.Load(path, input); ok {
 		return program, nil
@@ -101,7 +101,7 @@ func parseFile(path string) (*ast.Program, *object.Error) {
 	p := parser.New(lexer.NewWithSource(string(input), path))
 	program := p.ParseProgram()
 	if len(p.Errors()) != 0 {
-		return nil, newError("could not parse %q:\n%s", path, strings.Join(p.Errors(), "\n"))
+		return nil, newError(object.RuntimeErrorKindSyntax, "could not parse %q:\n%s", path, strings.Join(p.Errors(), "\n"))
 	}
 	program = foldConstants(program)
 	// A cache is an optimization only. Read-only directories and other cache

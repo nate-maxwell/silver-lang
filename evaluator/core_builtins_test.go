@@ -104,8 +104,8 @@ func TestNewCoreBuiltinErrors(t *testing.T) {
 			if !ok {
 				t.Fatalf("result is %T, want *object.Error", result)
 			}
-			if result.Message != tt.message {
-				t.Fatalf("error is %q, want %q", result.Message, tt.message)
+			if result.MessageText() != tt.message {
+				t.Fatalf("error is %q, want %q", result.MessageText(), tt.message)
 			}
 		})
 	}

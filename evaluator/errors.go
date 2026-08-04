@@ -5,16 +5,14 @@ import (
 	"silver/object"
 )
 
-// newError formats a Silver runtime error without a source frame. Eval attaches
-// the origin as the error propagates out of the AST node that created it.
-func newError(format string, a ...interface{}) *object.Error {
-	return &object.Error{Message: fmt.Sprintf(format, a...)}
+// newError creates a typed built-in runtime error struct. Eval attaches its
+// source origin centrally while declared error structs use the same wrapper.
+func newError(kind object.RuntimeErrorKind, format string, a ...interface{}) *object.Error {
+	return object.NewError(kind, fmt.Sprintf(format, a...))
 }
 
-// isError safely identifies runtime error objects, including a nil result.
+// isError identifies the single failure object used for evaluation unwinding.
 func isError(obj object.Object) bool {
-	if obj != nil {
-		return obj.Type() == object.ERROR_OBJ
-	}
-	return false
+	_, ok := obj.(*object.Error)
+	return ok
 }

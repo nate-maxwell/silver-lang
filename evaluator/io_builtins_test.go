@@ -77,14 +77,19 @@ func TestFileOperationsAfterCloseReturnIOError(t *testing.T) {
 	}
 
 	tests := []string{
-		`type(file.read()) == IOError`,
-		`type(file.write("replacement")) == IOError`,
-		`type(file.close()) == IOError`,
+		`file.read()`,
+		`file.write("replacement")`,
+		`file.close()`,
 	}
-	for _, assertion := range tests {
+	for _, operation := range tests {
 		input := `let file = open(` + silverString(path) + `)
 file.close()
-` + assertion
+try {
+` + operation + `
+False
+} catch IOError err {
+err.message != ""
+}`
 		testBooleanObject(t, testEval(input), true)
 	}
 }
@@ -92,10 +97,22 @@ file.close()
 func TestOpenReturnsStructuredErrors(t *testing.T) {
 	directory := t.TempDir()
 	missing := filepath.Join(directory, "missing.txt")
-	testBooleanObject(t, testEval(`type(open(`+silverString(missing)+`)) == FileNotFound`), true)
-	testBooleanObject(t, testEval(`type(open(`+silverString(directory)+`)) == PermissionDenied`), true)
+	testBooleanObject(t, testEval(`try {
+open(`+silverString(missing)+`)
+} catch FileNotFound err {
+err.message != ""
+}`), true)
+	testBooleanObject(t, testEval(`try {
+open(`+silverString(directory)+`)
+} catch PermissionDenied err {
+err.message != ""
+}`), true)
 
-	result := testEval(`open(` + silverString(missing) + `).message`)
+	result := testEval(`try {
+open(` + silverString(missing) + `)
+} catch FileNotFound err {
+err.message
+}`)
 	message, ok := result.(*object.String)
 	if !ok || message.Value == "" {
 		t.Fatalf("missing-file message is %#v, want a non-empty string", result)
@@ -121,8 +138,8 @@ func TestOpenRejectsInvalidArguments(t *testing.T) {
 		if !ok {
 			t.Fatalf("%s returned %T, want *object.Error", tt.input, result)
 		}
-		if result.Message != tt.message {
-			t.Fatalf("error is %q, want %q", result.Message, tt.message)
+		if result.MessageText() != tt.message {
+			t.Fatalf("error is %q, want %q", result.MessageText(), tt.message)
 		}
 	}
 }

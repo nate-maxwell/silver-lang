@@ -5,10 +5,6 @@ import (
 	"strings"
 )
 
-// If Silver can see the problem before running your code, it tells you immediately.
-// If your code expects a failure, it returns an error value.
-// If something unexpected goes wrong at runtime, you get a traceback.
-
 // TraceFrame is one user-visible execution frame. Frames store structured data,
 // so alternate frontends can render tracebacks differently without parsing a
 // preformatted error string.
@@ -24,21 +20,41 @@ func (f TraceFrame) IsValid() bool {
 	return f.Line > 0 && f.Column > 0
 }
 
-// Error is a Silver runtime failure. Message remains separate from Frames, so
-// frontends can render structured traceback data in their preferred format.
+// Error is the one failure object used by the evaluator. Value is always an
+// error-struct instance: either a declared Silver error alternative or one of
+// the built-in runtime error structs.
 type Error struct {
-	Message string
-	Frames  []TraceFrame
+	Value  *StructInstance
+	Frames []TraceFrame
 }
 
-// Type returns the runtime error tag.
+// NewError creates an error containing the built-in struct registered for kind.
+func NewError(kind RuntimeErrorKind, message string) *Error {
+	name, ok := runtimeErrorStructName(kind)
+	if !ok {
+		panic(fmt.Sprintf("object: unknown runtime error kind %q", kind))
+	}
+	definition, ok := BuiltinStructDefinitionByName(name)
+	if !ok {
+		panic(fmt.Sprintf("object: built-in %s struct is not registered", name))
+	}
+	return &Error{
+		Value: &StructInstance{
+			Struct: definition,
+			Values: map[string]Object{"message": &String{Value: message}},
+		},
+	}
+}
+
 func (e *Error) Type() ObjectType { return ERROR_OBJ }
 
-// Inspect renders a Python-style traceback followed by the error message. An
-// error without frames retains the compact legacy ERROR form.
+// Inspect renders a Python-style traceback followed by the error struct's
+// nominal type and message. The complete struct remains available for typed
+// catch binding and field access.
 func (e *Error) Inspect() string {
+	ending := e.ending()
 	if len(e.Frames) == 0 {
-		return "ERROR: " + e.Message
+		return ending
 	}
 
 	var out strings.Builder
@@ -57,13 +73,54 @@ func (e *Error) Inspect() string {
 			function,
 		)
 	}
-	out.WriteString("ERROR: ")
-	out.WriteString(e.Message)
+	out.WriteString(ending)
 	return out.String()
 }
 
-// SetOrigin records the innermost location that produced an error. Propagating
-// AST nodes call this freely; only the first valid origin is retained.
+func (e *Error) ending() string {
+	name := "Error"
+	detail := e.MessageText()
+	if e.Value != nil && e.Value.Struct != nil {
+		name = e.Value.Struct.Name
+		if detail == "" {
+			detail = e.Value.Inspect()
+		}
+	}
+	if detail == "" {
+		return name
+	}
+	return name + ": " + detail
+}
+
+// MessageText returns the conventional message field from the carried error
+// struct. It exists for Go frontends and tests; the struct remains the source
+// of truth rather than duplicating message state on Error.
+func (e *Error) MessageText() string {
+	if e == nil || e.Value == nil {
+		return ""
+	}
+	message, ok := e.Value.Get("message")
+	if !ok {
+		return ""
+	}
+	text, ok := message.(*String)
+	if !ok {
+		return ""
+	}
+	return text.Value
+}
+
+// IsRuntimeError reports whether this error contains one of Silver's built-in,
+// unchecked runtime error structs rather than a declared callable alternative.
+func (e *Error) IsRuntimeError() bool {
+	if e == nil || e.Value == nil {
+		return false
+	}
+	return isRuntimeErrorStruct(e.Value.Struct)
+}
+
+// SetOrigin records the innermost location that produced an error.
+// Propagating AST nodes call this freely; only the first valid origin is kept.
 func (e *Error) SetOrigin(frame TraceFrame) {
 	if len(e.Frames) == 0 && frame.IsValid() {
 		e.Frames = append(e.Frames, frame)
@@ -73,13 +130,10 @@ func (e *Error) SetOrigin(frame TraceFrame) {
 // PrependFrame adds an outer caller so frames remain ordered like Python
 // tracebacks: outermost call first, error origin last.
 func (e *Error) PrependFrame(frame TraceFrame) {
-	if !frame.IsValid() {
-		return
+	if frame.IsValid() {
+		e.Frames = append([]TraceFrame{frame}, e.Frames...)
 	}
-	e.Frames = append([]TraceFrame{frame}, e.Frames...)
 }
 
 // HasTraceback reports whether an origin or caller frame has been attached.
-func (e *Error) HasTraceback() bool {
-	return len(e.Frames) != 0
-}
+func (e *Error) HasTraceback() bool { return len(e.Frames) != 0 }

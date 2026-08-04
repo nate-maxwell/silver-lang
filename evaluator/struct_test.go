@@ -47,7 +47,7 @@ Point{1}
 	if !ok {
 		t.Fatalf("result is %T, want *object.Error", evaluated)
 	}
-	if got, want := err.Message, `wrong number of arguments for struct Point. got=1, want=2`; got != want {
+	if got, want := err.MessageText(), `wrong number of arguments for struct Point. got=1, want=2`; got != want {
 		t.Fatalf("error message is %q, want %q", got, want)
 	}
 }
@@ -63,23 +63,23 @@ Point{1}.y
 	if !ok {
 		t.Fatalf("result is %T, want *object.Error", evaluated)
 	}
-	if got, want := err.Message, `struct "Point" has no field "y"`; got != want {
+	if got, want := err.MessageText(), `struct "Point" has no field "y"`; got != want {
 		t.Fatalf("error message is %q, want %q", got, want)
 	}
 }
 
 func TestStructExportedFromModule(t *testing.T) {
 	dir := t.TempDir()
-	libraryPath := filepath.Join(dir, "library.lib")
-	mainPath := filepath.Join(dir, "main.slvr")
-	writeMonkeyFile(t, libraryPath, `
+	libraryPath := filepath.Join(dir, "library.slv")
+	mainPath := filepath.Join(dir, "main.slv")
+	writeSilverFile(t, libraryPath, `
 struct Point {
 	x: int
 	y: int
 }
 `)
-	writeMonkeyFile(t, mainPath, `
-let library = import("./library.lib")
+	writeSilverFile(t, mainPath, `
+let library = import("./library.slv")
 let point: library.Point = library.Point{8, 9}
 point.y
 `)
@@ -100,7 +100,7 @@ Person{"Ada", "old"}
 	if !ok {
 		t.Fatalf("result is %T, want *object.Error", evaluated)
 	}
-	if got, want := err.Message, `type mismatch for field "Person.age": expected int, got str`; got != want {
+	if got, want := err.MessageText(), `type mismatch for field "Person.age": expected int, got str`; got != want {
 		t.Fatalf("error message is %q, want %q", got, want)
 	}
 }
@@ -195,7 +195,7 @@ consume(Payload{"wrong"})
 	if !ok {
 		t.Fatalf("result is %T, want *object.Error", evaluated)
 	}
-	if got, want := err.Message, `type mismatch for parameter "value": expected int, got str`; got != want {
+	if got, want := err.MessageText(), `type mismatch for parameter "value": expected int, got str`; got != want {
 		t.Fatalf("error message is %q, want %q", got, want)
 	}
 }
@@ -223,7 +223,7 @@ consume(Point{1})
 	if !ok {
 		t.Fatalf("result is %T, want *object.Error", evaluated)
 	}
-	if got, want := err.Message, `type mismatch for parameter "value": expected int, got Point`; got != want {
+	if got, want := err.MessageText(), `type mismatch for parameter "value": expected int, got Point`; got != want {
 		t.Fatalf("error message is %q, want %q", got, want)
 	}
 }
@@ -237,7 +237,7 @@ value{}
 	if !ok {
 		t.Fatalf("result is %T, want *object.Error", evaluated)
 	}
-	if got, want := err.Message, `not a struct: int`; got != want {
+	if got, want := err.MessageText(), `not a struct: int`; got != want {
 		t.Fatalf("error message is %q, want %q", got, want)
 	}
 }
@@ -283,7 +283,7 @@ point.x = "wrong"
 	if !ok {
 		t.Fatalf("result is %T, want *object.Error", evaluated)
 	}
-	if got, want := err.Message, `type mismatch for field "Point.x": expected int, got str`; got != want {
+	if got, want := err.MessageText(), `type mismatch for field "Point.x": expected int, got str`; got != want {
 		t.Fatalf("error message is %q, want %q", got, want)
 	}
 }

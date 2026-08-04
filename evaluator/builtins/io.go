@@ -149,9 +149,9 @@ func namedType(name string) *ast.TypeAnnotation {
 }
 
 func callSignature(parameterNames []string, parameterTypes []*ast.TypeAnnotation, returnType *ast.TypeAnnotation, errorNames ...string) *ast.TypeAnnotation {
-	errors := make([]*ast.TypeAnnotation, len(errorNames))
+	callErrors := make([]*ast.TypeAnnotation, len(errorNames))
 	for index, name := range errorNames {
-		errors[index] = namedType(name)
+		callErrors[index] = namedType(name)
 	}
 	if parameterNames == nil {
 		parameterNames = []string{}
@@ -164,7 +164,7 @@ func callSignature(parameterNames []string, parameterTypes []*ast.TypeAnnotation
 		ParameterNames: parameterNames,
 		ParameterTypes: parameterTypes,
 		ReturnType:     returnType,
-		ErrorTypes:     errors,
+		ErrorTypes:     callErrors,
 	}
 }
 

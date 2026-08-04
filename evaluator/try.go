@@ -23,7 +23,7 @@ func (e *Evaluator) evalTryExpression(expression *ast.TryExpression, env *object
 	for _, clause := range expression.Catches {
 		matches, resolutionError := typeMatches(clause.ErrorType, error.Value, env)
 		if resolutionError != "" {
-			return newError("%s", resolutionError)
+			return newError(object.RuntimeErrorKindName, "%s", resolutionError)
 		}
 		if !matches {
 			continue

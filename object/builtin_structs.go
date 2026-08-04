@@ -2,6 +2,39 @@ package object
 
 import "silver/ast"
 
+// RuntimeErrorKind identifies one built-in runtime error struct. The table is
+// the complete registry: adding an entry makes the nominal struct available to
+// Silver code and allows evaluators and native builtins to construct it.
+type RuntimeErrorKind string
+
+const (
+	RuntimeErrorKindRuntime      RuntimeErrorKind = "runtime"
+	RuntimeErrorKindType         RuntimeErrorKind = "type"
+	RuntimeErrorKindValue        RuntimeErrorKind = "value"
+	RuntimeErrorKindZeroDivision RuntimeErrorKind = "zero_division"
+	RuntimeErrorKindName         RuntimeErrorKind = "name"
+	RuntimeErrorKindAttribute    RuntimeErrorKind = "attribute"
+	RuntimeErrorKindImport       RuntimeErrorKind = "import"
+	RuntimeErrorKindSyntax       RuntimeErrorKind = "syntax"
+	RuntimeErrorKindKey          RuntimeErrorKind = "key"
+	RuntimeErrorKindIndex        RuntimeErrorKind = "index"
+	RuntimeErrorKindTask         RuntimeErrorKind = "task"
+)
+
+var runtimeErrorStructNames = map[RuntimeErrorKind]string{
+	RuntimeErrorKindRuntime:      "RuntimeError",
+	RuntimeErrorKindType:         "TypeError",
+	RuntimeErrorKindValue:        "ValueError",
+	RuntimeErrorKindZeroDivision: "ZeroDivisionError",
+	RuntimeErrorKindName:         "NameError",
+	RuntimeErrorKindAttribute:    "AttributeError",
+	RuntimeErrorKindImport:       "ImportError",
+	RuntimeErrorKindSyntax:       "SyntaxError",
+	RuntimeErrorKindKey:          "KeyError",
+	RuntimeErrorKindIndex:        "IndexError",
+	RuntimeErrorKindTask:         "TaskError",
+}
+
 // Builtin nominal structs are fallback definitions, like primitive types and
 // builtin functions. User bindings with the same name still take precedence.
 var builtinStructDefinitions map[string]*Struct
@@ -9,10 +42,12 @@ var builtinStructDefinitions map[string]*Struct
 func init() {
 	environment := NewEnvironment()
 	builtinStructDefinitions = map[string]*Struct{
-		"Error":            errorStructDefinition("Error", environment),
 		"IOError":          errorStructDefinition("IOError", environment),
 		"FileNotFound":     errorStructDefinition("FileNotFound", environment),
 		"PermissionDenied": errorStructDefinition("PermissionDenied", environment),
+	}
+	for _, name := range runtimeErrorStructNames {
+		builtinStructDefinitions[name] = errorStructDefinition(name, environment)
 	}
 	builtinStructDefinitions["File"] = &Struct{
 		Name:   "File",
@@ -63,8 +98,23 @@ func callAnnotation(parameterNames []string, parameterTypes []*ast.TypeAnnotatio
 	}
 }
 
-// BuiltinStructDefinitionByName resolves File and the native I/O error types.
+// BuiltinStructDefinitionByName resolves File and built-in error structs.
 func BuiltinStructDefinitionByName(name string) (*Struct, bool) {
 	definition, ok := builtinStructDefinitions[name]
 	return definition, ok
+}
+
+func runtimeErrorStructName(kind RuntimeErrorKind) (string, bool) {
+	name, ok := runtimeErrorStructNames[kind]
+	return name, ok
+}
+
+func isRuntimeErrorStruct(definition *Struct) bool {
+	for _, name := range runtimeErrorStructNames {
+		candidate, ok := builtinStructDefinitions[name]
+		if ok && definition == candidate {
+			return true
+		}
+	}
+	return false
 }

@@ -12,7 +12,7 @@ func (e *Evaluator) evalEnumStatement(node *ast.EnumStatement, env *object.Envir
 	members := make(map[string]*object.EnumValue, len(node.Members))
 	for _, member := range node.Members {
 		if _, exists := members[member.Value]; exists {
-			return newError("duplicate enum member %q", member.Value)
+			return newError(object.RuntimeErrorKindValue, "duplicate enum member %q", member.Value)
 		}
 		hashID := e.nextEnumValueID.Add(1)
 		members[member.Value] = &object.EnumValue{

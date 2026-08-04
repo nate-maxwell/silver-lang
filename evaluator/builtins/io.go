@@ -39,7 +39,7 @@ func builtinOpen(null *object.Null) object.BuiltinFunction {
 		}
 		path, ok := args[0].(*object.String)
 		if !ok {
-			return newError("argument to `open` must be STRING, got %s", args[0].Type())
+			return newError(object.RuntimeErrorKindType, "argument to `open` must be STRING, got %s", args[0].Type())
 		}
 
 		handle, err := os.OpenFile(path.Value, os.O_RDWR, 0)
@@ -89,7 +89,7 @@ func (file *nativeFile) write(args ...object.Object) object.Object {
 	}
 	contents, ok := args[0].(*object.String)
 	if !ok {
-		return newError("argument to `File.write` must be STRING, got %s", args[0].Type())
+		return newError(object.RuntimeErrorKindType, "argument to `File.write` must be STRING, got %s", args[0].Type())
 	}
 	file.mu.Lock()
 	defer file.mu.Unlock()

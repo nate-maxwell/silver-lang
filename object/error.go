@@ -20,19 +20,23 @@ func (f TraceFrame) IsValid() bool {
 	return f.Line > 0 && f.Column > 0
 }
 
-// Error is the one failure object used by the evaluator. Value is always
-// an error-struct instance: either a declared Silver error alternative or the
-// built-in Error struct used for ordinary runtime faults.
+// Error is the one failure object used by the evaluator. Value is always an
+// error-struct instance: either a declared Silver error alternative or one of
+// the built-in runtime error structs.
 type Error struct {
 	Value  *StructInstance
 	Frames []TraceFrame
 }
 
-// NewError creates an error containing the built-in Error struct.
-func NewError(message string) *Error {
-	definition, ok := BuiltinStructDefinitionByName("Error")
+// NewError creates an error containing the built-in struct registered for kind.
+func NewError(kind RuntimeErrorKind, message string) *Error {
+	name, ok := runtimeErrorStructName(kind)
 	if !ok {
-		panic("object: built-in Error struct is not registered")
+		panic(fmt.Sprintf("object: unknown runtime error kind %q", kind))
+	}
+	definition, ok := BuiltinStructDefinitionByName(name)
+	if !ok {
+		panic(fmt.Sprintf("object: built-in %s struct is not registered", name))
 	}
 	return &Error{
 		Value: &StructInstance{
@@ -106,14 +110,13 @@ func (e *Error) MessageText() string {
 	return text.Value
 }
 
-// IsRuntimeError reports whether this error contains Silver's built-in,
-// unchecked Error struct rather than a declared callable error alternative.
+// IsRuntimeError reports whether this error contains one of Silver's built-in,
+// unchecked runtime error structs rather than a declared callable alternative.
 func (e *Error) IsRuntimeError() bool {
 	if e == nil || e.Value == nil {
 		return false
 	}
-	definition, ok := BuiltinStructDefinitionByName("Error")
-	return ok && e.Value.Struct == definition
+	return isRuntimeErrorStruct(e.Value.Struct)
 }
 
 // SetOrigin records the innermost location that produced an error.

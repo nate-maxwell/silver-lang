@@ -27,28 +27,28 @@ func evalFloatInfixExpression(operator string, left, right object.Object) object
 		return &object.Float{Value: leftValue * rightValue}
 	case "**":
 		if leftValue == 0 && rightValue < 0 {
-			return newError("division by zero")
+			return newError(object.RuntimeErrorKindZeroDivision, "division by zero")
 		}
 		return &object.Float{Value: math.Pow(leftValue, rightValue)}
 	case "/":
 		if rightValue == 0 {
-			return newError("division by zero")
+			return newError(object.RuntimeErrorKindZeroDivision, "division by zero")
 		}
 		return &object.Float{Value: leftValue / rightValue}
 	case "//":
 		if rightValue == 0 {
-			return newError("division by zero")
+			return newError(object.RuntimeErrorKindZeroDivision, "division by zero")
 		}
 		quotient := math.Trunc(leftValue / rightValue)
 		const integerLimit = float64(uint64(1) << 63)
 		if math.IsNaN(quotient) || math.IsInf(quotient, 0) || quotient < -integerLimit || quotient >= integerLimit {
-			return newError("integer division result out of range")
+			return newError(object.RuntimeErrorKindValue, "integer division result out of range")
 		}
 		return &object.Integer{Value: int64(quotient)}
 	case "<", ">", "<=", ">=", "==", "!=":
 		return nativeBoolToBooleanObject(compareNumeric(operator, left, right))
 	default:
-		return newError("unknown operator: %s %s %s", left.Type(), operator, right.Type())
+		return newError(object.RuntimeErrorKindType, "unknown operator: %s %s %s", left.Type(), operator, right.Type())
 	}
 }
 

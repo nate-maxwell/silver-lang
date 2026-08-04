@@ -86,16 +86,16 @@ caller()
 	}
 }
 
-func TestRuntimeErrorsUseTheBuiltinErrorStruct(t *testing.T) {
+func TestRuntimeErrorsUseTheirBuiltinErrorStruct(t *testing.T) {
 	result := testEval(`
 try {
 	1 + True
-} catch Error err {
+} catch TypeError err {
 	err.message
 }
 `)
 	message, ok := result.(*object.String)
 	if !ok || message.Value != "type mismatch: INTEGER + BOOLEAN" {
-		t.Fatalf("result is %#v, want the caught Error message", result)
+		t.Fatalf("result is %#v, want the caught TypeError message", result)
 	}
 }

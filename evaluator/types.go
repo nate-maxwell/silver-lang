@@ -16,12 +16,12 @@ func (e *Evaluator) requireType(annotation *ast.TypeAnnotation, value object.Obj
 
 	matches, resolutionError := typeMatches(annotation, value, env)
 	if resolutionError != "" {
-		return newError("%s", resolutionError)
+		return newError(object.RuntimeErrorKindName, "%s", resolutionError)
 	}
 	if matches {
 		return nil
 	}
-	return newError("type mismatch for %s: expected %s, got %s", subject, annotation.String(), runtimeTypeName(value))
+	return newError(object.RuntimeErrorKindType, "type mismatch for %s: expected %s, got %s", subject, annotation.String(), runtimeTypeName(value))
 }
 
 // validateTypeAnnotation rejects unknown names at declaration time, even when
@@ -55,13 +55,13 @@ func (e *Evaluator) validateTypeAnnotation(annotation *ast.TypeAnnotation, env *
 	}
 	value, resolutionError := resolveNamedType(annotation, env)
 	if resolutionError != "" {
-		return newError("%s", resolutionError)
+		return newError(object.RuntimeErrorKindName, "%s", resolutionError)
 	}
 	switch value.(type) {
 	case *object.Struct, *object.Enum:
 		return nil
 	default:
-		return newError("%q does not name a value type", annotation.String())
+		return newError(object.RuntimeErrorKindType, "%q does not name a value type", annotation.String())
 	}
 }
 
@@ -70,21 +70,21 @@ func (e *Evaluator) validateTypeAnnotation(annotation *ast.TypeAnnotation, env *
 // callable boundary, leaving structs ordinary values everywhere else.
 func (e *Evaluator) validateErrorTypeAnnotation(annotation *ast.TypeAnnotation, env *object.Environment) *object.Error {
 	if annotation == nil {
-		return newError("error return type must be a struct")
+		return newError(object.RuntimeErrorKindType, "error return type must be a struct")
 	}
 	if err := e.validateTypeAnnotation(annotation, env); err != nil {
 		return err
 	}
 	_, primitive := primitiveTypes[annotation.String()]
 	if annotation.IsCallSignature() || len(annotation.Parts) == 1 && primitive {
-		return newError("error return type %q must be a struct", annotation.String())
+		return newError(object.RuntimeErrorKindType, "error return type %q must be a struct", annotation.String())
 	}
 	value, resolutionError := resolveNamedType(annotation, env)
 	if resolutionError != "" {
-		return newError("%s", resolutionError)
+		return newError(object.RuntimeErrorKindName, "%s", resolutionError)
 	}
 	if _, ok := value.(*object.Struct); !ok {
-		return newError("error return type %q must be a struct", annotation.String())
+		return newError(object.RuntimeErrorKindType, "error return type %q must be a struct", annotation.String())
 	}
 	return nil
 }
@@ -99,7 +99,7 @@ func (e *Evaluator) requireReturnType(success *ast.TypeAnnotation, errorTypes []
 	} else {
 		matches, resolutionError := typeMatches(success, value, env)
 		if resolutionError != "" {
-			return newError("%s", resolutionError)
+			return newError(object.RuntimeErrorKindName, "%s", resolutionError)
 		}
 		if matches {
 			return nil
@@ -108,13 +108,13 @@ func (e *Evaluator) requireReturnType(success *ast.TypeAnnotation, errorTypes []
 	for _, errorType := range errorTypes {
 		matches, resolutionError := typeMatches(errorType, value, env)
 		if resolutionError != "" {
-			return newError("%s", resolutionError)
+			return newError(object.RuntimeErrorKindName, "%s", resolutionError)
 		}
 		if matches {
 			return nil
 		}
 	}
-	return newError("type mismatch for %s: expected %s, got %s", subject, returnTypesString(success, errorTypes), runtimeTypeName(value))
+	return newError(object.RuntimeErrorKindType, "type mismatch for %s: expected %s, got %s", subject, returnTypesString(success, errorTypes), runtimeTypeName(value))
 }
 
 // matchesDeclaredError reports whether value is one of a callable's declared
@@ -123,7 +123,7 @@ func matchesDeclaredError(errorTypes []*ast.TypeAnnotation, value object.Object,
 	for _, errorType := range errorTypes {
 		matches, resolutionError := typeMatches(errorType, value, env)
 		if resolutionError != "" {
-			return false, newError("%s", resolutionError)
+			return false, newError(object.RuntimeErrorKindName, "%s", resolutionError)
 		}
 		if matches {
 			return true, nil

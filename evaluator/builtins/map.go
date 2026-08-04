@@ -112,7 +112,7 @@ func builtinMapValues(args ...object.Object) object.Object {
 func requireMap(name string, value object.Object) (*object.Hash, *object.Error) {
 	mapping, ok := value.(*object.Hash)
 	if !ok {
-		return nil, newError("argument to `%s` must be HASH, got %s", name, value.Type())
+		return nil, newError(object.RuntimeErrorKindType, "argument to `%s` must be HASH, got %s", name, value.Type())
 	}
 	return mapping, nil
 }
@@ -120,7 +120,7 @@ func requireMap(name string, value object.Object) (*object.Hash, *object.Error) 
 func requireHashKey(value object.Object) (object.HashKey, *object.Error) {
 	hashable, ok := value.(object.Hashable)
 	if !ok {
-		return object.HashKey{}, newError("unusable as hash key: %s", value.Type())
+		return object.HashKey{}, newError(object.RuntimeErrorKindType, "unusable as hash key: %s", value.Type())
 	}
 	return hashable.HashKey(), nil
 }

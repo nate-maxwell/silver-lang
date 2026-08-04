@@ -21,19 +21,19 @@ func evalIntegerInfixExpression(operator string, left, right object.Object) obje
 	case "**":
 		if rightValue < 0 {
 			if leftValue == 0 {
-				return newError("division by zero")
+				return newError(object.RuntimeErrorKindZeroDivision, "division by zero")
 			}
 			return &object.Float{Value: math.Pow(float64(leftValue), float64(rightValue))}
 		}
 		return &object.Integer{Value: integerPower(leftValue, rightValue)}
 	case "/":
 		if rightValue == 0 {
-			return newError("division by zero")
+			return newError(object.RuntimeErrorKindZeroDivision, "division by zero")
 		}
 		return &object.Float{Value: float64(leftValue) / float64(rightValue)}
 	case "//":
 		if rightValue == 0 {
-			return newError("division by zero")
+			return newError(object.RuntimeErrorKindZeroDivision, "division by zero")
 		}
 		return &object.Integer{Value: leftValue / rightValue}
 	case "<":
@@ -49,7 +49,7 @@ func evalIntegerInfixExpression(operator string, left, right object.Object) obje
 	case "!=":
 		return nativeBoolToBooleanObject(leftValue != rightValue)
 	default:
-		return newError("unknown operator: %s %s %s", left.Type(), operator, right.Type())
+		return newError(object.RuntimeErrorKindType, "unknown operator: %s %s %s", left.Type(), operator, right.Type())
 	}
 }
 

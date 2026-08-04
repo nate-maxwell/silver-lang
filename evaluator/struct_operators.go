@@ -38,11 +38,12 @@ func (e *Evaluator) evalInfixExpression(node *ast.InfixExpression, left, right o
 
 	methodName, ok := structInfixOperatorMethods[node.Operator]
 	if !ok {
-		return newError("unknown operator: %s %s %s", left.Type(), node.Operator, right.Type())
+		return newError(object.RuntimeErrorKindType, "unknown operator: %s %s %s", left.Type(), node.Operator, right.Type())
 	}
 	method, exists := instance.Get(methodName)
 	if !exists {
 		return newError(
+			object.RuntimeErrorKindAttribute,
 			"operator %q is not defined for struct %q: missing method %q",
 			node.Operator,
 			instance.Struct.Name,
@@ -68,6 +69,7 @@ func (e *Evaluator) evalInfixExpression(node *ast.InfixExpression, left, right o
 		}
 	default:
 		return newError(
+			object.RuntimeErrorKindType,
 			"operator method %q on struct %q is not callable",
 			methodName,
 			instance.Struct.Name,

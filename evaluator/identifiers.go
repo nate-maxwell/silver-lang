@@ -11,7 +11,7 @@ import (
 func (e *Evaluator) evalAssignment(node *ast.AssignmentStatement, env *object.Environment) object.Object {
 	annotation, declarationEnv, ok := env.AssignmentTarget(node.Name.Value)
 	if !ok {
-		return newError("identifier not found: %s", node.Name.Value)
+		return newError(object.RuntimeErrorKindName, "identifier not found: %s", node.Name.Value)
 	}
 
 	value := e.Eval(node.Value, env)
@@ -34,7 +34,7 @@ func (e *Evaluator) evalMemberAssignment(node *ast.MemberAssignmentStatement, en
 	}
 	instance, ok := target.(*object.StructInstance)
 	if !ok {
-		return newError("member assignment not supported on %s", runtimeTypeName(target))
+		return newError(object.RuntimeErrorKindType, "member assignment not supported on %s", runtimeTypeName(target))
 	}
 
 	member := node.Target.Member.Value
@@ -46,7 +46,7 @@ func (e *Evaluator) evalMemberAssignment(node *ast.MemberAssignmentStatement, en
 		}
 	}
 	if fieldIndex < 0 {
-		return newError("struct %q has no field %q", instance.Struct.Name, member)
+		return newError(object.RuntimeErrorKindAttribute, "struct %q has no field %q", instance.Struct.Name, member)
 	}
 
 	value := e.Eval(node.Value, env)
@@ -69,7 +69,7 @@ func (e *Evaluator) evalIndexAssignment(node *ast.IndexAssignmentStatement, env 
 	}
 	mapping, ok := target.(*object.Hash)
 	if !ok {
-		return newError("index assignment not supported on %s", runtimeTypeName(target))
+		return newError(object.RuntimeErrorKindType, "index assignment not supported on %s", runtimeTypeName(target))
 	}
 
 	key := e.Eval(node.Target.Index, env)
@@ -78,7 +78,7 @@ func (e *Evaluator) evalIndexAssignment(node *ast.IndexAssignmentStatement, env 
 	}
 	hashable, ok := key.(object.Hashable)
 	if !ok {
-		return newError("unusable as hash key: %s", key.Type())
+		return newError(object.RuntimeErrorKindType, "unusable as hash key: %s", key.Type())
 	}
 
 	value := e.Eval(node.Value, env)
@@ -96,19 +96,19 @@ func (e *Evaluator) evalMember(value object.Object, member string) object.Object
 	case *object.Module:
 		export, ok := value.Exports[member]
 		if !ok {
-			return newError("module %q has no member %q", value.Path, member)
+			return newError(object.RuntimeErrorKindAttribute, "module %q has no member %q", value.Path, member)
 		}
 		return export
 	case *object.Enum:
 		enumValue, ok := value.Members[member]
 		if !ok {
-			return newError("enum %q has no member %q", value.Name, member)
+			return newError(object.RuntimeErrorKindAttribute, "enum %q has no member %q", value.Name, member)
 		}
 		return enumValue
 	case *object.StructInstance:
 		field, ok := value.Get(member)
 		if !ok {
-			return newError("struct %q has no field %q", value.Struct.Name, member)
+			return newError(object.RuntimeErrorKindAttribute, "struct %q has no field %q", value.Struct.Name, member)
 		}
 		for index, fieldName := range value.Struct.Fields {
 			fieldType := value.Struct.FieldTypes[index]
@@ -126,7 +126,7 @@ func (e *Evaluator) evalMember(value object.Object, member string) object.Object
 		if builtin, ok := e.builtins.LookupMethod(value.Type(), member); ok {
 			return bindBuiltinReceiver(builtin, value)
 		}
-		return newError("member access not supported on %s", value.Type())
+		return newError(object.RuntimeErrorKindType, "member access not supported on %s", value.Type())
 	}
 }
 
@@ -156,5 +156,5 @@ func (e *Evaluator) evalIdentifier(node *ast.Identifier, env *object.Environment
 	if structDefinition, ok := object.BuiltinStructDefinitionByName(node.Value); ok {
 		return structDefinition
 	}
-	return newError("identifier not found: %s", node.Value)
+	return newError(object.RuntimeErrorKindName, "identifier not found: %s", node.Value)
 }

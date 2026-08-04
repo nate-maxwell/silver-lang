@@ -56,7 +56,7 @@ fail()
 		"Traceback (most recent call last):",
 		fmt.Sprintf("File \"%s\", line 4, column 1, in <module>", path),
 		fmt.Sprintf("File \"%s\", line 2, column 7, in fail", path),
-		"Error: type mismatch: INTEGER + BOOLEAN",
+		"TypeError: type mismatch: INTEGER + BOOLEAN",
 	} {
 		if !strings.Contains(traceback, part) {
 			t.Fatalf("traceback does not contain %q:\n%s", part, traceback)

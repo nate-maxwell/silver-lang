@@ -39,7 +39,7 @@ middle()
 	if !strings.Contains(traceback, fmt.Sprintf("File \"%s\", line 2, column 7, in fail", path)) {
 		t.Fatalf("traceback does not include the error origin:\n%s", traceback)
 	}
-	if !strings.HasSuffix(traceback, "Error: type mismatch: INTEGER + BOOLEAN") {
+	if !strings.HasSuffix(traceback, "TypeError: type mismatch: INTEGER + BOOLEAN") {
 		t.Fatalf("traceback has unexpected error message:\n%s", traceback)
 	}
 }

@@ -27,7 +27,7 @@ func builtinAbs(args ...object.Object) object.Object {
 	case *object.Integer:
 		const minimumInteger = -1 << 63
 		if value.Value == minimumInteger {
-			return newError("absolute value out of range for INTEGER")
+			return newError(object.RuntimeErrorKindValue, "absolute value out of range for INTEGER")
 		}
 		if value.Value < 0 {
 			return &object.Integer{Value: -value.Value}
@@ -36,7 +36,7 @@ func builtinAbs(args ...object.Object) object.Object {
 	case *object.Float:
 		return &object.Float{Value: math.Abs(value.Value)}
 	default:
-		return newError("argument to `abs` must be INTEGER or FLOAT, got %s", args[0].Type())
+		return newError(object.RuntimeErrorKindType, "argument to `abs` must be INTEGER or FLOAT, got %s", args[0].Type())
 	}
 }
 
@@ -56,7 +56,7 @@ func builtinNumericExtreme(name string, minimum bool, args []object.Object) obje
 	}
 	for index, argument := range args {
 		if !isNumber(argument) {
-			return newError("argument %d to `%s` must be INTEGER or FLOAT, got %s", index+1, name, argument.Type())
+			return newError(object.RuntimeErrorKindType, "argument %d to `%s` must be INTEGER or FLOAT, got %s", index+1, name, argument.Type())
 		}
 	}
 	comparison := compareNumbers(args[0], args[1])
@@ -74,11 +74,11 @@ func builtinRange(args ...object.Object) object.Object {
 	}
 	start, ok := args[0].(*object.Integer)
 	if !ok {
-		return newError("argument 1 to `range` must be INTEGER, got %s", args[0].Type())
+		return newError(object.RuntimeErrorKindType, "argument 1 to `range` must be INTEGER, got %s", args[0].Type())
 	}
 	end, ok := args[1].(*object.Integer)
 	if !ok {
-		return newError("argument 2 to `range` must be INTEGER, got %s", args[1].Type())
+		return newError(object.RuntimeErrorKindType, "argument 2 to `range` must be INTEGER, got %s", args[1].Type())
 	}
 	if end.Value <= start.Value {
 		return &object.Array{Elements: []object.Object{}}
@@ -87,7 +87,7 @@ func builtinRange(args ...object.Object) object.Object {
 	length := uint64(end.Value) - uint64(start.Value)
 	const maximumRangeLength = 1_000_000
 	if length > maximumRangeLength {
-		return newError("range contains too many elements: %d (maximum %d)", length, maximumRangeLength)
+		return newError(object.RuntimeErrorKindValue, "range contains too many elements: %d (maximum %d)", length, maximumRangeLength)
 	}
 	elements := make([]object.Object, int(length))
 	for index := range elements {

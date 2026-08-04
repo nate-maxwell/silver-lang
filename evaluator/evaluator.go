@@ -283,7 +283,7 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 		}
 		definition, ok := structType.(*object.Struct)
 		if !ok {
-			return newError("not a struct: %s", runtimeTypeName(structType))
+			return newError(object.RuntimeErrorKindType, "not a struct: %s", runtimeTypeName(structType))
 		}
 		values := e.evalExpressions(node.Values, env)
 		if len(values) == 1 && isError(values[0]) {

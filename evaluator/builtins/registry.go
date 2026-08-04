@@ -118,20 +118,20 @@ func requireArgumentCount(args []object.Object, want int) *object.Error {
 	if len(args) == want {
 		return nil
 	}
-	return newError("wrong number of arguments. got=%d, want=%d", len(args), want)
+	return newError(object.RuntimeErrorKindType, "wrong number of arguments. got=%d, want=%d", len(args), want)
 }
 
 // requireArray performs the shared runtime type check for array builtins.
 func requireArray(name string, value object.Object) (*object.Array, *object.Error) {
 	array, ok := value.(*object.Array)
 	if !ok {
-		return nil, newError("argument to `%s` must be ARRAY, got %s", name, value.Type())
+		return nil, newError(object.RuntimeErrorKindType, "argument to `%s` must be ARRAY, got %s", name, value.Type())
 	}
 	return array, nil
 }
 
 // newError creates a runtime error that the evaluator will annotate with the
 // Silver call site's traceback information.
-func newError(format string, args ...interface{}) *object.Error {
-	return object.NewError(fmt.Sprintf(format, args...))
+func newError(kind object.RuntimeErrorKind, format string, args ...interface{}) *object.Error {
+	return object.NewError(kind, fmt.Sprintf(format, args...))
 }

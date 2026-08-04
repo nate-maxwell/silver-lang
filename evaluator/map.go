@@ -5,19 +5,19 @@ import (
 	"silver/object"
 )
 
-// evalHashIndexExpression normalizes a hashable key and returns null when the
-// key is absent.
+// evalHashIndexExpression normalizes a hashable key and returns KeyError when
+// the key is absent. The map get builtin remains the nullable lookup API.
 func evalHashIndexExpression(hash, index object.Object) object.Object {
 	hashObject := hash.(*object.Hash)
 
 	key, ok := index.(object.Hashable)
 	if !ok {
-		return newError("unusable as hash key: %s", index.Type())
+		return newError(object.RuntimeErrorKindType, "unusable as hash key: %s", index.Type())
 	}
 
 	pair, ok := hashObject.Get(key.HashKey())
 	if !ok {
-		return NULL
+		return newError(object.RuntimeErrorKindKey, "key not found: %s", index.Inspect())
 	}
 	return pair.Value
 }
@@ -35,7 +35,7 @@ func (e *Evaluator) evalMapLiteral(node *ast.MapLiteral, env *object.Environment
 
 		hashKey, ok := key.(object.Hashable)
 		if !ok {
-			return newError("unusable as hash key: %s", key.Type())
+			return newError(object.RuntimeErrorKindType, "unusable as hash key: %s", key.Type())
 		}
 
 		value := e.Eval(valueNode, env)

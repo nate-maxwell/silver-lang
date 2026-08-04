@@ -14,7 +14,7 @@ func (e *Evaluator) evalForStatement(statement *ast.ForStatement, env *object.En
 	switch collection := iterable.(type) {
 	case *object.Array:
 		if statement.Value != nil {
-			return newError("array for loop requires one binding")
+			return newError(object.RuntimeErrorKindValue, "array for loop requires one binding")
 		}
 		for _, element := range collection.Elements {
 			env.Set(statement.Key.Value, element)
@@ -24,7 +24,7 @@ func (e *Evaluator) evalForStatement(statement *ast.ForStatement, env *object.En
 		}
 	case *object.Hash:
 		if statement.Value == nil {
-			return newError("map for loop requires key and value bindings")
+			return newError(object.RuntimeErrorKindValue, "map for loop requires key and value bindings")
 		}
 		for _, pair := range collection.Snapshot() {
 			env.Set(statement.Key.Value, pair.Key)
@@ -34,7 +34,7 @@ func (e *Evaluator) evalForStatement(statement *ast.ForStatement, env *object.En
 			}
 		}
 	default:
-		return newError("not iterable: %s", runtimeTypeName(iterable))
+		return newError(object.RuntimeErrorKindType, "not iterable: %s", runtimeTypeName(iterable))
 	}
 
 	return NULL

@@ -11,9 +11,7 @@ func TestHashIndexExpressions(t *testing.T) {
 		expected interface{}
 	}{
 		{`{"foo": 5}["foo"]`, 5},
-		{`{"foo": 5}["bar"]`, nil},
 		{"let key = \"foo\"\n{\"foo\": 5}[key]", 5},
-		{`{}["foo"]`, nil},
 		{`{5: 5}[5]`, 5},
 		{`{True: 5}[True]`, 5},
 		{`{False: 5}[False]`, 5},
@@ -26,6 +24,15 @@ func TestHashIndexExpressions(t *testing.T) {
 			testIntegerObject(t, evaluated, int64(integer))
 		} else {
 			testNullObject(t, evaluated)
+		}
+	}
+}
+
+func TestMissingMapIndexProducesKeyError(t *testing.T) {
+	for _, input := range []string{`{"foo": 5}["bar"]`, `{}["foo"]`} {
+		err, ok := testEval(input).(*object.Error)
+		if !ok || err.Value.Struct.Name != "KeyError" {
+			t.Fatalf("%s returned %#v, want KeyError", input, err)
 		}
 	}
 }

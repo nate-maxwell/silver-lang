@@ -46,11 +46,11 @@ func (e *Evaluator) evalCollectExpression(node *ast.CollectExpression, env *obje
 	for index, identifier := range node.Handles {
 		value, ok := env.Get(identifier.Value)
 		if !ok {
-			return newError("identifier not found: %s", identifier.Value)
+			return newError(object.RuntimeErrorKindName, "identifier not found: %s", identifier.Value)
 		}
 		handle, ok := value.(*object.Task)
 		if !ok {
-			return newError("CannotCollectExpressionError: %q is not a task handle", identifier.Value)
+			return newError(object.RuntimeErrorKindType, "%q is not a task handle", identifier.Value)
 		}
 		handles[index] = handle
 	}
@@ -60,7 +60,7 @@ func (e *Evaluator) evalCollectExpression(node *ast.CollectExpression, env *obje
 			for prior := 0; prior < index; prior++ {
 				handles[prior].Await()
 			}
-			return newError("TaskAlreadyCollectedError: task handle %q may only be collected once", node.Handles[index].Value)
+			return newError(object.RuntimeErrorKindTask, "task handle %q may only be collected once", node.Handles[index].Value)
 		}
 	}
 

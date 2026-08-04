@@ -18,8 +18,6 @@ func TestArrayIndexExpressions(t *testing.T) {
 		{"let myArray = [1, 2, 3]\nmyArray[2]", 3},
 		{"let myArray = [1, 2, 3]\nmyArray[0] + myArray[1] + myArray[2]", 6},
 		{"let myArray = [1, 2, 3]\nlet i = myArray[0]\nmyArray[i]", 2},
-		{"[1, 2, 3][3]", nil},
-		{"[1, 2, 3][-1]", nil},
 	}
 
 	for _, tt := range tests {
@@ -29,6 +27,15 @@ func TestArrayIndexExpressions(t *testing.T) {
 			testIntegerObject(t, evaluated, int64(integer))
 		} else {
 			testNullObject(t, evaluated)
+		}
+	}
+}
+
+func TestArrayIndexOutOfRangeProducesIndexError(t *testing.T) {
+	for _, input := range []string{"[1, 2, 3][3]", "[1, 2, 3][-1]"} {
+		err, ok := testEval(input).(*object.Error)
+		if !ok || err.Value.Struct.Name != "IndexError" {
+			t.Fatalf("%s returned %#v, want IndexError", input, err)
 		}
 	}
 }

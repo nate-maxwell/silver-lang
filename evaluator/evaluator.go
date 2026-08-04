@@ -135,6 +135,18 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 		}
 		return &object.ReturnValue{Value: val}
 
+	case *ast.DeferStatement:
+		function := e.Eval(node.Call.Function, env)
+		if isError(function) {
+			return function
+		}
+		arguments := e.evalExpressions(node.Call.Arguments, env)
+		if len(arguments) == 1 && isError(arguments[0]) {
+			return arguments[0]
+		}
+		env.RegisterDefer(object.DeferredCall{Function: function, Arguments: arguments, Call: node.Call})
+		return NULL
+
 	case *ast.LetStatement:
 		if err := e.validateTypeAnnotation(node.Name.Type, env); err != nil {
 			return err

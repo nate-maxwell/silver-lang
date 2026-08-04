@@ -347,3 +347,10 @@ func TestStructKeyword(t *testing.T) {
 		}
 	}
 }
+
+func TestDeferKeyword(t *testing.T) {
+	tok := New("defer close()").NextToken()
+	if tok.Type != token.DEFER || tok.Literal != "defer" {
+		t.Fatalf("token is (%q, %q), want (DEFER, defer)", tok.Type, tok.Literal)
+	}
+}

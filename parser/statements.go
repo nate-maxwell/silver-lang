@@ -20,9 +20,33 @@ func (p *Parser) parseStatement() ast.Statement {
 		return p.parseWhileStatement()
 	case token.RETURN:
 		return p.parseReturnStatement()
+	case token.DEFER:
+		return p.parseDeferStatement()
 	default:
 		return p.parseExpressionStatement()
 	}
+}
+
+// parseDeferStatement parses a call that will run when the surrounding
+// function, module, or script exits.
+func (p *Parser) parseDeferStatement() *ast.DeferStatement {
+	stmt := &ast.DeferStatement{Token: p.curToken}
+	if p.peekTokenIs(token.RBRACE) || p.peekTokenIs(token.EOF) || p.lineBreakBeforePeek() {
+		p.addError(p.curToken.Position, "defer requires a function call")
+		p.consumeStatementEnd()
+		return stmt
+	}
+
+	p.nextToken()
+	expression := p.parseExpression(LOWEST)
+	call, ok := expression.(*ast.CallExpression)
+	if !ok {
+		p.addError(p.curToken.Position, "defer requires a function call")
+	} else {
+		stmt.Call = call
+	}
+	p.consumeStatementEnd()
+	return stmt
 }
 
 // consumeStatementEnd accepts a physical newline, a closing delimiter, or

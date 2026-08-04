@@ -14,6 +14,15 @@ type Environment struct {
 	outer     *Environment // enclosing lexical scope, if any
 	sourceDir string       // directory of the source file being evaluated
 	tasks     []*Task      // tasks launched directly in this lexical scope
+	defers    []DeferredCall
+}
+
+// DeferredCall holds a callable and the argument values captured when a
+// Silver defer statement executes.
+type DeferredCall struct {
+	Function  Object
+	Arguments []Object
+	Call      *ast.CallExpression
 }
 
 // NewEnvironment constructs an empty top-level environment.
@@ -139,6 +148,23 @@ func (e *Environment) Tasks() []*Task {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
 	return append([]*Task(nil), e.tasks...)
+}
+
+// RegisterDefer schedules a captured call for this scope's exit.
+func (e *Environment) RegisterDefer(call DeferredCall) {
+	e.mu.Lock()
+	e.defers = append(e.defers, call)
+	e.mu.Unlock()
+}
+
+// TakeDefers removes and returns the scope's deferred calls in declaration
+// order. The evaluator invokes the returned calls in reverse order.
+func (e *Environment) TakeDefers() []DeferredCall {
+	e.mu.Lock()
+	deferred := append([]DeferredCall(nil), e.defers...)
+	e.defers = nil
+	e.mu.Unlock()
+	return deferred
 }
 
 // NewEnclosedEnvironment constructs a child lexical scope linked to outer.

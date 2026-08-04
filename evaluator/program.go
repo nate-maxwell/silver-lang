@@ -16,11 +16,15 @@ func (e *Evaluator) evalProgram(program *ast.Program, env *object.Environment) o
 
 		switch result := result.(type) {
 		case *object.ReturnValue:
-			return result.Value
+			deferredResult := e.runDefers(env, result)
+			if returned, ok := deferredResult.(*object.ReturnValue); ok {
+				return returned.Value
+			}
+			return deferredResult
 		case *object.Error:
-			return result
+			return e.runDefers(env, result)
 		}
 	}
 
-	return result
+	return e.runDefers(env, result)
 }

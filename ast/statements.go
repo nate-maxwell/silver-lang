@@ -257,3 +257,28 @@ func (rs *ReturnStatement) String() string {
 
 	return out.String()
 }
+
+/* ----------------------------------------------------------------------------------------------------------
+Defer statements
+---------------------------------------------------------------------------------------------------------- */
+
+// DeferStatement schedules Call for the end of the surrounding function,
+// module, or script. The evaluator captures the callable and arguments when
+// this statement executes.
+type DeferStatement struct {
+	Token token.Token // the 'defer' token
+	Call  *CallExpression
+}
+
+func (ds *DeferStatement) statementNode() {}
+
+func (ds *DeferStatement) TokenLiteral() string { return ds.Token.Literal }
+
+func (ds *DeferStatement) Position() token.Position { return ds.Token.Position }
+
+func (ds *DeferStatement) String() string {
+	if ds.Call == nil {
+		return ds.TokenLiteral()
+	}
+	return ds.TokenLiteral() + " " + ds.Call.String()
+}

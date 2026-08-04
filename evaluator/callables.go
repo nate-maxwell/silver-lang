@@ -65,6 +65,7 @@ func (e *Evaluator) applyUserFunction(fn *object.Function, args []object.Object,
 	e.pushContext(contextName)
 	defer e.popContext()
 	evaluated := e.Eval(fn.Body, extendedEnv)
+	evaluated = e.runDefers(extendedEnv, evaluated)
 	if error, ok := evaluated.(*object.Error); ok {
 		if error.IsRuntimeError() {
 			return error

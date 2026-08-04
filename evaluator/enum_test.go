@@ -71,11 +71,11 @@ func TestMissingEnumMember(t *testing.T) {
 
 func TestEnumExportedFromModule(t *testing.T) {
 	dir := t.TempDir()
-	libraryPath := filepath.Join(dir, "library.lib")
-	mainPath := filepath.Join(dir, "main.slvr")
-	writeMonkeyFile(t, libraryPath, `enum Status { Ready, Busy }`)
-	writeMonkeyFile(t, mainPath, `
-let library = import("./library.lib")
+	libraryPath := filepath.Join(dir, "library.slv")
+	mainPath := filepath.Join(dir, "main.slv")
+	writeSilverFile(t, libraryPath, `enum Status { Ready, Busy }`)
+	writeSilverFile(t, mainPath, `
+let library = import("./library.slv")
 library.Status.Ready
 `)
 

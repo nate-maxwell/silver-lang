@@ -13,5 +13,6 @@ func newError(kind object.RuntimeErrorKind, format string, a ...interface{}) *ob
 
 // isError identifies the single failure object used for evaluation unwinding.
 func isError(obj object.Object) bool {
-	return obj != nil && obj.Type() == object.ERROR_OBJ
+	_, ok := obj.(*object.Error)
+	return ok
 }

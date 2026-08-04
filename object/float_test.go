@@ -1,6 +1,9 @@
 package object
 
-import "testing"
+import (
+	"math"
+	"testing"
+)
 
 func TestFloatInspection(t *testing.T) {
 	tests := []struct {
@@ -9,7 +12,7 @@ func TestFloatInspection(t *testing.T) {
 	}{
 		{1, "1.0"},
 		{1.5, "1.5"},
-		{-0.0, "0.0"},
+		{math.Copysign(0, -1), "-0.0"},
 	}
 
 	for _, tt := range tests {

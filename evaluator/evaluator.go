@@ -102,13 +102,6 @@ func (e *Evaluator) fork() *Evaluator {
 	}
 }
 
-// Eval preserves the original package API. Callers that evaluate more than
-// one program, such as the REPL, should reuse an Evaluator returned by New so
-// imported modules remain cached.
-func Eval(node ast.Node, env *object.Environment) object.Object {
-	return New().Eval(node, env)
-}
-
 // Eval annotates a newly-created runtime error with the current AST location.
 // Errors that are merely propagating already have an origin, so SetOrigin
 // leaves their traceback unchanged.

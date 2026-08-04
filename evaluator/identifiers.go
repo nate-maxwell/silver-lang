@@ -67,7 +67,7 @@ func (e *Evaluator) evalIndexAssignment(node *ast.IndexAssignmentStatement, env 
 	if isError(target) {
 		return target
 	}
-	mapping, ok := target.(*object.Hash)
+	mapping, ok := target.(*object.Map)
 	if !ok {
 		return newError(object.RuntimeErrorKindType, "index assignment not supported on %s", runtimeTypeName(target))
 	}
@@ -85,7 +85,7 @@ func (e *Evaluator) evalIndexAssignment(node *ast.IndexAssignmentStatement, env 
 	if isError(value) {
 		return value
 	}
-	mapping.Set(hashable.HashKey(), object.HashPair{Key: key, Value: value})
+	mapping.Set(hashable.HashKey(), object.MapPair{Key: key, Value: value})
 	return NULL
 }
 

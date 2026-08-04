@@ -49,9 +49,9 @@ func TestMapLiterals(t *testing.T) {
 	}`
 
 	evaluated := testEval(input)
-	result, ok := evaluated.(*object.Hash)
+	result, ok := evaluated.(*object.Map)
 	if !ok {
-		t.Fatalf("Eval didn't return Hash. got=%T (%+v)", evaluated, evaluated)
+		t.Fatalf("Eval didn't return Map. got=%T (%+v)", evaluated, evaluated)
 	}
 
 	expected := map[object.HashKey]int64{
@@ -64,7 +64,7 @@ func TestMapLiterals(t *testing.T) {
 	}
 
 	if len(result.Pairs) != len(expected) {
-		t.Fatalf("Hash has wrong num of pairs. got=%d", len(result.Pairs))
+		t.Fatalf("Map has wrong num of pairs. got=%d", len(result.Pairs))
 	}
 
 	for expectedKey, expectedValue := range expected {

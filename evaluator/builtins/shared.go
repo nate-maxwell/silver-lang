@@ -16,7 +16,7 @@ func builtinLen(args ...object.Object) object.Object {
 	switch argument := args[0].(type) {
 	case *object.Array:
 		return &object.Integer{Value: int64(len(argument.Elements))}
-	case *object.Hash:
+	case *object.Map:
 		return &object.Integer{Value: int64(argument.Len())}
 	case *object.String:
 		return &object.Integer{Value: int64(len(argument.Value))}
@@ -40,7 +40,7 @@ func builtinContains(trueValue, falseValue *object.Boolean) object.BuiltinFuncti
 				}
 			}
 			return falseValue
-		case *object.Hash:
+		case *object.Map:
 			key, ok := args[1].(object.Hashable)
 			if !ok {
 				return newError(object.RuntimeErrorKindType, "unusable as hash key: %s", args[1].Type())
@@ -50,7 +50,7 @@ func builtinContains(trueValue, falseValue *object.Boolean) object.BuiltinFuncti
 			}
 			return falseValue
 		default:
-			return newError(object.RuntimeErrorKindType, "argument to `contains` must be ARRAY or HASH, got %s", args[0].Type())
+			return newError(object.RuntimeErrorKindType, "argument to `contains` must be ARRAY or MAP, got %s", args[0].Type())
 		}
 	}
 }

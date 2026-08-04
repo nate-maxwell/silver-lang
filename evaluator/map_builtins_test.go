@@ -104,10 +104,10 @@ func TestMapBuiltinErrors(t *testing.T) {
 		input   string
 		message string
 	}{
-		{name: "get receiver", input: `get(1, "one")`, message: "argument to `get` must be HASH, got INTEGER"},
-		{name: "set receiver", input: `set(1, "one", 1)`, message: "argument to `set` must be HASH, got INTEGER"},
-		{name: "delete receiver", input: `delete(1, "one")`, message: "argument to `delete` must be HASH, got INTEGER"},
-		{name: "values receiver", input: `values(1)`, message: "argument to `values` must be HASH, got INTEGER"},
+		{name: "get receiver", input: `get(1, "one")`, message: "argument to `get` must be MAP, got INTEGER"},
+		{name: "set receiver", input: `set(1, "one", 1)`, message: "argument to `set` must be MAP, got INTEGER"},
+		{name: "delete receiver", input: `delete(1, "one")`, message: "argument to `delete` must be MAP, got INTEGER"},
+		{name: "values receiver", input: `values(1)`, message: "argument to `values` must be MAP, got INTEGER"},
 		{name: "get key", input: `{}.get([])`, message: "unusable as hash key: ARRAY"},
 		{name: "set key", input: `{}.set([], 1)`, message: "unusable as hash key: ARRAY"},
 		{name: "delete key", input: `{}.delete([])`, message: "unusable as hash key: ARRAY"},

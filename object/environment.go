@@ -18,8 +18,10 @@ type Environment struct {
 
 // NewEnvironment constructs an empty top-level environment.
 func NewEnvironment() *Environment {
-	s := make(map[string]Object)
-	return &Environment{store: s, types: make(map[string]*ast.TypeAnnotation), outer: nil}
+	return &Environment{
+		store: make(map[string]Object),
+		types: make(map[string]*ast.TypeAnnotation),
+	}
 }
 
 // Get resolves name in the current scope, then walks outward through enclosing
@@ -35,19 +37,17 @@ func (e *Environment) Get(name string) (Object, bool) {
 	return obj, ok
 }
 
-// Set creates or replaces a binding in the current scope and returns val for
-// evaluator convenience.
-func (e *Environment) Set(name string, val Object) Object {
+// Set creates or replaces an untyped binding in the current scope.
+func (e *Environment) Set(name string, val Object) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	e.store[name] = val
 	delete(e.types, name)
-	return val
 }
 
 // SetTyped creates or replaces a binding and records its explicit type, if
 // any, for later assignment checks.
-func (e *Environment) SetTyped(name string, val Object, annotation *ast.TypeAnnotation) Object {
+func (e *Environment) SetTyped(name string, val Object, annotation *ast.TypeAnnotation) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	e.store[name] = val
@@ -56,7 +56,6 @@ func (e *Environment) SetTyped(name string, val Object, annotation *ast.TypeAnno
 	} else {
 		e.types[name] = annotation
 	}
-	return val
 }
 
 // AssignmentTarget finds the nearest lexical binding and its declared type.
@@ -75,20 +74,20 @@ func (e *Environment) AssignmentTarget(name string) (*ast.TypeAnnotation, *Envir
 	return nil, nil, false
 }
 
-// Assign replaces the nearest existing lexical binding.
-func (e *Environment) Assign(name string, val Object) bool {
+// Assign replaces the nearest existing lexical binding. Callers resolve the
+// target first, so a missing name is not an evaluator-visible condition here.
+func (e *Environment) Assign(name string, val Object) {
 	e.mu.Lock()
 	if _, ok := e.store[name]; ok {
 		e.store[name] = val
 		e.mu.Unlock()
-		return true
+		return
 	}
 	outer := e.outer
 	e.mu.Unlock()
 	if outer != nil {
-		return outer.Assign(name, val)
+		outer.Assign(name, val)
 	}
-	return false
 }
 
 // Bindings returns a copy of the names defined directly in this environment.

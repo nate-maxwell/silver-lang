@@ -14,7 +14,7 @@ func TestTypeBuiltinReturnsPrimitiveTypeValues(t *testing.T) {
 		`type("silver") == str`,
 		`type(if False { 1 }) == null`,
 		`type([1, 2]) == array`,
-		`type({"answer": 42}) == hash`,
+		`type({"answer": 42}) == map`,
 		`type(fn() {}) == call`,
 		`type(len) == call`,
 	}
@@ -80,10 +80,10 @@ func TestTypeDefinitionsAreIdempotent(t *testing.T) {
 
 func TestTypeBuiltinReturnsModuleType(t *testing.T) {
 	dir := t.TempDir()
-	libraryPath := filepath.Join(dir, "library.silver")
-	mainPath := filepath.Join(dir, "main.silver")
-	writeMonkeyFile(t, libraryPath, `let answer = 42`)
-	writeMonkeyFile(t, mainPath, `let library = import("./library.silver")
+	libraryPath := filepath.Join(dir, "library.slv")
+	mainPath := filepath.Join(dir, "main.slv")
+	writeSilverFile(t, libraryPath, `let answer = 42`)
+	writeSilverFile(t, mainPath, `let library = import("./library.slv")
 type(library) == module`)
 
 	evaluated := New().EvalFile(mainPath, object.NewEnvironment())

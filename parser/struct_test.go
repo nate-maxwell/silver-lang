@@ -47,13 +47,13 @@ func TestStructStatement(t *testing.T) {
 }
 
 func TestStructRejectsDuplicateFields(t *testing.T) {
-	p := New(lexer.NewWithSource(`struct Pair { x: int, x: int }`, "duplicate.slvr"))
+	p := New(lexer.NewWithSource(`struct Pair { x: int, x: int }`, "duplicate.slv"))
 	p.ParseProgram()
 
 	if len(p.Errors()) != 1 {
 		t.Fatalf("parser returned %d errors, want 1: %v", len(p.Errors()), p.Errors())
 	}
-	if message := p.Errors()[0]; !strings.Contains(message, `duplicate struct field "x"`) || !strings.Contains(message, "duplicate.slvr:1:23") {
+	if message := p.Errors()[0]; !strings.Contains(message, `duplicate struct field "x"`) || !strings.Contains(message, "duplicate.slv:1:23") {
 		t.Fatalf("unexpected parser error: %q", message)
 	}
 }

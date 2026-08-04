@@ -13,7 +13,7 @@ func (s *String) Type() ObjectType { return STRING_OBJ }
 // Inspect returns the raw string value without adding quotes.
 func (s *String) Inspect() string { return s.Value }
 
-// HashKey computes a stable FNV-1a digest for use in a Silver hash.
+// HashKey computes a stable FNV-1a digest for use as a Silver map key.
 func (s *String) HashKey() HashKey {
 	hash := fnv.New64a()
 	hash.Write([]byte(s.Value))

@@ -66,8 +66,8 @@ func builtinMapSet(args ...object.Object) object.Object {
 	}
 
 	pairs := copyMapPairs(mapping)
-	pairs[key] = object.HashPair{Key: args[1], Value: args[2]}
-	return &object.Hash{Pairs: pairs}
+	pairs[key] = object.MapPair{Key: args[1], Value: args[2]}
+	return &object.Map{Pairs: pairs}
 }
 
 // builtinMapDelete returns a copy without key. A missing key leaves the copied
@@ -87,7 +87,7 @@ func builtinMapDelete(args ...object.Object) object.Object {
 
 	pairs := copyMapPairs(mapping)
 	delete(pairs, key)
-	return &object.Hash{Pairs: pairs}
+	return &object.Map{Pairs: pairs}
 }
 
 // builtinMapValues returns the map values in the map's unspecified iteration
@@ -109,10 +109,10 @@ func builtinMapValues(args ...object.Object) object.Object {
 	return &object.Array{Elements: values}
 }
 
-func requireMap(name string, value object.Object) (*object.Hash, *object.Error) {
-	mapping, ok := value.(*object.Hash)
+func requireMap(name string, value object.Object) (*object.Map, *object.Error) {
+	mapping, ok := value.(*object.Map)
 	if !ok {
-		return nil, newError(object.RuntimeErrorKindType, "argument to `%s` must be HASH, got %s", name, value.Type())
+		return nil, newError(object.RuntimeErrorKindType, "argument to `%s` must be MAP, got %s", name, value.Type())
 	}
 	return mapping, nil
 }
@@ -125,6 +125,6 @@ func requireHashKey(value object.Object) (object.HashKey, *object.Error) {
 	return hashable.HashKey(), nil
 }
 
-func copyMapPairs(mapping *object.Hash) map[object.HashKey]object.HashPair {
+func copyMapPairs(mapping *object.Map) map[object.HashKey]object.MapPair {
 	return mapping.Snapshot()
 }

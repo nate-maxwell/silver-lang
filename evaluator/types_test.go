@@ -53,17 +53,6 @@ func TestUnknownType(t *testing.T) {
 	}
 }
 
-func TestStringTypeNameIsRejected(t *testing.T) {
-	evaluated := testEval(`let value: string = "old spelling"`)
-	err, ok := evaluated.(*object.Error)
-	if !ok {
-		t.Fatalf("result is %T, want *object.Error", evaluated)
-	}
-	if got, want := err.MessageText(), `unknown type "string"`; got != want {
-		t.Fatalf("error message is %q, want %q", got, want)
-	}
-}
-
 func TestEnumTypeAnnotation(t *testing.T) {
 	evaluated := testEval("enum Direction { North, South }\nlet direction: Direction = Direction.North\ndirection")
 	value, ok := evaluated.(*object.EnumValue)

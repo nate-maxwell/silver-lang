@@ -35,8 +35,8 @@ var runtimeErrorStructNames = map[RuntimeErrorKind]string{
 	RuntimeErrorKindTask:         "TaskError",
 }
 
-// Builtin nominal structs are fallback definitions, like primitive types and
-// builtin functions. User bindings with the same name still take precedence.
+// Builtin nominal structs are predeclared alongside primitive types and native
+// functions. Lexical bindings take precedence during identifier lookup.
 var builtinStructDefinitions map[string]*Struct
 
 func init() {

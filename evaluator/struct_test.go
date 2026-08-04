@@ -70,16 +70,16 @@ Point{1}.y
 
 func TestStructExportedFromModule(t *testing.T) {
 	dir := t.TempDir()
-	libraryPath := filepath.Join(dir, "library.lib")
-	mainPath := filepath.Join(dir, "main.slvr")
-	writeMonkeyFile(t, libraryPath, `
+	libraryPath := filepath.Join(dir, "library.slv")
+	mainPath := filepath.Join(dir, "main.slv")
+	writeSilverFile(t, libraryPath, `
 struct Point {
 	x: int
 	y: int
 }
 `)
-	writeMonkeyFile(t, mainPath, `
-let library = import("./library.lib")
+	writeSilverFile(t, mainPath, `
+let library = import("./library.slv")
 let point: library.Point = library.Point{8, 9}
 point.y
 `)

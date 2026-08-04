@@ -22,7 +22,7 @@ func (e *Evaluator) evalForStatement(statement *ast.ForStatement, env *object.En
 				return result
 			}
 		}
-	case *object.Hash:
+	case *object.Map:
 		if statement.Value == nil {
 			return newError(object.RuntimeErrorKindValue, "map for loop requires key and value bindings")
 		}
@@ -56,8 +56,10 @@ func (e *Evaluator) evalWhileStatement(statement *ast.WhileStatement, env *objec
 }
 
 func loopMustStop(result object.Object) bool {
-	if result == nil {
+	switch result.(type) {
+	case *object.ReturnValue, *object.Error:
+		return true
+	default:
 		return false
 	}
-	return result.Type() == object.RETURN_VALUE_OBJ || result.Type() == object.ERROR_OBJ
 }

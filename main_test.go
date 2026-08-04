@@ -10,7 +10,7 @@ import (
 )
 
 func TestRunFile(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "main.monkey")
+	path := filepath.Join(t.TempDir(), "main.slv")
 	if err := os.WriteFile(path, []byte(`let answer = 42`), 0644); err != nil {
 		t.Fatal(err)
 	}
@@ -27,7 +27,7 @@ func TestRunFile(t *testing.T) {
 
 func TestRunFileReportsErrors(t *testing.T) {
 	var stdout, stderr bytes.Buffer
-	code := run([]string{filepath.Join(t.TempDir(), "missing.monkey")}, strings.NewReader(""), &stdout, &stderr)
+	code := run([]string{filepath.Join(t.TempDir(), "missing.slv")}, strings.NewReader(""), &stdout, &stderr)
 	if code != 1 {
 		t.Fatalf("run returned %d, want 1", code)
 	}
@@ -37,7 +37,7 @@ func TestRunFileReportsErrors(t *testing.T) {
 }
 
 func TestRunFileReportsTraceback(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "main.silver")
+	path := filepath.Join(t.TempDir(), "main.slv")
 	if err := os.WriteFile(path, []byte(`let fail = fn() {
     1 + True
 }
@@ -65,7 +65,7 @@ fail()
 }
 
 func TestRunFileReportsUnhandledStructError(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "main.silver")
+	path := filepath.Join(t.TempDir(), "main.slv")
 	source := `struct Missing { message: str }
 let read = fn() str | Missing { Missing{"not found"} }
 read()

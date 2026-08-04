@@ -59,8 +59,8 @@ func evalIndexExpression(left, index object.Object) object.Object {
 	switch {
 	case left.Type() == object.ARRAY_OBJ && index.Type() == object.INTEGER_OBJ:
 		return evalArrayIndexExpression(left, index)
-	case left.Type() == object.HASH_OBJ:
-		return evalHashIndexExpression(left, index)
+	case left.Type() == object.MAP_OBJ:
+		return evalMapIndexExpression(left, index)
 	default:
 		return newError(object.RuntimeErrorKindType, "index operator not supported: %s", left.Type())
 	}

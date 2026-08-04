@@ -7,8 +7,8 @@ import (
 	"strings"
 )
 
-// requireType enforces an explicit annotation. Declarations without an
-// annotation retain Silver's existing inference-compatible behavior.
+// requireType enforces an explicit annotation. Unannotated declarations accept
+// any runtime value.
 func (e *Evaluator) requireType(annotation *ast.TypeAnnotation, value object.Object, env *object.Environment, subject string) *object.Error {
 	if annotation == nil {
 		return nil
@@ -49,7 +49,7 @@ func (e *Evaluator) validateTypeAnnotation(annotation *ast.TypeAnnotation, env *
 		return nil
 	}
 	if len(annotation.Parts) == 1 {
-		if _, ok := primitiveTypes[annotation.String()]; ok {
+		if _, ok := object.TypeDefinitionByName(annotation.String()); ok {
 			return nil
 		}
 	}
@@ -75,7 +75,7 @@ func (e *Evaluator) validateErrorTypeAnnotation(annotation *ast.TypeAnnotation, 
 	if err := e.validateTypeAnnotation(annotation, env); err != nil {
 		return err
 	}
-	_, primitive := primitiveTypes[annotation.String()]
+	_, primitive := object.TypeDefinitionByName(annotation.String())
 	if annotation.IsCallSignature() || len(annotation.Parts) == 1 && primitive {
 		return newError(object.RuntimeErrorKindType, "error return type %q must be a struct", annotation.String())
 	}
@@ -186,8 +186,9 @@ func typeMatches(annotation *ast.TypeAnnotation, value object.Object, env *objec
 
 	name := annotation.String()
 	if len(annotation.Parts) == 1 {
-		if expected, ok := primitiveTypes[name]; ok {
-			if expected == object.FUNCTION_OBJ && value != nil && value.Type() == object.BUILTINT_OBJ {
+		if definition, ok := object.TypeDefinitionByName(name); ok {
+			expected := definition.RuntimeType
+			if expected == object.FUNCTION_OBJ && value != nil && value.Type() == object.BUILTIN_OBJ {
 				return true, ""
 			}
 			return value != nil && value.Type() == expected, ""
@@ -265,16 +266,16 @@ func annotationAssignable(target, source *ast.TypeAnnotation, targetEnv, sourceE
 	}
 
 	if len(target.Parts) == 1 {
-		if targetType, ok := primitiveTypes[target.String()]; ok {
+		if targetDefinition, ok := object.TypeDefinitionByName(target.String()); ok {
 			if len(source.Parts) != 1 {
 				return false, ""
 			}
-			sourceType, ok := primitiveTypes[source.String()]
-			return ok && targetType == sourceType, ""
+			sourceDefinition, ok := object.TypeDefinitionByName(source.String())
+			return ok && targetDefinition.RuntimeType == sourceDefinition.RuntimeType, ""
 		}
 	}
 	if len(source.Parts) == 1 {
-		if _, primitive := primitiveTypes[source.String()]; primitive {
+		if _, primitive := object.TypeDefinitionByName(source.String()); primitive {
 			return false, ""
 		}
 	}
@@ -336,18 +337,6 @@ func isPrimitiveAnnotation(annotation *ast.TypeAnnotation, name string) bool {
 	return annotation != nil && !annotation.IsCallSignature() && len(annotation.Parts) == 1 && annotation.Parts[0] == name
 }
 
-var primitiveTypes = map[string]object.ObjectType{
-	"int":    object.INTEGER_OBJ,
-	"float":  object.FLOAT_OBJ,
-	"bool":   object.BOOLEAN_OBJ,
-	"str":    object.STRING_OBJ,
-	"null":   object.NULL_OBJ,
-	"array":  object.ARRAY_OBJ,
-	"hash":   object.HASH_OBJ,
-	"call":   object.FUNCTION_OBJ,
-	"module": object.MODULE_OBJ,
-}
-
 // resolveNamedType follows module members in a qualified annotation and
 // returns the declaration object represented by the final component.
 func resolveNamedType(annotation *ast.TypeAnnotation, env *object.Environment) (object.Object, string) {
@@ -385,22 +374,8 @@ func runtimeTypeName(value object.Object) string {
 	case *object.EnumValue:
 		return value.EnumName
 	}
-	if name, ok := sourceTypeNames[value.Type()]; ok {
+	if name, ok := object.RuntimeTypeName(value.Type()); ok {
 		return name
 	}
 	return strings.ToLower(string(value.Type()))
-}
-
-var sourceTypeNames = map[object.ObjectType]string{
-	object.INTEGER_OBJ:  "int",
-	object.FLOAT_OBJ:    "float",
-	object.BOOLEAN_OBJ:  "bool",
-	object.STRING_OBJ:   "str",
-	object.NULL_OBJ:     "null",
-	object.ARRAY_OBJ:    "array",
-	object.HASH_OBJ:     "hash",
-	object.FUNCTION_OBJ: "call",
-	object.MODULE_OBJ:   "module",
-	object.TYPE_OBJ:     "type",
-	object.TASK_OBJ:     "task",
 }

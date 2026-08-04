@@ -2,7 +2,6 @@ package repl
 
 import (
 	"bufio"
-	"fmt"
 	"io"
 	"silver/evaluator"
 	"silver/lexer"
@@ -10,8 +9,7 @@ import (
 	"silver/parser"
 )
 
-// PROMPT is written before each interactive input line.
-const PROMPT = ">> "
+const prompt = ">> "
 
 // Start runs a persistent read-evaluate-print loop. It reuses one environment
 // and evaluator so bindings and imported modules survive between input lines.
@@ -21,7 +19,7 @@ func Start(in io.Reader, out io.Writer) {
 	engine := evaluator.NewWithOutput(out)
 
 	for {
-		fmt.Fprintf(out, PROMPT)
+		io.WriteString(out, prompt)
 		scanned := scanner.Scan()
 		if !scanned {
 			return

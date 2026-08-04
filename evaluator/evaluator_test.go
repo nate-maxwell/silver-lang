@@ -214,7 +214,7 @@ func TestErrorHandling(t *testing.T) {
 			"unknown operator: STRING - STRING",
 		},
 		{
-			`{"name": "Monkey"}[fn(x) { x }]`,
+			`{"name": "Silver"}[fn(x) { x }]`,
 			"unusable as hash key: FUNCTION",
 		},
 	}

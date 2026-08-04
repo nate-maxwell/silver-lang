@@ -83,11 +83,8 @@ func (e *Evaluator) applyUserFunction(fn *object.Function, args []object.Object,
 		}
 		return error
 	}
-	if isError(evaluated) {
-		return evaluated
-	}
-	// A completely omitted return declaration keeps the existing void-function
-	// behavior. A leading pipe instead declares null success plus one or more
+	// A completely omitted return declaration denotes a void function. A leading
+	// pipe instead declares null success plus one or more
 	// struct error alternatives, so its actual result must escape.
 	if fn.ReturnType == nil && len(fn.ErrorTypes) == 0 {
 		return NULL

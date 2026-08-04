@@ -41,13 +41,13 @@ let direction = Direction.North
 }
 
 func TestEnumRejectsDuplicateMembers(t *testing.T) {
-	p := New(lexer.NewWithSource(`enum State { Ready, Ready }`, "duplicate.slvr"))
+	p := New(lexer.NewWithSource(`enum State { Ready, Ready }`, "duplicate.slv"))
 	p.ParseProgram()
 
 	if len(p.Errors()) != 1 {
 		t.Fatalf("parser returned %d errors, want 1: %v", len(p.Errors()), p.Errors())
 	}
-	if message := p.Errors()[0]; !strings.Contains(message, `duplicate enum member "Ready"`) || !strings.Contains(message, "duplicate.slvr:1:21") {
+	if message := p.Errors()[0]; !strings.Contains(message, `duplicate enum member "Ready"`) || !strings.Contains(message, "duplicate.slv:1:21") {
 		t.Fatalf("unexpected parser error: %q", message)
 	}
 }

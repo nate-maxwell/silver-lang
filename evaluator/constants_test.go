@@ -64,8 +64,8 @@ func TestFloatPoolUsesExactBits(t *testing.T) {
 }
 
 func TestFoldedCachedConstantsArePooled(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "main.slvr")
-	writeMonkeyFile(t, path, "40 + 2")
+	path := filepath.Join(t.TempDir(), "main.slv")
+	writeSilverFile(t, path, "40 + 2")
 	engine := New()
 
 	first := engine.EvalFile(path, object.NewEnvironment())

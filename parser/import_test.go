@@ -7,7 +7,7 @@ import (
 )
 
 func TestImportAndMemberExpression(t *testing.T) {
-	p := New(lexer.New("let math = import(\"./math.monkey\")\nmath.add(1, 2)"))
+	p := New(lexer.New("let math = import(\"./math.slv\")\nmath.add(1, 2)"))
 	program := p.ParseProgram()
 	if len(p.Errors()) != 0 {
 		t.Fatalf("parser errors: %v", p.Errors())
@@ -24,7 +24,7 @@ func TestImportAndMemberExpression(t *testing.T) {
 	if !ok {
 		t.Fatalf("let value is %T, want *ast.ImportExpression", letStatement.Value)
 	}
-	if importExpression.Path.Value != "./math.monkey" {
+	if importExpression.Path.Value != "./math.slv" {
 		t.Fatalf("import path is %q", importExpression.Path.Value)
 	}
 

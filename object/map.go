@@ -12,16 +12,16 @@ type Hashable interface {
 	HashKey() HashKey
 }
 
-// HashPair retains both the original key object and its associated value. The
-// original object is needed when rendering the hash.
-type HashPair struct {
+// MapPair retains both the original key object and its associated value. The
+// original object is needed when rendering the map.
+type MapPair struct {
 	Key   Object
 	Value Object
 }
 
-// Hash stores pairs by their normalized HashKey.
-type Hash struct {
-	Pairs map[HashKey]HashPair
+// Map stores pairs by their normalized HashKey.
+type Map struct {
+	Pairs map[HashKey]MapPair
 	mu    sync.RWMutex
 }
 
@@ -32,16 +32,16 @@ type HashKey struct {
 	Value uint64
 }
 
-// Type returns the hash runtime tag.
-func (h *Hash) Type() ObjectType { return HASH_OBJ }
+// Type returns the map runtime tag.
+func (m *Map) Type() ObjectType { return MAP_OBJ }
 
-// Inspect renders the hash's key/value pairs. Go map iteration means pair order
+// Inspect renders the map's key/value pairs. Go map iteration means pair order
 // is intentionally unspecified.
-func (h *Hash) Inspect() string {
+func (m *Map) Inspect() string {
 	var out bytes.Buffer
 
 	pairs := []string{}
-	for _, pair := range h.Snapshot() {
+	for _, pair := range m.Snapshot() {
 		pairs = append(pairs, fmt.Sprintf("%s: %s", pair.Key.Inspect(), pair.Value.Inspect()))
 	}
 
@@ -52,38 +52,38 @@ func (h *Hash) Inspect() string {
 }
 
 // Get returns the pair stored for a normalized key.
-func (h *Hash) Get(key HashKey) (HashPair, bool) {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-	pair, ok := h.Pairs[key]
+func (m *Map) Get(key HashKey) (MapPair, bool) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	pair, ok := m.Pairs[key]
 	return pair, ok
 }
 
 // Len returns the number of pairs currently stored in the map.
-func (h *Hash) Len() int {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-	return len(h.Pairs)
+func (m *Map) Len() int {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return len(m.Pairs)
 }
 
 // Set creates or replaces one pair. Synchronization makes map assignment safe
 // when aliases are shared by concurrent tasks.
-func (h *Hash) Set(key HashKey, pair HashPair) {
-	h.mu.Lock()
-	if h.Pairs == nil {
-		h.Pairs = make(map[HashKey]HashPair)
+func (m *Map) Set(key HashKey, pair MapPair) {
+	m.mu.Lock()
+	if m.Pairs == nil {
+		m.Pairs = make(map[HashKey]MapPair)
 	}
-	h.Pairs[key] = pair
-	h.mu.Unlock()
+	m.Pairs[key] = pair
+	m.mu.Unlock()
 }
 
 // Snapshot returns a shallow copy suitable for iteration without holding a
 // lock while user code runs.
-func (h *Hash) Snapshot() map[HashKey]HashPair {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-	pairs := make(map[HashKey]HashPair, len(h.Pairs))
-	for key, pair := range h.Pairs {
+func (m *Map) Snapshot() map[HashKey]MapPair {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	pairs := make(map[HashKey]MapPair, len(m.Pairs))
+	for key, pair := range m.Pairs {
 		pairs[key] = pair
 	}
 	return pairs

@@ -20,9 +20,9 @@ const (
 	RETURN_VALUE_OBJ = "RETURN_VALUE"
 	ERROR_OBJ        = "ERROR"
 	FUNCTION_OBJ     = "FUNCTION"
-	BUILTINT_OBJ     = "BUILTIN"
+	BUILTIN_OBJ      = "BUILTIN"
 	ARRAY_OBJ        = "ARRAY"
-	HASH_OBJ         = "HASH"
+	MAP_OBJ          = "MAP"
 	MODULE_OBJ       = "MODULE"
 	ENUM_OBJ         = "ENUM"
 	ENUM_VALUE_OBJ   = "ENUM_VALUE"
@@ -106,7 +106,7 @@ type Builtin struct {
 }
 
 // Type returns the native function runtime tag.
-func (b *Builtin) Type() ObjectType { return BUILTINT_OBJ }
+func (b *Builtin) Type() ObjectType { return BUILTIN_OBJ }
 
 // Inspect returns a generic description because builtin names live in the
 // evaluator registry rather than on the value itself.

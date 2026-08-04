@@ -64,8 +64,8 @@ func TestMissingEnumMember(t *testing.T) {
 	if !ok {
 		t.Fatalf("result is %T, want *object.Error", evaluated)
 	}
-	if err.Message != `enum "Direction" has no member "South"` {
-		t.Fatalf("error message is %q", err.Message)
+	if err.MessageText() != `enum "Direction" has no member "South"` {
+		t.Fatalf("error message is %q", err.MessageText())
 	}
 }
 

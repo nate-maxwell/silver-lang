@@ -108,6 +108,21 @@ func (p *Parser) validateTaskExpression(expression ast.Expression, bindings map[
 			p.validateTaskStatements(node.Alternative.Statements, alternative)
 		}
 		mergeCollectedTaskBindings(bindings, consequence, alternative)
+	case *ast.TryExpression:
+		// The try body runs in the surrounding scope. Catch bindings are local,
+		// but collecting an outer task in any handler must still count as a
+		// possible consumption for the affine task check.
+		p.validateTaskStatements(node.Body.Statements, bindings)
+		for _, clause := range node.Catches {
+			handler := cloneTaskBindings(bindings)
+			delete(handler, clause.Binding.Value)
+			p.validateTaskStatements(clause.Body.Statements, handler)
+			for name, usage := range bindings {
+				if handled, ok := handler[name]; ok && handled.collected {
+					usage.collected = true
+				}
+			}
+		}
 	case *ast.FunctionLiteral:
 		functionBindings := cloneTaskBindings(bindings)
 		for _, parameter := range node.Parameters {

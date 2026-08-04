@@ -20,7 +20,14 @@ func (e *Evaluator) applyFunction(fn object.Object, args []object.Object) object
 		return e.applyUserFunction(fn.Method, boundArgs, fn.Receiver.Struct.Name+"."+fn.Name)
 
 	case *object.Builtin:
-		return fn.Fn(args...)
+		result := fn.Fn(args...)
+		if isError(result) || fn.Signature == nil || len(fn.Signature.ErrorTypes) == 0 {
+			return result
+		}
+		if matchesBuiltinDeclaredError(fn.Signature.ErrorTypes, result) {
+			return &object.Error{Value: result.(*object.StructInstance)}
+		}
+		return result
 
 	case *object.Struct:
 		return e.applyStruct(fn, args)
@@ -58,12 +65,29 @@ func (e *Evaluator) applyUserFunction(fn *object.Function, args []object.Object,
 	e.pushContext(contextName)
 	defer e.popContext()
 	evaluated := e.Eval(fn.Body, extendedEnv)
+	if error, ok := evaluated.(*object.Error); ok {
+		if error.IsRuntimeError() {
+			return error
+		}
+		matches, matchError := matchesDeclaredError(fn.ErrorTypes, error.Value, fn.Env)
+		if matchError != nil {
+			return matchError
+		}
+		if !matches {
+			return newError(
+				"error %s escaped %q but is not declared in its return union",
+				error.Value.Struct.Name,
+				contextName,
+			)
+		}
+		return error
+	}
 	if isError(evaluated) {
 		return evaluated
 	}
 	// A completely omitted return declaration keeps the existing void-function
 	// behavior. A leading pipe instead declares null success plus one or more
-	// struct-valued error alternatives, so its actual result must escape.
+	// struct error alternatives, so its actual result must escape.
 	if fn.ReturnType == nil && len(fn.ErrorTypes) == 0 {
 		return NULL
 	}
@@ -73,6 +97,13 @@ func (e *Evaluator) applyUserFunction(fn *object.Function, args []object.Object,
 	}
 	if err := e.requireReturnType(fn.ReturnType, fn.ErrorTypes, evaluated, fn.Env, fmt.Sprintf("return value of %q", contextName)); err != nil {
 		return err
+	}
+	if matches, err := matchesDeclaredError(fn.ErrorTypes, evaluated, fn.Env); err != nil {
+		return err
+	} else if matches {
+		error := &object.Error{Value: evaluated.(*object.StructInstance)}
+		error.SetOrigin(e.traceFrame(fn.Body))
+		return error
 	}
 	return evaluated
 }

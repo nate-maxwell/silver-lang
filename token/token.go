@@ -87,6 +87,8 @@ const (
 	WHILE    = "WHILE"
 	TASK     = "TASK"
 	COLLECT  = "COLLECT"
+	TRY      = "TRY"
+	CATCH    = "CATCH"
 )
 
 // keywords maps reserved source words to their specialized token types. Any
@@ -107,6 +109,8 @@ var keywords = map[string]TokenType{
 	"while":   WHILE,
 	"task":    TASK,
 	"collect": COLLECT,
+	"try":     TRY,
+	"catch":   CATCH,
 }
 
 // LookupIdent classifies an identifier as a reserved keyword or a normal

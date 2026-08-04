@@ -66,7 +66,8 @@ func (e *Evaluator) validateTypeAnnotation(annotation *ast.TypeAnnotation, env *
 }
 
 // validateErrorTypeAnnotation enforces that every failure alternative is a
-// nominal struct type. Error values themselves need no privileged runtime tag.
+// nominal struct type. Returned instances are wrapped for unwinding only at a
+// callable boundary, leaving structs ordinary values everywhere else.
 func (e *Evaluator) validateErrorTypeAnnotation(annotation *ast.TypeAnnotation, env *object.Environment) *object.Error {
 	if annotation == nil {
 		return newError("error return type must be a struct")
@@ -88,8 +89,8 @@ func (e *Evaluator) validateErrorTypeAnnotation(annotation *ast.TypeAnnotation, 
 	return nil
 }
 
-// requireReturnType accepts the declared success type or any declared error
-// struct type. A nil success annotation in a union denotes null.
+// requireReturnType accepts the declared success type or any declared struct
+// error type. A nil success annotation in a union denotes null.
 func (e *Evaluator) requireReturnType(success *ast.TypeAnnotation, errorTypes []*ast.TypeAnnotation, value object.Object, env *object.Environment, subject string) *object.Error {
 	if success == nil {
 		if value == NULL {
@@ -114,6 +115,41 @@ func (e *Evaluator) requireReturnType(success *ast.TypeAnnotation, errorTypes []
 		}
 	}
 	return newError("type mismatch for %s: expected %s, got %s", subject, returnTypesString(success, errorTypes), runtimeTypeName(value))
+}
+
+// matchesDeclaredError reports whether value is one of a callable's declared
+// struct failure alternatives.
+func matchesDeclaredError(errorTypes []*ast.TypeAnnotation, value object.Object, env *object.Environment) (bool, *object.Error) {
+	for _, errorType := range errorTypes {
+		matches, resolutionError := typeMatches(errorType, value, env)
+		if resolutionError != "" {
+			return false, newError("%s", resolutionError)
+		}
+		if matches {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// matchesBuiltinDeclaredError uses the native definition's nominal identity,
+// so a user binding that shadows names such as FileNotFound cannot turn a
+// builtin error back into an ordinary return value.
+func matchesBuiltinDeclaredError(errorTypes []*ast.TypeAnnotation, value object.Object) bool {
+	instance, ok := value.(*object.StructInstance)
+	if !ok {
+		return false
+	}
+	for _, errorType := range errorTypes {
+		if errorType == nil || len(errorType.Parts) != 1 {
+			continue
+		}
+		definition, ok := object.BuiltinStructDefinitionByName(errorType.Parts[0])
+		if ok && instance.Struct == definition {
+			return true
+		}
+	}
+	return false
 }
 
 func returnTypesString(success *ast.TypeAnnotation, errorTypes []*ast.TypeAnnotation) string {

@@ -21,6 +21,9 @@ let person = Person{"Ada", 36}
 person.age = 37
 let choose = fn(value: int) int { if (value > 0) { return -value } else { return 0 } }
 let apply = fn(operation: call(int) int, value: int) int { operation(value) }
+struct Missing { message: str }
+let read = fn() str | Missing { Missing{"missing"} }
+try { read() } catch Missing err { err.message }
 for value in values { print(value) }
 for key, value in ({"answer": 42}) { print(key, value) }
 while False { print("never") }

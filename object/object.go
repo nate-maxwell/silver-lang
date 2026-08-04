@@ -52,8 +52,8 @@ func (m *Module) Type() ObjectType { return MODULE_OBJ }
 func (m *Module) Inspect() string { return "<module " + m.Path + ">" }
 
 // BuiltinFunction is the Go calling convention used by native Silver
-// functions. Language errors are returned as Error objects rather than Go
-// errors so they propagate through normal evaluation.
+// functions. Language failures are returned as Error objects rather than
+// Go errors so they propagate through normal evaluation.
 type BuiltinFunction func(args ...Object) Object
 
 // Function is a Silver closure. Env captures the lexical environment active at

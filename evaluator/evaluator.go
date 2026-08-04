@@ -114,8 +114,8 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 // leaves their traceback unchanged.
 func (e *Evaluator) Eval(node ast.Node, env *object.Environment) object.Object {
 	result := e.eval(node, env)
-	if err, ok := result.(*object.Error); ok {
-		err.SetOrigin(e.traceFrame(node))
+	if failure, ok := result.(*object.Error); ok {
+		failure.SetOrigin(e.traceFrame(node))
 	}
 	return result
 }
@@ -202,6 +202,9 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 	// Expressions
 	case *ast.IfExpression:
 		return e.evalIfExpression(node, env)
+
+	case *ast.TryExpression:
+		return e.evalTryExpression(node, env)
 
 	case *ast.ExpressionStatement:
 		return e.Eval(node.Expression, env)

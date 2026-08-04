@@ -8,8 +8,8 @@ import (
 
 // TypeAnnotation is a primitive or qualified nominal type name, such as int
 // or geometry.Point. Callable signatures may name parameters, and an omitted
-// ReturnType means null; ErrorTypes are the ordinary struct-valued failure
-// alternatives following it. A nil ParameterTypes slice distinguishes bare
+// ReturnType means null; ErrorTypes are the struct error alternatives
+// following it. A nil ParameterTypes slice distinguishes bare
 // call from call().
 type TypeAnnotation struct {
 	Token          token.Token // the first identifier in the type name

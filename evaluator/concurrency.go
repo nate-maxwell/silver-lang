@@ -23,8 +23,8 @@ func (e *Evaluator) evalTaskExpression(node *ast.TaskExpression, env *object.Env
 		if !isError(callable) {
 			result = taskEvaluator.applyFunction(callable, nil)
 			taskEvaluator.prependCallerFrame(result, node)
-			if err, ok := result.(*object.Error); ok {
-				err.SetOrigin(taskEvaluator.traceFrame(node))
+			if failure, ok := result.(*object.Error); ok {
+				failure.SetOrigin(taskEvaluator.traceFrame(node))
 			}
 		}
 		result = unwrapReturnValue(result)
@@ -65,15 +65,15 @@ func (e *Evaluator) evalCollectExpression(node *ast.CollectExpression, env *obje
 	}
 
 	results := make([]object.Object, len(handles))
-	var firstError *object.Error
+	var firstFailure object.Object
 	for index, handle := range handles {
 		results[index] = handle.Await()
-		if firstError == nil {
-			firstError, _ = results[index].(*object.Error)
+		if firstFailure == nil && isError(results[index]) {
+			firstFailure = results[index]
 		}
 	}
-	if firstError != nil {
-		return firstError
+	if firstFailure != nil {
+		return firstFailure
 	}
 
 	fields := make([]string, 0, len(results))

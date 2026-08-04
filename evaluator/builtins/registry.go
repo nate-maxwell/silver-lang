@@ -133,5 +133,5 @@ func requireArray(name string, value object.Object) (*object.Array, *object.Erro
 // newError creates a runtime error that the evaluator will annotate with the
 // Silver call site's traceback information.
 func newError(format string, args ...interface{}) *object.Error {
-	return &object.Error{Message: fmt.Sprintf(format, args...)}
+	return object.NewError(fmt.Sprintf(format, args...))
 }

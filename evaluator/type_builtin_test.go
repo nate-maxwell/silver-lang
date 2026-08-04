@@ -59,13 +59,17 @@ type(Color.Red) == Color`,
 	}
 }
 
-func TestTypeBuiltinIdentifiesStructValuedError(t *testing.T) {
+func TestTypeBuiltinIdentifiesCaughtStructError(t *testing.T) {
 	evaluated := testEval(`
 struct FileNotFound { message: str }
 let open = fn() str | FileNotFound {
 	return FileNotFound{"missing"}
 }
-type(open()) == FileNotFound
+try {
+	open()
+} catch FileNotFound err {
+	type(err) == FileNotFound
+}
 `)
 	testBooleanObject(t, evaluated, true)
 }

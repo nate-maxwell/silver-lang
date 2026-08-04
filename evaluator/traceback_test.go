@@ -39,7 +39,7 @@ middle()
 	if !strings.Contains(traceback, fmt.Sprintf("File \"%s\", line 2, column 7, in fail", path)) {
 		t.Fatalf("traceback does not include the error origin:\n%s", traceback)
 	}
-	if !strings.HasSuffix(traceback, "ERROR: type mismatch: INTEGER + BOOLEAN") {
+	if !strings.HasSuffix(traceback, "Error: type mismatch: INTEGER + BOOLEAN") {
 		t.Fatalf("traceback has unexpected error message:\n%s", traceback)
 	}
 }
@@ -72,8 +72,8 @@ library.run()
 		{Source: libraryPath, Line: 2, Column: 7, Function: "fail"},
 	}
 	assertTraceFrames(t, err.Frames, want)
-	if err.Message != "division by zero" {
-		t.Fatalf("error message is %q, want %q", err.Message, "division by zero")
+	if err.MessageText() != "division by zero" {
+		t.Fatalf("error message is %q, want %q", err.MessageText(), "division by zero")
 	}
 }
 
@@ -93,8 +93,8 @@ identity()
 		{Source: path, Line: 2, Column: 1, Function: "<module>"},
 	}
 	assertTraceFrames(t, err.Frames, want)
-	if err.Message != "wrong number of arguments. got=0, want=1" {
-		t.Fatalf("error message is %q", err.Message)
+	if err.MessageText() != "wrong number of arguments. got=0, want=1" {
+		t.Fatalf("error message is %q", err.MessageText())
 	}
 }
 

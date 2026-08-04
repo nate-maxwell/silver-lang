@@ -87,8 +87,8 @@ func TestFoldConstantsLeavesRuntimeErrors(t *testing.T) {
 			if !ok {
 				t.Fatalf("result is %T, want *object.Error", result)
 			}
-			if err.Message != test.want {
-				t.Fatalf("error is %q, want %q", err.Message, test.want)
+			if err.MessageText() != test.want {
+				t.Fatalf("error is %q, want %q", err.MessageText(), test.want)
 			}
 		})
 	}

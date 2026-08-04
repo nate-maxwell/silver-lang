@@ -27,8 +27,8 @@ func TestBuiltinFileStructShape(t *testing.T) {
 	}
 }
 
-func TestBuiltinIOErrorStructsExposeMessage(t *testing.T) {
-	for _, name := range []string{"IOError", "FileNotFound", "PermissionDenied"} {
+func TestBuiltinErrorStructsExposeMessage(t *testing.T) {
+	for _, name := range []string{"Error", "IOError", "FileNotFound", "PermissionDenied"} {
 		definition, ok := BuiltinStructDefinitionByName(name)
 		if !ok {
 			t.Fatalf("%s definition is not registered", name)

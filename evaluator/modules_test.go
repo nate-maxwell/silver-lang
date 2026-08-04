@@ -125,8 +125,8 @@ func TestMissingModuleMember(t *testing.T) {
 	if !ok {
 		t.Fatalf("result is %T, want *object.Error", result)
 	}
-	if !strings.Contains(err.Message, `has no member "missing"`) {
-		t.Fatalf("unexpected error: %s", err.Message)
+	if !strings.Contains(err.MessageText(), `has no member "missing"`) {
+		t.Fatalf("unexpected error: %s", err.MessageText())
 	}
 }
 
@@ -140,8 +140,8 @@ func TestCircularImport(t *testing.T) {
 	if !ok {
 		t.Fatalf("result is %T, want *object.Error", result)
 	}
-	if !strings.Contains(err.Message, "circular import detected") {
-		t.Fatalf("unexpected error: %s", err.Message)
+	if !strings.Contains(err.MessageText(), "circular import detected") {
+		t.Fatalf("unexpected error: %s", err.MessageText())
 	}
 }
 

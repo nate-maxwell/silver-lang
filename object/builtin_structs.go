@@ -9,6 +9,7 @@ var builtinStructDefinitions map[string]*Struct
 func init() {
 	environment := NewEnvironment()
 	builtinStructDefinitions = map[string]*Struct{
+		"Error":            errorStructDefinition("Error", environment),
 		"IOError":          errorStructDefinition("IOError", environment),
 		"FileNotFound":     errorStructDefinition("FileNotFound", environment),
 		"PermissionDenied": errorStructDefinition("PermissionDenied", environment),

@@ -108,8 +108,8 @@ Vector{1} + Vector{2}
 		t.Fatalf("result is %T, want *object.Error", evaluated)
 	}
 	for _, part := range []string{`operator "+"`, `struct "Vector"`, `method "add"`} {
-		if !strings.Contains(err.Message, part) {
-			t.Fatalf("error %q does not contain %q", err.Message, part)
+		if !strings.Contains(err.MessageText(), part) {
+			t.Fatalf("error %q does not contain %q", err.MessageText(), part)
 		}
 	}
 }
@@ -120,7 +120,7 @@ struct Invalid { add: int }
 Invalid{1} + 2
 `)
 	err, ok := evaluated.(*object.Error)
-	if !ok || !strings.Contains(err.Message, `operator method "add" on struct "Invalid" is not callable`) {
+	if !ok || !strings.Contains(err.MessageText(), `operator method "add" on struct "Invalid" is not callable`) {
 		t.Fatalf("result is %#v, want non-callable operator error", evaluated)
 	}
 }

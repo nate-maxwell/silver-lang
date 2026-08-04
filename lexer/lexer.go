@@ -1,6 +1,8 @@
 package lexer
 
-import "silver/token"
+import (
+	"silver/token"
+)
 
 // Lexer converts Silver source text into a stream of positioned tokens. It
 // scans bytes; line and column coordinates are one-based for diagnostics.
@@ -120,8 +122,14 @@ func (l *Lexer) NextToken() token.Token {
 	case '}':
 		tok = newToken(token.RBRACE, l.ch, position)
 	case '"':
-		tok.Type = token.STRING
-		tok.Literal = l.readString()
+		literal, diagnostic := l.readString()
+		if diagnostic != "" {
+			tok.Type = token.ILLEGAL
+			tok.Literal = diagnostic
+		} else {
+			tok.Type = token.STRING
+			tok.Literal = literal
+		}
 		tok.Position = position
 	case '[':
 		tok = newToken(token.LBRACKET, l.ch, position)
@@ -231,18 +239,28 @@ func isLetter(ch byte) bool {
 	return 'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z' || ch == '_'
 }
 
-// readString consumes bytes until the closing quote or EOF. The returned
-// literal excludes the surrounding quotes.
-func (l *Lexer) readString() string {
+// readString consumes bytes until an unescaped closing quote or EOF, then
+// decodes escape sequences. It leaves ch on the closing quote so NextToken's
+// final read advances to the following source byte.
+func (l *Lexer) readString() (string, string) {
 	position := l.position + 1
+	escaped := false
 	for {
 		l.readChar()
-		if l.ch == '"' || l.ch == 0 {
+		if l.ch == 0 {
+			return "", "unterminated string literal"
+		}
+		if l.ch == '"' && !escaped {
 			break
+		}
+		if escaped {
+			escaped = false
+		} else if l.ch == '\\' {
+			escaped = true
 		}
 	}
 
-	return l.input[position:l.position]
+	return decodeString(l.input[position:l.position])
 }
 
 // readNumber consumes an integer or decimal float. A dot is part of the number

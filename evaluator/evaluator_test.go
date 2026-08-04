@@ -70,7 +70,7 @@ func TestPrintBuiltinUsesEvaluatorOutput(t *testing.T) {
 	result := evalInput(t, NewWithOutput(&out), object.NewEnvironment(), `print("hello", 42)`)
 
 	testNullObject(t, result)
-	if got, want := out.String(), "hello\n42\n"; got != want {
+	if got, want := out.String(), "hello 42\n"; got != want {
 		t.Fatalf("print output is %q, want %q", got, want)
 	}
 }

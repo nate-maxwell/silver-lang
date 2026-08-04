@@ -8,6 +8,7 @@ import (
 	"os"
 	"silver/ast"
 	"silver/object"
+	"strings"
 	"sync"
 )
 
@@ -184,14 +185,16 @@ func fileCloseSignature() *ast.TypeAnnotation {
 	return callSignature(nil, nil, nil, "IOError")
 }
 
-// builtinPrint creates a print function bound to out. Each argument is written
-// on its own line, and the function returns null because it exists for its side
-// effect rather than for a value.
+// builtinPrint creates a print function bound to out. Arguments are separated
+// by spaces and followed by one newline. The function returns null because it
+// exists for its side effect rather than for a value.
 func builtinPrint(out io.Writer, null *object.Null) object.BuiltinFunction {
 	return func(args ...object.Object) object.Object {
-		for _, argument := range args {
-			fmt.Fprintln(out, argument.Inspect())
+		parts := make([]string, len(args))
+		for i, argument := range args {
+			parts[i] = argument.Inspect()
 		}
+		fmt.Fprintln(out, strings.Join(parts, " "))
 		return null
 	}
 }

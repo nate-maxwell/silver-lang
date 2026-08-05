@@ -170,6 +170,24 @@ combine(100, Point{2, 3})
 	testIntegerObject(t, evaluated, 123)
 }
 
+func TestDestructuringCombinesMultipleStructArguments(t *testing.T) {
+	evaluated := testEval(`
+struct Position {
+	x: int
+	y: int
+}
+struct Size {
+	width: int
+	height: int
+}
+let encode = fn(x: int, y: int, width: int, height: int) int {
+	x * 1000 + y * 100 + width * 10 + height
+}
+encode(Position{1, 2}, Size{3, 4})
+`)
+	testIntegerObject(t, evaluated, 1234)
+}
+
 func TestDestructuringMatchesFieldNamesNotDeclarationOrder(t *testing.T) {
 	evaluated := testEval(`
 struct Coordinates {

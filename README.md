@@ -1,2 +1,3 @@
 # Silver
-The Silver interpreted programming language
+
+A struct-centric language where behavior is data.

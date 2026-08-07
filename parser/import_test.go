@@ -24,8 +24,9 @@ func TestImportAndMemberExpression(t *testing.T) {
 	if !ok {
 		t.Fatalf("let value is %T, want *ast.ImportExpression", letStatement.Value)
 	}
-	if importExpression.Path.Value != "./math.slv" {
-		t.Fatalf("import path is %q", importExpression.Path.Value)
+	path, ok := importExpression.Path.(*ast.StringLiteral)
+	if !ok || path.Value != "./math.slv" {
+		t.Fatalf("import path is %T (%v), want string literal", importExpression.Path, importExpression.Path)
 	}
 
 	expressionStatement := program.Statements[1].(*ast.ExpressionStatement)
@@ -39,5 +40,31 @@ func TestImportAndMemberExpression(t *testing.T) {
 	}
 	if member.Object.String() != "math" || member.Member.Value != "add" {
 		t.Fatalf("unexpected member expression: %s", member.String())
+	}
+}
+
+func TestImportAcceptsPathExpression(t *testing.T) {
+	p := New(lexer.New("import(module_path)"))
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	statement := program.Statements[0].(*ast.ExpressionStatement)
+	importExpression := statement.Expression.(*ast.ImportExpression)
+	path, ok := importExpression.Path.(*ast.Identifier)
+	if !ok || path.Value != "module_path" {
+		t.Fatalf("import path is %T (%v), want module_path identifier", importExpression.Path, importExpression.Path)
+	}
+	if got, want := importExpression.String(), "import(module_path)"; got != want {
+		t.Fatalf("import string is %q, want %q", got, want)
+	}
+}
+
+func TestImportRequiresOnePathExpression(t *testing.T) {
+	for _, input := range []string{"import()", `import("a.slv", "b.slv")`} {
+		p := New(lexer.New(input))
+		p.ParseProgram()
+		if len(p.Errors()) == 0 {
+			t.Fatalf("%q parsed without an error", input)
+		}
 	}
 }

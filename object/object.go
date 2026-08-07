@@ -38,6 +38,13 @@ type Object interface {
 	Inspect() string
 }
 
+// Destructurable exposes named values that may be matched to function
+// parameters. Struct instances provide fields and modules provide exports.
+type Destructurable interface {
+	Object
+	Get(name string) (Object, bool)
+}
+
 // Module represents one evaluated source file and its exported top-level
 // bindings. Path is the canonical path used by the evaluator's module cache.
 type Module struct {
@@ -50,6 +57,12 @@ func (m *Module) Type() ObjectType { return MODULE_OBJ }
 
 // Inspect returns a compact module description for diagnostics.
 func (m *Module) Inspect() string { return "<module " + m.Path + ">" }
+
+// Get returns one exported binding for member access or destructuring.
+func (m *Module) Get(name string) (Object, bool) {
+	export, ok := m.Exports[name]
+	return export, ok
+}
 
 // BuiltinFunction is the Go calling convention used by native Silver
 // functions. Language failures are returned as Error objects rather than

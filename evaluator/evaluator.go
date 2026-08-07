@@ -193,7 +193,15 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 		return e.evalIdentifier(node, env)
 
 	case *ast.ImportExpression:
-		result := e.importModule(node.Path.Value, env)
+		pathValue := e.Eval(node.Path, env)
+		if isError(pathValue) {
+			return pathValue
+		}
+		path, ok := pathValue.(*object.String)
+		if !ok {
+			return newError(object.RuntimeErrorKindType, "import path must be str, got %s", runtimeTypeName(pathValue))
+		}
+		result := e.importModule(path.Value, env)
 		e.prependCallerFrame(result, node)
 		return result
 

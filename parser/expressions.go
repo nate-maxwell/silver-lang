@@ -266,23 +266,19 @@ func (p *Parser) parseIfExpression() ast.Expression {
 	return expression
 }
 
-// parseImportExpression accepts the restricted import("path") form.
+// parseImportExpression accepts one path expression inside import(...).
 func (p *Parser) parseImportExpression() ast.Expression {
 	expression := &ast.ImportExpression{Token: p.curToken}
 
 	if !p.expectPeek(token.LPAREN) {
 		return nil
 	}
-	if !p.expectPeek(token.STRING) {
-		return nil
+	arguments := p.parseExpressionList(token.RPAREN)
+	if len(arguments) != 1 {
+		p.addError(expression.Position(), "import expects exactly one path expression")
+		return expression
 	}
-
-	expression.Path = &ast.StringLiteral{Token: p.curToken, Value: p.curToken.Literal}
-
-	if !p.expectPeek(token.RPAREN) {
-		return nil
-	}
-
+	expression.Path = arguments[0]
 	return expression
 }
 

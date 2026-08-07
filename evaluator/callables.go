@@ -108,9 +108,9 @@ func (e *Evaluator) applyUserFunction(fn *object.Function, args []object.Object,
 }
 
 // bindFunctionArguments applies ordinary positional binding first. When a
-// struct value does not satisfy the parameter at its position, its fields are
-// offered to the remaining parameters by name. A matching struct parameter is
-// therefore kept intact instead of being destructured.
+// destructurable value does not satisfy the parameter at its position, its
+// named fields or exports are offered to the remaining parameters. A value
+// that satisfies its parameter is therefore kept intact.
 func (e *Evaluator) bindFunctionArguments(fn *object.Function, args []object.Object) ([]object.Object, *object.Error) {
 	if len(args) > len(fn.Parameters) {
 		return nil, newError(object.RuntimeErrorKindType, "wrong number of arguments. got=%d, want=%d", len(args), len(fn.Parameters))
@@ -138,7 +138,7 @@ func (e *Evaluator) bindFunctionArguments(fn *object.Function, args []object.Obj
 			continue
 		}
 
-		structValue, ok := argument.(*object.StructInstance)
+		destructurable, ok := argument.(object.Destructurable)
 		if !ok {
 			return nil, e.parameterTypeError(parameter, argument, fn.Env)
 		}
@@ -149,7 +149,7 @@ func (e *Evaluator) bindFunctionArguments(fn *object.Function, args []object.Obj
 				continue
 			}
 			candidate := fn.Parameters[index]
-			fieldValue, ok := structValue.Get(candidate.Value)
+			fieldValue, ok := destructurable.Get(candidate.Value)
 			if !ok {
 				continue
 			}

@@ -1,6 +1,7 @@
 package evaluator
 
 import (
+	"path/filepath"
 	"silver/object"
 	"testing"
 )
@@ -49,6 +50,50 @@ func TestUnknownType(t *testing.T) {
 		t.Fatalf("result is %T, want *object.Error", evaluated)
 	}
 	if got, want := err.MessageText(), `unknown type "Missing"`; got != want {
+		t.Fatalf("error message is %q, want %q", got, want)
+	}
+}
+
+func TestModuleTypeAnnotationAcceptsImportedModules(t *testing.T) {
+	dir := t.TempDir()
+	libraryPath := filepath.Join(dir, "library.slv")
+	mainPath := filepath.Join(dir, "main.slv")
+	writeSilverFile(t, libraryPath, `let double = fn(value: int) int { value * 2 }`)
+	writeSilverFile(t, mainPath, `
+let load = fn() module { import("./library.slv") }
+let process = fn(lib: module) int { lib.double(21) }
+let library: module = load()
+process(library)
+`)
+
+	evaluated := New().EvalFile(mainPath, object.NewEnvironment())
+	testIntegerObject(t, evaluated, 42)
+}
+
+func TestModuleTypeAnnotationRejectsNonModules(t *testing.T) {
+	evaluated := testEval(`
+let process = fn(lib: module) { }
+process(42)
+`)
+	err, ok := evaluated.(*object.Error)
+	if !ok {
+		t.Fatalf("result is %T, want *object.Error", evaluated)
+	}
+	if got, want := err.MessageText(), `type mismatch for parameter "lib": expected module, got int`; got != want {
+		t.Fatalf("error message is %q, want %q", got, want)
+	}
+}
+
+func TestModuleReturnTypeRejectsNonModules(t *testing.T) {
+	evaluated := testEval(`
+let load = fn() module { 42 }
+load()
+`)
+	err, ok := evaluated.(*object.Error)
+	if !ok {
+		t.Fatalf("result is %T, want *object.Error", evaluated)
+	}
+	if got, want := err.MessageText(), `type mismatch for return value of "load": expected module, got int`; got != want {
 		t.Fatalf("error message is %q, want %q", got, want)
 	}
 }

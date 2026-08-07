@@ -1,11 +1,14 @@
 package ast
 
-import "silver/token"
+import (
+	"silver/token"
+	"strconv"
+)
 
-// ImportExpression loads a module from the string literal in Path.
+// ImportExpression loads a module from the string produced by Path.
 type ImportExpression struct {
 	Token token.Token // The 'import' token
-	Path  *StringLiteral
+	Path  Expression
 }
 
 // expressionNode marks ImportExpression as an Expression.
@@ -19,7 +22,11 @@ func (ie *ImportExpression) Position() token.Position {
 	return ie.Token.Position
 }
 
-// String renders the import call and quoted path.
+// String renders the import call and its path expression.
 func (ie *ImportExpression) String() string {
-	return ie.TokenLiteral() + "(\"" + ie.Path.Value + "\")"
+	path := ie.Path.String()
+	if literal, ok := ie.Path.(*StringLiteral); ok {
+		path = strconv.Quote(literal.Value)
+	}
+	return ie.TokenLiteral() + "(" + path + ")"
 }

@@ -120,6 +120,9 @@ func foldExpressionConstants(expression ast.Expression) ast.Expression {
 	case *ast.MemberExpression:
 		node.Object = foldExpressionConstants(node.Object)
 
+	case *ast.ImportExpression:
+		node.Path = foldExpressionConstants(node.Path)
+
 	case *ast.TaskExpression:
 		node.Work = foldExpressionConstants(node.Work)
 

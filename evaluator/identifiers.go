@@ -94,7 +94,7 @@ func (e *Evaluator) evalIndexAssignment(node *ast.IndexAssignmentStatement, env 
 func (e *Evaluator) evalMember(value object.Object, member string) object.Object {
 	switch value := value.(type) {
 	case *object.Module:
-		export, ok := value.Exports[member]
+		export, ok := value.Get(member)
 		if !ok {
 			return newError(object.RuntimeErrorKindAttribute, "module %q has no member %q", value.Path, member)
 		}

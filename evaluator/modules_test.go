@@ -114,6 +114,83 @@ func TestImportsAreCached(t *testing.T) {
 	}
 }
 
+func TestImportAcceptsPathExpression(t *testing.T) {
+	dir := t.TempDir()
+	writeSilverFile(t, filepath.Join(dir, "module.slv"), `let value = 42`)
+	env := object.NewEnvironment()
+	env.SetSourceDir(dir)
+
+	result := evalInput(t, New(), env, `
+let module_path = "./module.slv"
+import(module_path).value
+`)
+	assertInteger(t, result, 42)
+}
+
+func TestImportRejectsNonStringPath(t *testing.T) {
+	result := evalInput(t, New(), object.NewEnvironment(), `import(42)`)
+	err, ok := result.(*object.Error)
+	if !ok {
+		t.Fatalf("result is %T, want *object.Error", result)
+	}
+	if got, want := err.MessageText(), "import path must be str, got int"; got != want {
+		t.Fatalf("error message is %q, want %q", got, want)
+	}
+}
+
+func TestFunctionDestructuresModuleExports(t *testing.T) {
+	dir := t.TempDir()
+	writeSilverFile(t, filepath.Join(dir, "library.slv"), `
+let message = "loaded"
+let double = fn(value: int) int { value * 2 }
+`)
+	mainPath := filepath.Join(dir, "main.slv")
+	writeSilverFile(t, mainPath, `
+let library = import("./library.slv")
+let process = fn(double: call(int) int, message: str) int {
+	double(21)
+}
+process(library)
+`)
+
+	result := New().EvalFile(mainPath, object.NewEnvironment())
+	assertInteger(t, result, 42)
+}
+
+func TestMatchingModuleParameterIsNotDestructured(t *testing.T) {
+	dir := t.TempDir()
+	writeSilverFile(t, filepath.Join(dir, "library.slv"), `let value = 42`)
+	mainPath := filepath.Join(dir, "main.slv")
+	writeSilverFile(t, mainPath, `
+let library = import("./library.slv")
+let read = fn(library: module) int { library.value }
+read(library)
+`)
+
+	result := New().EvalFile(mainPath, object.NewEnvironment())
+	assertInteger(t, result, 42)
+}
+
+func TestDestructuredModuleExportMustMatchParameterType(t *testing.T) {
+	dir := t.TempDir()
+	writeSilverFile(t, filepath.Join(dir, "library.slv"), `let value = "wrong"`)
+	mainPath := filepath.Join(dir, "main.slv")
+	writeSilverFile(t, mainPath, `
+let library = import("./library.slv")
+let read = fn(value: int) int { value }
+read(library)
+`)
+
+	result := New().EvalFile(mainPath, object.NewEnvironment())
+	err, ok := result.(*object.Error)
+	if !ok {
+		t.Fatalf("result is %T, want *object.Error", result)
+	}
+	if got, want := err.MessageText(), `type mismatch for parameter "value": expected int, got str`; got != want {
+		t.Fatalf("error message is %q, want %q", got, want)
+	}
+}
+
 func TestMissingModuleMember(t *testing.T) {
 	dir := t.TempDir()
 	writeSilverFile(t, filepath.Join(dir, "module.slv"), `let present = 1`)

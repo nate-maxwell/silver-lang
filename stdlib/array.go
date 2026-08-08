@@ -1,4 +1,4 @@
-package builtins
+package stdlib
 
 import (
 	"silver/object"
@@ -10,13 +10,51 @@ import (
 func arrayDefinitions(null *object.Null, trueValue, falseValue *object.Boolean) []definition {
 	return []definition{
 		{name: "append", fn: builtinAppend},
-		{name: "contains", fn: builtinContains(trueValue, falseValue)},
+		{name: "contains", fn: builtinArrayContains(trueValue, falseValue)},
 		{name: "first", fn: builtinFirst(null)},
 		{name: "last", fn: builtinLast(null)},
 		{name: "remove", fn: builtinRemove(null)},
 		{name: "rest", fn: builtinRest(null)},
 		{name: "reverse", fn: builtinReverse},
 		{name: "sort", fn: builtinSort},
+	}
+}
+
+func builtinArrayContains(trueValue, falseValue *object.Boolean) object.BuiltinFunction {
+	return func(args ...object.Object) object.Object {
+		if err := requireArgumentCount(args, 2); err != nil {
+			return err
+		}
+		array, err := requireArray("contains", args[0])
+		if err != nil {
+			return err
+		}
+		for _, element := range array.Elements {
+			if objectsEqual(element, args[1]) {
+				return trueValue
+			}
+		}
+		return falseValue
+	}
+}
+
+func objectsEqual(left, right object.Object) bool {
+	if isNumber(left) && isNumber(right) {
+		if numberIsNaN(left) || numberIsNaN(right) {
+			return false
+		}
+		return compareNumbers(left, right) == 0
+	}
+	if left.Type() != right.Type() {
+		return false
+	}
+	switch left := left.(type) {
+	case *object.String:
+		return left.Value == right.(*object.String).Value
+	case *object.Boolean:
+		return left.Value == right.(*object.Boolean).Value
+	default:
+		return left == right
 	}
 }
 

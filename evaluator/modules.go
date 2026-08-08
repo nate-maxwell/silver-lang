@@ -29,9 +29,18 @@ func (e *Evaluator) EvalFile(path string, env *object.Environment) object.Object
 	return e.Eval(program, env)
 }
 
-// importModule resolves, loads, and evaluates a module in an isolated top-level
-// environment. Successful modules are cached by canonical absolute path.
+// importModule first resolves bundled standard-library names, then loads file
+// modules in an isolated top-level environment. Successful modules are cached
+// by standard-library name or canonical absolute path.
 func (e *Evaluator) importModule(path string, env *object.Environment) object.Object {
+	if module, ok := e.standardLibrary.LookupModule(path); ok {
+		if cached, exists := e.modules[path]; exists {
+			return cached
+		}
+		e.modules[path] = module
+		return module
+	}
+
 	absolutePath, err := resolveImportPath(path, env.SourceDir())
 	if err != nil {
 		return newError(object.RuntimeErrorKindImport, "could not resolve import %q: %s", path, err)

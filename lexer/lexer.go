@@ -227,14 +227,14 @@ func newToken(tokenType token.TokenType, ch byte, position token.Position) token
 // readIdentifier consumes a Silver identifier and returns its source text.
 func (l *Lexer) readIdentifier() string {
 	position := l.position
-	for isLetter(l.ch) {
+	for isLetter(l.ch) || isDigit(l.ch) {
 		l.readChar()
 	}
 	return l.input[position:l.position]
 }
 
-// isLetter reports whether ch may occur in a Silver identifier. Digits are not
-// currently accepted after the first character.
+// isLetter reports whether ch may begin a Silver identifier. Once an
+// identifier has begun, readIdentifier also accepts decimal digits.
 func isLetter(ch byte) bool {
 	return 'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z' || ch == '_'
 }

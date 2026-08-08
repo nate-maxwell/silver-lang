@@ -5,8 +5,8 @@ import (
 	"io"
 	"os"
 	"silver/ast"
-	builtinpkg "silver/evaluator/builtins"
 	"silver/object"
+	stdlibpkg "silver/stdlib"
 	"sync"
 	"sync/atomic"
 )
@@ -14,16 +14,16 @@ import (
 // NULL is the canonical null singleton used by identity-based truthiness.
 var NULL = &object.Null{}
 
-// Evaluator owns the state shared across one execution session: native
-// builtins, imported-module caches, circular-import state, and traceback
+// Evaluator owns the state shared across one execution session: the standard
+// library, imported-module caches, circular-import state, and traceback
 // contexts. Reuse one evaluator for a REPL or a group of related evaluations.
 type Evaluator struct {
-	builtins  *builtinpkg.Registry
-	constants *constantPool
-	modules   map[string]*object.Module // filepath to module
-	loading   map[string]bool           // module load state | circular import detection
-	contexts  []string                  // active Silver function/module names
-	warnings  io.Writer                 // scope-exit task diagnostics
+	standardLibrary *stdlibpkg.Registry
+	constants       *constantPool
+	modules         map[string]*object.Module // filepath or standard-library name to module
+	loading         map[string]bool           // module load state | circular import detection
+	contexts        []string                  // active Silver function/module names
+	warnings        io.Writer                 // scope-exit task diagnostics
 	// nextEnumValueID gives every evaluated enum member a session-unique hash
 	// identity, even when separate modules declare enums with the same names.
 	nextEnumValueID *atomic.Uint64
@@ -74,7 +74,7 @@ func NewWithWriters(out, warnings io.Writer) *Evaluator {
 
 func newEvaluator(out, warnings io.Writer) *Evaluator {
 	return &Evaluator{
-		builtins:        builtinpkg.New(out, NULL, TRUE, FALSE),
+		standardLibrary: stdlibpkg.New(out, NULL, TRUE, FALSE),
 		constants:       newConstantPool(),
 		modules:         make(map[string]*object.Module),
 		loading:         make(map[string]bool),
@@ -85,14 +85,15 @@ func newEvaluator(out, warnings io.Writer) *Evaluator {
 }
 
 // fork gives a task independent mutable evaluator state while sharing the
-// immutable builtin registry, synchronized output, and enum identity source.
+// immutable standard-library registry, synchronized output, and enum identity
+// source.
 func (e *Evaluator) fork() *Evaluator {
 	modules := make(map[string]*object.Module, len(e.modules))
 	for path, module := range e.modules {
 		modules[path] = module
 	}
 	return &Evaluator{
-		builtins:        e.builtins,
+		standardLibrary: e.standardLibrary,
 		constants:       newConstantPool(),
 		modules:         modules,
 		loading:         make(map[string]bool),

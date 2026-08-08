@@ -1,30 +1,36 @@
-package builtins
+package stdlib
 
 import "silver/object"
 
-// mapDefinitions groups the native map operations. contains shares the
-// collection implementation used by arrays so the global function can
-// dispatch on either receiver type.
+// mapDefinitions groups the functions exported by import("map").
 func mapDefinitions(null *object.Null, trueValue, falseValue *object.Boolean) []definition {
 	return []definition{
 		{name: "get", fn: builtinMapGet(null)},
 		{name: "set", fn: builtinMapSet},
 		{name: "delete", fn: builtinMapDelete},
 		{name: "values", fn: builtinMapValues},
-		{name: "contains", fn: builtinContains(trueValue, falseValue)},
+		{name: "contains", fn: builtinMapContains(trueValue, falseValue)},
 	}
 }
 
-// mapGlobalDefinitions omits contains because the array definition already
-// registers the shared, type-dispatching implementation under that name.
-func mapGlobalDefinitions(definitions []definition) []definition {
-	globals := make([]definition, 0, len(definitions)-1)
-	for _, definition := range definitions {
-		if definition.name != "contains" {
-			globals = append(globals, definition)
+func builtinMapContains(trueValue, falseValue *object.Boolean) object.BuiltinFunction {
+	return func(args ...object.Object) object.Object {
+		if err := requireArgumentCount(args, 2); err != nil {
+			return err
 		}
+		mapping, err := requireMap("contains", args[0])
+		if err != nil {
+			return err
+		}
+		key, keyError := requireHashKey(args[1])
+		if keyError != nil {
+			return keyError
+		}
+		if _, ok := mapping.Get(key); ok {
+			return trueValue
+		}
+		return falseValue
 	}
-	return globals
 }
 
 // builtinMapGet returns the value associated with key, or null when no pair is

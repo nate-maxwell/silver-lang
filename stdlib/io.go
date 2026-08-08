@@ -1,4 +1,4 @@
-package builtins
+package stdlib
 
 import (
 	"errors"

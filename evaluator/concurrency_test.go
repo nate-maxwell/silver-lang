@@ -12,7 +12,8 @@ func TestTaskCollectReturnsNamedNonNullResults(t *testing.T) {
 let double = fn(value: int) int { value * 2 }
 let work_a = fn() int { double(2) }
 let work_b = fn() int { double(5) }
-let work_c = fn() { print("side effect") }
+let io = import("io")
+let work_c = fn() { io.print("side effect") }
 let a = task work_a
 let b = task work_b
 let c = task work_c
@@ -64,9 +65,10 @@ results.handle
 func TestTaskHoldsRuntimeErrorUntilCollect(t *testing.T) {
 	var out bytes.Buffer
 	result := evalInput(t, NewWithOutput(&out), object.NewEnvironment(), `
+let io = import("io")
 let fail = fn() int { 1 + True }
 let bad = task fail
-print("continued")
+io.print("continued")
 collect bad
 `)
 	err, ok := result.(*object.Error)
@@ -81,7 +83,8 @@ collect bad
 func TestUncollectedTaskWarnsAndIsJoinedAtScopeExit(t *testing.T) {
 	var out, warnings bytes.Buffer
 	result := evalInput(t, NewWithWriters(&out, &warnings), object.NewEnvironment(), `
-let work = fn() { print("finished") }
+let io = import("io")
+let work = fn() { io.print("finished") }
 let abandoned = task work
 42
 `)

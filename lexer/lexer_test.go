@@ -261,6 +261,29 @@ func TestFloatTokens(t *testing.T) {
 	}
 }
 
+func TestIdentifiersMayContainDigits(t *testing.T) {
+	l := New(`exp2 log1p value42 _2 2fast`)
+	want := []struct {
+		tokenType token.TokenType
+		literal   string
+	}{
+		{token.IDENT, "exp2"},
+		{token.IDENT, "log1p"},
+		{token.IDENT, "value42"},
+		{token.IDENT, "_2"},
+		{token.INT, "2"},
+		{token.IDENT, "fast"},
+		{token.EOF, ""},
+	}
+
+	for index, expected := range want {
+		got := l.NextToken()
+		if got.Type != expected.tokenType || got.Literal != expected.literal {
+			t.Fatalf("token %d is (%q, %q), want (%q, %q)", index, got.Type, got.Literal, expected.tokenType, expected.literal)
+		}
+	}
+}
+
 func TestPowerToken(t *testing.T) {
 	l := NewWithSource("2 ** 3 * 4", "power.slv")
 	want := []struct {

@@ -89,8 +89,7 @@ func (e *Evaluator) evalIndexAssignment(node *ast.IndexAssignmentStatement, env 
 	return NULL
 }
 
-// evalMember resolves members on modules, enum namespaces, structs, and
-// primitive values with registered builtin methods.
+// evalMember resolves members on modules, enum namespaces, and structs.
 func (e *Evaluator) evalMember(value object.Object, member string) object.Object {
 	switch value := value.(type) {
 	case *object.Module:
@@ -123,32 +122,14 @@ func (e *Evaluator) evalMember(value object.Object, member string) object.Object
 		}
 		return field
 	default:
-		if builtin, ok := e.builtins.LookupMethod(value.Type(), member); ok {
-			return bindBuiltinReceiver(builtin, value)
-		}
 		return newError(object.RuntimeErrorKindType, "member access not supported on %s", value.Type())
 	}
 }
 
-// bindBuiltinReceiver produces a normal builtin value that injects receiver
-// ahead of the arguments supplied by the Silver call expression.
-func bindBuiltinReceiver(builtin *object.Builtin, receiver object.Object) *object.Builtin {
-	return &object.Builtin{Fn: func(args ...object.Object) object.Object {
-		boundArgs := make([]object.Object, 0, len(args)+1)
-		boundArgs = append(boundArgs, receiver)
-		boundArgs = append(boundArgs, args...)
-		return builtin.Fn(boundArgs...)
-	}}
-}
-
-// evalIdentifier resolves lexical bindings before falling back to the native
-// builtin registry.
+// evalIdentifier resolves lexical bindings and built-in type definitions.
 func (e *Evaluator) evalIdentifier(node *ast.Identifier, env *object.Environment) object.Object {
 	if val, ok := env.Get(node.Value); ok {
 		return val
-	}
-	if builtin, ok := e.builtins.Lookup(node.Value); ok {
-		return builtin
 	}
 	if typeDefinition, ok := object.TypeDefinitionByName(node.Value); ok {
 		return typeDefinition

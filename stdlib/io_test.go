@@ -1,4 +1,4 @@
-package evaluator
+package stdlib_test
 
 import (
 	"os"
@@ -8,18 +8,20 @@ import (
 	"testing"
 )
 
+const ioImport = "let io = import(\"io\")\n"
+
 func TestOpenReturnsReadableFileStruct(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "message.txt")
 	if err := os.WriteFile(path, []byte("hello, Silver"), 0600); err != nil {
 		t.Fatal(err)
 	}
 
-	input := `let file: File = open(` + silverString(path) + `)
+	input := `let file: File = io.open(` + silverString(path) + `)
 let reader: call() str | IOError = file.read
 let contents = reader()
 file.close()
 contents`
-	result, ok := testEval(input).(*object.String)
+	result, ok := testEval(ioImport + input).(*object.String)
 	if !ok {
 		t.Fatalf("result is not a string")
 	}
@@ -34,13 +36,13 @@ func TestFileWriteReplacesContents(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	input := `let file = open(` + silverString(path) + `)
+	input := `let file = io.open(` + silverString(path) + `)
 let writer: call(contents: str) | IOError = file.write
 writer("new contents")
 let contents = file.read()
 file.close()
 contents`
-	result, ok := testEval(input).(*object.String)
+	result, ok := testEval(ioImport + input).(*object.String)
 	if !ok {
 		t.Fatalf("result is not a string")
 	}
@@ -62,12 +64,12 @@ func TestFilePathAndNominalTypeAreExposed(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	input := `let file = open(` + silverString(path) + `)
-let matches = type(file) == File
+	input := `let file = io.open(` + silverString(path) + `)
+let matches = core.type(file) == File
 let path_matches = file.path == ` + silverString(path) + `
 file.close()
 if matches { path_matches } else { False }`
-	testBooleanObject(t, testEval(input), true)
+	testBooleanObject(t, testEval(ioImport+coreImport+input), true)
 }
 
 func TestFileOperationsAfterCloseReturnIOError(t *testing.T) {
@@ -82,7 +84,7 @@ func TestFileOperationsAfterCloseReturnIOError(t *testing.T) {
 		`file.close()`,
 	}
 	for _, operation := range tests {
-		input := `let file = open(` + silverString(path) + `)
+		input := `let file = io.open(` + silverString(path) + `)
 file.close()
 try {
 ` + operation + `
@@ -90,26 +92,26 @@ False
 } catch IOError err {
 err.message != ""
 }`
-		testBooleanObject(t, testEval(input), true)
+		testBooleanObject(t, testEval(ioImport+input), true)
 	}
 }
 
 func TestOpenReturnsStructuredErrors(t *testing.T) {
 	directory := t.TempDir()
 	missing := filepath.Join(directory, "missing.txt")
-	testBooleanObject(t, testEval(`try {
-open(`+silverString(missing)+`)
+	testBooleanObject(t, testEval(ioImport+`try {
+io.open(`+silverString(missing)+`)
 } catch FileNotFound err {
 err.message != ""
 }`), true)
-	testBooleanObject(t, testEval(`try {
-open(`+silverString(directory)+`)
+	testBooleanObject(t, testEval(ioImport+`try {
+io.open(`+silverString(directory)+`)
 } catch PermissionDenied err {
 err.message != ""
 }`), true)
 
-	result := testEval(`try {
-open(` + silverString(missing) + `)
+	result := testEval(ioImport + `try {
+io.open(` + silverString(missing) + `)
 } catch FileNotFound err {
 err.message
 }`)
@@ -120,9 +122,9 @@ err.message
 }
 
 func TestOpenHasDeclaredCallSignature(t *testing.T) {
-	input := `let opener: call(path: str) File | FileNotFound | PermissionDenied = open
-type(opener) == call`
-	testBooleanObject(t, testEval(input), true)
+	input := `let opener: call(path: str) File | FileNotFound | PermissionDenied = io.open
+core.type(opener) == call`
+	testBooleanObject(t, testEval(ioImport+coreImport+input), true)
 }
 
 func TestOpenRejectsInvalidArguments(t *testing.T) {
@@ -130,11 +132,11 @@ func TestOpenRejectsInvalidArguments(t *testing.T) {
 		input   string
 		message string
 	}{
-		{input: `open()`, message: "wrong number of arguments. got=0, want=1"},
-		{input: `open(1)`, message: "argument to `open` must be STRING, got INTEGER"},
+		{input: `io.open()`, message: "wrong number of arguments. got=0, want=1"},
+		{input: `io.open(1)`, message: "argument to `open` must be STRING, got INTEGER"},
 	}
 	for _, tt := range tests {
-		result, ok := testEval(tt.input).(*object.Error)
+		result, ok := testEval(ioImport + tt.input).(*object.Error)
 		if !ok {
 			t.Fatalf("%s returned %T, want *object.Error", tt.input, result)
 		}

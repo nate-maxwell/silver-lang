@@ -38,6 +38,9 @@ func (p *Parser) validateTaskStatements(statements []ast.Statement, bindings map
 			p.validateTaskExpression(node.Value, bindings)
 		case *ast.ReturnStatement:
 			p.validateTaskExpression(node.ReturnValue, bindings)
+		case *ast.AssertStatement:
+			p.validateTaskExpression(node.Condition, bindings)
+			p.validateTaskExpression(node.Message, bindings)
 		case *ast.DeferStatement:
 			p.validateTaskExpression(node.Call, bindings)
 		case *ast.ForStatement:

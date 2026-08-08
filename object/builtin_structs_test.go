@@ -46,6 +46,7 @@ func TestBuiltinErrorStructsExposeMessage(t *testing.T) {
 func TestRuntimeErrorStructTableConstructsEveryKind(t *testing.T) {
 	want := map[RuntimeErrorKind]string{
 		RuntimeErrorKindRuntime:      "RuntimeError",
+		RuntimeErrorKindAssertion:    "AssertionError",
 		RuntimeErrorKindType:         "TypeError",
 		RuntimeErrorKindValue:        "ValueError",
 		RuntimeErrorKindZeroDivision: "ZeroDivisionError",

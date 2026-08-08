@@ -57,14 +57,13 @@ func evalInfixExpression(operator string, left, right object.Object) object.Obje
 // evalIndexExpression dispatches primitive indexing directly and lets struct
 // values implement bracket reads through get_item.
 func (e *Evaluator) evalIndexExpression(node *ast.IndexExpression, left, index object.Object) object.Object {
-	if instance, ok := left.(*object.StructInstance); ok {
-		return e.callStructIndexMethod(node, instance, "get_item", []object.Object{index})
-	}
-	switch {
-	case left.Type() == object.ARRAY_OBJ && index.Type() == object.INTEGER_OBJ:
+	switch left := left.(type) {
+	case *object.Array:
 		return evalArrayIndexExpression(left, index)
-	case left.Type() == object.MAP_OBJ:
+	case *object.Map:
 		return evalMapIndexExpression(left, index)
+	case *object.StructInstance:
+		return e.callStructIndexMethod(node, left, "get_item", []object.Object{index})
 	default:
 		return newError(object.RuntimeErrorKindType, "index operator not supported: %s", left.Type())
 	}

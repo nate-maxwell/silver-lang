@@ -79,6 +79,7 @@ const (
 	IF       = "IF"
 	ELSE     = "ELSE"
 	RETURN   = "RETURN"
+	ASSERT   = "ASSERT"
 	DEFER    = "DEFER"
 	IMPORT   = "IMPORT"
 	ENUM     = "ENUM"
@@ -102,6 +103,7 @@ var keywords = map[string]TokenType{
 	"if":      IF,
 	"else":    ELSE,
 	"return":  RETURN,
+	"assert":  ASSERT,
 	"defer":   DEFER,
 	"import":  IMPORT,
 	"enum":    ENUM,

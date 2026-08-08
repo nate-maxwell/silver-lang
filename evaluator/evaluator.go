@@ -136,6 +136,24 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 		}
 		return &object.ReturnValue{Value: val}
 
+	case *ast.AssertStatement:
+		condition := e.Eval(node.Condition, env)
+		if isError(condition) {
+			return condition
+		}
+		if isTruthy(condition) {
+			return NULL
+		}
+		message := ""
+		if node.Message != nil {
+			value := e.Eval(node.Message, env)
+			if isError(value) {
+				return value
+			}
+			message = value.Inspect()
+		}
+		return newError(object.RuntimeErrorKindAssertion, "%s", message)
+
 	case *ast.DeferStatement:
 		function := e.Eval(node.Call.Function, env)
 		if isError(function) {

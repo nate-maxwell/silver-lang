@@ -88,8 +88,7 @@ type AssignmentStatement struct {
 	Value Expression
 }
 
-func (as *AssignmentStatement) statementNode() {}
-
+func (as *AssignmentStatement) statementNode()       {}
 func (as *AssignmentStatement) TokenLiteral() string { return as.Token.Literal }
 
 func (as *AssignmentStatement) Position() token.Position {
@@ -259,6 +258,44 @@ func (rs *ReturnStatement) String() string {
 }
 
 /* ----------------------------------------------------------------------------------------------------------
+Assert statements
+---------------------------------------------------------------------------------------------------------- */
+
+// AssertStatement requires Condition to be truthy. Message, when present, is
+// evaluated only after the condition fails and becomes the AssertionError
+// detail.
+type AssertStatement struct {
+	Token     token.Token // the 'assert' token
+	Condition Expression
+	Message   Expression
+}
+
+// statementNode marks AssertStatement as a Statement.
+func (as *AssertStatement) statementNode() {}
+
+// TokenLiteral returns the assert keyword.
+func (as *AssertStatement) TokenLiteral() string { return as.Token.Literal }
+
+// Position returns the assert keyword's position.
+func (as *AssertStatement) Position() token.Position { return as.Token.Position }
+
+// String renders the condition and optional failure message without a
+// statement terminator.
+func (as *AssertStatement) String() string {
+	var out bytes.Buffer
+	out.WriteString(as.TokenLiteral())
+	if as.Condition != nil {
+		out.WriteString(" ")
+		out.WriteString(as.Condition.String())
+	}
+	if as.Message != nil {
+		out.WriteString(", ")
+		out.WriteString(as.Message.String())
+	}
+	return out.String()
+}
+
+/* ----------------------------------------------------------------------------------------------------------
 Defer statements
 ---------------------------------------------------------------------------------------------------------- */
 
@@ -270,12 +307,16 @@ type DeferStatement struct {
 	Call  *CallExpression
 }
 
+// statementNode marks DeferStatement as a Statement.
 func (ds *DeferStatement) statementNode() {}
 
+// TokenLiteral returns the defer keyword.
 func (ds *DeferStatement) TokenLiteral() string { return ds.Token.Literal }
 
+// Position returns the defer keyword's position.
 func (ds *DeferStatement) Position() token.Position { return ds.Token.Position }
 
+// String renders the deferred call without a statement terminator.
 func (ds *DeferStatement) String() string {
 	if ds.Call == nil {
 		return ds.TokenLiteral()

@@ -135,8 +135,6 @@ func TestMapIndexAssignmentErrors(t *testing.T) {
 	}{
 		{input: `let values = {}
 values[[]] = 1`, message: "unusable as hash key: ARRAY"},
-		{input: `let values = []
-values[0] = 1`, message: "index assignment not supported on array"},
 	}
 
 	for _, tt := range tests {

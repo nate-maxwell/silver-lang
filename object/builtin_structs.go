@@ -9,6 +9,7 @@ type RuntimeErrorKind string
 
 const (
 	RuntimeErrorKindRuntime      RuntimeErrorKind = "runtime"
+	RuntimeErrorKindAssertion    RuntimeErrorKind = "assertion"
 	RuntimeErrorKindType         RuntimeErrorKind = "type"
 	RuntimeErrorKindValue        RuntimeErrorKind = "value"
 	RuntimeErrorKindZeroDivision RuntimeErrorKind = "zero_division"
@@ -23,6 +24,7 @@ const (
 
 var runtimeErrorStructNames = map[RuntimeErrorKind]string{
 	RuntimeErrorKindRuntime:      "RuntimeError",
+	RuntimeErrorKindAssertion:    "AssertionError",
 	RuntimeErrorKindType:         "TypeError",
 	RuntimeErrorKindValue:        "ValueError",
 	RuntimeErrorKindZeroDivision: "ZeroDivisionError",

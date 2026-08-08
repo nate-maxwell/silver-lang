@@ -60,15 +60,15 @@ func (e *Evaluator) evalMemberAssignment(node *ast.MemberAssignmentStatement, en
 	return NULL
 }
 
-// evalIndexAssignment invokes set_item on structs or creates/replaces a native
-// map entry. Maps are reference values, so mutations are visible through aliases.
+// evalIndexAssignment mutates native arrays/maps directly or invokes set_item
+// on structs. Native collection mutations are visible through aliases.
 func (e *Evaluator) evalIndexAssignment(node *ast.IndexAssignmentStatement, env *object.Environment) object.Object {
 	target := e.Eval(node.Target.Left, env)
 	if isError(target) {
 		return target
 	}
 	switch target.(type) {
-	case *object.StructInstance, *object.Map:
+	case *object.Array, *object.Map, *object.StructInstance:
 	default:
 		return newError(object.RuntimeErrorKindType, "index assignment not supported on %s", runtimeTypeName(target))
 	}
@@ -78,7 +78,15 @@ func (e *Evaluator) evalIndexAssignment(node *ast.IndexAssignmentStatement, env 
 		return key
 	}
 	var hashable object.Hashable
-	if _, isMap := target.(*object.Map); isMap {
+	var arrayIndex int
+	switch target := target.(type) {
+	case *object.Array:
+		var indexError *object.Error
+		arrayIndex, indexError = requireArrayIndex(target, key)
+		if indexError != nil {
+			return indexError
+		}
+	case *object.Map:
 		var ok bool
 		hashable, ok = key.(object.Hashable)
 		if !ok {
@@ -91,17 +99,21 @@ func (e *Evaluator) evalIndexAssignment(node *ast.IndexAssignmentStatement, env 
 		return value
 	}
 
-	if instance, ok := target.(*object.StructInstance); ok {
-		result := e.callStructIndexMethod(node, instance, "set_item", []object.Object{key, value})
+	switch target := target.(type) {
+	case *object.Array:
+		target.Elements[arrayIndex] = value
+		return NULL
+	case *object.Map:
+		target.Set(hashable.HashKey(), object.MapPair{Key: key, Value: value})
+		return NULL
+	case *object.StructInstance:
+		result := e.callStructIndexMethod(node, target, "set_item", []object.Object{key, value})
 		if isError(result) {
 			return result
 		}
 		return NULL
 	}
-
-	mapping := target.(*object.Map)
-	mapping.Set(hashable.HashKey(), object.MapPair{Key: key, Value: value})
-	return NULL
+	return newError(object.RuntimeErrorKindType, "index assignment not supported on %s", runtimeTypeName(target))
 }
 
 // evalMember resolves members on modules, enum namespaces, and structs.

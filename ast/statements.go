@@ -153,7 +153,7 @@ func (mas *MemberAssignmentStatement) String() string {
 Index assignment statements
 ---------------------------------------------------------------------------------------------------------- */
 
-// IndexAssignmentStatement replaces or creates one entry in a map value.
+// IndexAssignmentStatement assigns through a map or an indexable struct.
 type IndexAssignmentStatement struct {
 	Token  token.Token // the = token
 	Target *IndexExpression

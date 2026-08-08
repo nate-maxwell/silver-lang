@@ -7,9 +7,8 @@ import (
 	"silver/parser"
 )
 
-// DefaultDict is a standard-library-owned struct. Its get method is a Silver
-// closure, so it can invoke a user-supplied Silver factory without requiring
-// special map behavior in the evaluator.
+// DefaultDict is a standard-library-owned map-like struct. Its get_item method
+// is a Silver closure so it can invoke a user-supplied Silver factory.
 func newDefaultDictStructDefinition() *object.Struct {
 	environment := object.NewEnvironment()
 	definition := &object.Struct{
@@ -17,13 +16,9 @@ func newDefaultDictStructDefinition() *object.Struct {
 		Fields: []string{
 			"values",
 			"factory",
-			"get",
-			"set",
 		},
 		FieldTypes: []*ast.TypeAnnotation{
 			namedType("map"),
-			namedType("call"),
-			namedType("call"),
 			namedType("call"),
 		},
 		Env: environment,
@@ -62,15 +57,15 @@ func newDefaultDict(definition *object.Struct, null *object.Null) object.Builtin
 		}
 		instance := &object.StructInstance{Struct: definition, Values: values}
 		getter := &object.Function{
-			Name:       "get",
+			Name:       "get_item",
 			Parameters: defaultDictGetTemplate.Parameters,
 			ReturnType: returnType,
 			ErrorTypes: errorTypes,
 			Body:       defaultDictGetTemplate.Body,
 			Env:        factoryEnvironment,
 		}
-		values["get"] = &object.BoundMethod{Method: getter, Receiver: instance, Name: "get"}
-		values["set"] = &object.Builtin{Fn: func(setArgs ...object.Object) object.Object {
+		values["get_item"] = &object.BoundMethod{Method: getter, Receiver: instance, Name: "get_item"}
+		values["set_item"] = &object.Builtin{Fn: func(setArgs ...object.Object) object.Object {
 			if err := requireArgumentCount(setArgs, 2); err != nil {
 				return err
 			}
@@ -108,18 +103,18 @@ func parseDefaultDictGetTemplate() *ast.FunctionLiteral {
 	self.values[key] = value
 	return value
 }`
-	p := parser.New(lexer.NewWithSource(source, "<stdlib collections.DefaultDict.get>"))
+	p := parser.New(lexer.NewWithSource(source, "<stdlib collections.DefaultDict.get_item>"))
 	program := p.ParseProgram()
 	if len(p.Errors()) != 0 || len(program.Statements) != 1 {
-		panic("stdlib: invalid DefaultDict.get implementation")
+		panic("stdlib: invalid DefaultDict.get_item implementation")
 	}
 	statement, ok := program.Statements[0].(*ast.ExpressionStatement)
 	if !ok {
-		panic("stdlib: DefaultDict.get is not an expression")
+		panic("stdlib: DefaultDict.get_item is not an expression")
 	}
 	function, ok := statement.Expression.(*ast.FunctionLiteral)
 	if !ok {
-		panic("stdlib: DefaultDict.get is not a function")
+		panic("stdlib: DefaultDict.get_item is not a function")
 	}
 	return function
 }

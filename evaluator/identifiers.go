@@ -60,15 +60,16 @@ func (e *Evaluator) evalMemberAssignment(node *ast.MemberAssignmentStatement, en
 	return NULL
 }
 
-// evalIndexAssignment creates or replaces a map entry. Maps are reference
-// values, so the mutation is visible through every alias of the same map.
+// evalIndexAssignment invokes set_item on structs or creates/replaces a native
+// map entry. Maps are reference values, so mutations are visible through aliases.
 func (e *Evaluator) evalIndexAssignment(node *ast.IndexAssignmentStatement, env *object.Environment) object.Object {
 	target := e.Eval(node.Target.Left, env)
 	if isError(target) {
 		return target
 	}
-	mapping, ok := target.(*object.Map)
-	if !ok {
+	switch target.(type) {
+	case *object.StructInstance, *object.Map:
+	default:
 		return newError(object.RuntimeErrorKindType, "index assignment not supported on %s", runtimeTypeName(target))
 	}
 
@@ -76,15 +77,29 @@ func (e *Evaluator) evalIndexAssignment(node *ast.IndexAssignmentStatement, env 
 	if isError(key) {
 		return key
 	}
-	hashable, ok := key.(object.Hashable)
-	if !ok {
-		return newError(object.RuntimeErrorKindType, "unusable as hash key: %s", key.Type())
+	var hashable object.Hashable
+	if _, isMap := target.(*object.Map); isMap {
+		var ok bool
+		hashable, ok = key.(object.Hashable)
+		if !ok {
+			return newError(object.RuntimeErrorKindType, "unusable as hash key: %s", key.Type())
+		}
 	}
 
 	value := e.Eval(node.Value, env)
 	if isError(value) {
 		return value
 	}
+
+	if instance, ok := target.(*object.StructInstance); ok {
+		result := e.callStructIndexMethod(node, instance, "set_item", []object.Object{key, value})
+		if isError(result) {
+			return result
+		}
+		return NULL
+	}
+
+	mapping := target.(*object.Map)
 	mapping.Set(hashable.HashKey(), object.MapPair{Key: key, Value: value})
 	return NULL
 }

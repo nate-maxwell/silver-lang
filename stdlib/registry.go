@@ -44,6 +44,7 @@ func New(out io.Writer, null *object.Null, trueValue, falseValue *object.Boolean
 		"math":   mathDefinitions(),
 		"path":   pathDefinitions(null, trueValue, falseValue),
 		"string": stringDefinitions(trueValue, falseValue),
+		"system": systemDefinitions(null),
 	})
 }
 

@@ -38,4 +38,4 @@ go.work.sum
 examples/
 
 # JetBrains plugin build output
-tools/jetbrains-silver/build/
+tools/

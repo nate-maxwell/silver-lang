@@ -7,7 +7,7 @@ import (
 
 // evalMapIndexExpression normalizes a hashable key and returns KeyError when
 // the key is absent. The map get builtin remains the nullable lookup API.
-func evalMapIndexExpression(mapping, index object.Object) object.Object {
+func (e *Evaluator) evalMapIndexExpression(mapping, index object.Object) object.Object {
 	mapObject := mapping.(*object.Map)
 
 	key, ok := index.(object.Hashable)
@@ -17,6 +17,14 @@ func evalMapIndexExpression(mapping, index object.Object) object.Object {
 
 	pair, ok := mapObject.Get(key.HashKey())
 	if !ok {
+		if mapObject.DefaultFactory != nil {
+			value := e.applyFunction(mapObject.DefaultFactory, nil)
+			if isError(value) {
+				return value
+			}
+			mapObject.Set(key.HashKey(), object.MapPair{Key: index, Value: value})
+			return value
+		}
 		return newError(object.RuntimeErrorKindKey, "key not found: %s", index.Inspect())
 	}
 	return pair.Value

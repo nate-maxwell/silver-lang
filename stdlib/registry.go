@@ -37,14 +37,15 @@ func New(out io.Writer, null *object.Null, trueValue, falseValue *object.Boolean
 	}
 
 	return newRegistry(map[string][]definition{
-		"array":  arrayDefinitions(null, trueValue, falseValue),
-		"core":   coreDefinitions(),
-		"io":     ioDefinitions(out, null),
-		"map":    mapDefinitions(null, trueValue, falseValue),
-		"math":   mathDefinitions(),
-		"path":   pathDefinitions(null, trueValue, falseValue),
-		"string": stringDefinitions(trueValue, falseValue),
-		"system": systemDefinitions(null),
+		"array":       arrayDefinitions(null, trueValue, falseValue),
+		"collections": collectionDefinitions(null),
+		"core":        coreDefinitions(),
+		"io":          ioDefinitions(out, null),
+		"map":         mapDefinitions(null, trueValue, falseValue),
+		"math":        mathDefinitions(),
+		"path":        pathDefinitions(null, trueValue, falseValue),
+		"string":      stringDefinitions(trueValue, falseValue),
+		"system":      systemDefinitions(null),
 	})
 }
 

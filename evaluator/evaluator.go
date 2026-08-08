@@ -324,7 +324,7 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 		if isError(index) {
 			return index
 		}
-		return evalIndexExpression(left, index)
+		return e.evalIndexExpression(left, index)
 
 	case *ast.MapLiteral:
 		return e.evalMapLiteral(node, env)

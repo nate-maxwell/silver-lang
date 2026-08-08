@@ -18,7 +18,7 @@ var NULL = &object.Null{}
 // library, imported-module caches, circular-import state, and traceback
 // contexts. Reuse one evaluator for a REPL or a group of related evaluations.
 type Evaluator struct {
-	standardLibrary *stdlibpkg.Registry
+	standardLibrary *stdlibpkg.Library
 	constants       *constantPool
 	modules         map[string]*object.Module // filepath or standard-library name to module
 	loading         map[string]bool           // module load state | circular import detection
@@ -85,7 +85,7 @@ func newEvaluator(out, warnings io.Writer) *Evaluator {
 }
 
 // fork gives a task independent mutable evaluator state while sharing the
-// immutable standard-library registry, synchronized output, and enum identity
+// immutable standard library, synchronized output, and enum identity
 // source.
 func (e *Evaluator) fork() *Evaluator {
 	modules := make(map[string]*object.Module, len(e.modules))

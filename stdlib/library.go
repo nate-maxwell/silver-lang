@@ -1,5 +1,5 @@
 // Package stdlib contains importable modules that ship with Silver. The
-// evaluator depends only on the registry exposed by this package.
+// evaluator depends only on the library exposed by this package.
 package stdlib
 
 import (
@@ -17,15 +17,15 @@ type definition struct {
 	signature *ast.TypeAnnotation
 }
 
-// Registry contains the importable standard-library modules available to one
+// Library contains the importable standard-library modules available to one
 // evaluator.
-type Registry struct {
+type Library struct {
 	modules map[string]*object.Module
 }
 
 // New constructs Silver's standard library around the evaluator's configured
 // output and canonical singleton values.
-func New(out io.Writer, null *object.Null, trueValue, falseValue *object.Boolean) *Registry {
+func New(out io.Writer, null *object.Null, trueValue, falseValue *object.Boolean) *Library {
 	if out == nil {
 		out = io.Discard
 	}
@@ -36,7 +36,7 @@ func New(out io.Writer, null *object.Null, trueValue, falseValue *object.Boolean
 		panic("stdlib: canonical boolean values must not be nil")
 	}
 
-	return newRegistry(map[string][]definition{
+	return newLibrary(map[string][]definition{
 		"array":       arrayDefinitions(null, trueValue, falseValue),
 		"collections": collectionDefinitions(null),
 		"core":        coreDefinitions(),
@@ -49,7 +49,7 @@ func New(out io.Writer, null *object.Null, trueValue, falseValue *object.Boolean
 	})
 }
 
-func newRegistry(definitions map[string][]definition) *Registry {
+func newLibrary(definitions map[string][]definition) *Library {
 	modules := make(map[string]*object.Module, len(definitions))
 	for name, moduleDefinitions := range definitions {
 		exports := make(map[string]object.Object, len(moduleDefinitions))
@@ -65,13 +65,13 @@ func newRegistry(definitions map[string][]definition) *Registry {
 		}
 		modules[name] = &object.Module{Path: name, Exports: exports}
 	}
-	return &Registry{modules: modules}
+	return &Library{modules: modules}
 }
 
-// LookupModule returns a module registered under a bare import name such as
-// "math".
-func (r *Registry) LookupModule(name string) (*object.Module, bool) {
-	module, ok := r.modules[name]
+// LookupModule returns the standard-library module with the given bare import
+// name, such as "math".
+func (l *Library) LookupModule(name string) (*object.Module, bool) {
+	module, ok := l.modules[name]
 	return module, ok
 }
 

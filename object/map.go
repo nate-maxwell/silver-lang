@@ -21,9 +21,8 @@ type MapPair struct {
 
 // Map stores pairs by their normalized HashKey.
 type Map struct {
-	Pairs          map[HashKey]MapPair
-	DefaultFactory Object
-	mu             sync.RWMutex
+	Pairs map[HashKey]MapPair
+	mu    sync.RWMutex
 }
 
 // HashKey combines a runtime type tag with a type-specific 64-bit payload so,

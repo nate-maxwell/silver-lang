@@ -73,7 +73,7 @@ func builtinMapSet(args ...object.Object) object.Object {
 
 	pairs := copyMapPairs(mapping)
 	pairs[key] = object.MapPair{Key: args[1], Value: args[2]}
-	return &object.Map{Pairs: pairs, DefaultFactory: mapping.DefaultFactory}
+	return &object.Map{Pairs: pairs}
 }
 
 // builtinMapDelete returns a copy without key. A missing key leaves the copied
@@ -93,7 +93,7 @@ func builtinMapDelete(args ...object.Object) object.Object {
 
 	pairs := copyMapPairs(mapping)
 	delete(pairs, key)
-	return &object.Map{Pairs: pairs, DefaultFactory: mapping.DefaultFactory}
+	return &object.Map{Pairs: pairs}
 }
 
 // builtinMapValues returns the map values in the map's unspecified iteration

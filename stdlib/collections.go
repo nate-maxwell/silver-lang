@@ -3,11 +3,13 @@ package stdlib
 import "silver/object"
 
 // collectionDefinitions provides mutable deque and stack operations over
-// arrays, plus maps that create values on their first indexed access.
+// arrays.
 func collectionDefinitions(null *object.Null) []definition {
+	defaultDictType := newDefaultDictStructDefinition()
 	return []definition{
+		{name: "DefaultDict", value: defaultDictType},
 		{name: "deque", fn: newSequence("deque")},
-		{name: "defaultdict", fn: newDefaultDict},
+		{name: "defaultdict", fn: newDefaultDict(defaultDictType, null)},
 		{name: "stack", fn: newSequence("stack")},
 		{name: "append", fn: collectionAppend(null)},
 		{name: "appendleft", fn: collectionAppendLeft(null)},
@@ -43,37 +45,6 @@ func newSequence(name string) object.BuiltinFunction {
 			return err
 		}
 		return copyArray(values)
-	}
-}
-
-// newDefaultDict accepts a zero-argument factory and an optional initial map.
-// Indexed access invokes the factory once for each missing key and stores the
-// result. The ordinary map.get function remains a non-creating lookup.
-func newDefaultDict(args ...object.Object) object.Object {
-	if len(args) < 1 || len(args) > 2 {
-		return newError(object.RuntimeErrorKindType, "wrong number of arguments. got=%d, want=1 or 2", len(args))
-	}
-	if !isCallable(args[0]) {
-		return newError(object.RuntimeErrorKindType, "default factory must be callable, got %s", args[0].Type())
-	}
-
-	pairs := make(map[object.HashKey]object.MapPair)
-	if len(args) == 2 {
-		initial, err := requireMap("defaultdict", args[1])
-		if err != nil {
-			return err
-		}
-		pairs = initial.Snapshot()
-	}
-	return &object.Map{Pairs: pairs, DefaultFactory: args[0]}
-}
-
-func isCallable(value object.Object) bool {
-	switch value.(type) {
-	case *object.Function, *object.BoundMethod, *object.Builtin, *object.Struct:
-		return true
-	default:
-		return false
 	}
 }
 

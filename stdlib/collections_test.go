@@ -55,27 +55,23 @@ let make_list = fn() array {
     return []
 }
 let grouped = collections.defaultdict(make_list, {"known": [1]})
-let first = grouped["missing"]
-let second = grouped["missing"]
-[grouped["known"], first == second, calls["count"]]`)
+let first = grouped.get("missing")
+let second = grouped.get("missing")
+[grouped.get("known"), first == second, calls["count"], grouped.values]`)
 
-	if got, want := result.Inspect(), `[[1], true, 1]`; got != want {
-		t.Fatalf("result is %q, want %q", got, want)
+	if got, want := result.Inspect(), `[[1], true, 1, {known: [1], missing: []}]`; got != want && got != `[[1], true, 1, {missing: [], known: [1]}]` {
+		t.Fatalf("result is %q, want map with known and missing entries", got)
 	}
 }
 
-func TestDefaultDictGetDoesNotInvokeFactory(t *testing.T) {
-	result := testEval(collectionsImport + `let maps = import("map")
-let calls = {"count": 0}
-let make_value = fn() int {
-    calls["count"] = calls["count"] + 1
-    return 0
-}
-let values = collections.defaultdict(make_value)
-let missing = maps.get(values, "missing")
-[missing, calls["count"]]`)
+func TestDefaultDictSetAndNominalType(t *testing.T) {
+	result := testEval(collectionsImport + `let core = import("core")
+let make_count = fn() int { 0 }
+let counts = collections.defaultdict(make_count)
+counts.set("silver", counts.get("silver") + 1)
+[counts.get("silver"), core.type(counts) == collections.DefaultDict]`)
 
-	if got, want := result.Inspect(), `[null, 0]`; got != want {
+	if got, want := result.Inspect(), `[1, true]`; got != want {
 		t.Fatalf("result is %q, want %q", got, want)
 	}
 }
@@ -87,7 +83,7 @@ func TestCollectionErrors(t *testing.T) {
 	}{
 		{input: `collections.pop([])`, message: "pop from an empty collection"},
 		{input: `collections.peek([])`, message: "peek from an empty stack"},
-		{input: `collections.defaultdict(0)`, message: "default factory must be callable, got INTEGER"},
+		{input: `collections.defaultdict(0)`, message: "default factory must be a Silver function, got INTEGER"},
 		{input: `collections.rotate([], "one")`, message: "rotation argument to `rotate` must be INTEGER, got STRING"},
 	}
 

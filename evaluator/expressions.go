@@ -55,12 +55,12 @@ func evalInfixExpression(operator string, left, right object.Object) object.Obje
 }
 
 // evalIndexExpression dispatches indexing according to the left operand type.
-func (e *Evaluator) evalIndexExpression(left, index object.Object) object.Object {
+func evalIndexExpression(left, index object.Object) object.Object {
 	switch {
 	case left.Type() == object.ARRAY_OBJ && index.Type() == object.INTEGER_OBJ:
 		return evalArrayIndexExpression(left, index)
 	case left.Type() == object.MAP_OBJ:
-		return e.evalMapIndexExpression(left, index)
+		return evalMapIndexExpression(left, index)
 	default:
 		return newError(object.RuntimeErrorKindType, "index operator not supported: %s", left.Type())
 	}

@@ -72,6 +72,7 @@ func New(out io.Writer, null *object.Null, trueValue, falseValue *object.Boolean
 		"collections": collectionDefinitions(null),
 		"core":        coreDefinitions(),
 		"io":          ioDefinitions(out, null),
+		"json":        jsonDefinitions(null, trueValue, falseValue),
 		"map":         mapDefinitions(null, trueValue, falseValue),
 		"math":        mathDefinitions(),
 		"path":        pathDefinitions(null, trueValue, falseValue),

@@ -75,6 +75,7 @@ func New(out io.Writer, null *object.Null, trueValue, falseValue *object.Boolean
 		"json":        jsonDefinitions(null, trueValue, falseValue),
 		"map":         mapDefinitions(null, trueValue, falseValue),
 		"math":        mathDefinitions(),
+		"networking":  networkingDefinitions(null),
 		"path":        pathDefinitions(null, trueValue, falseValue),
 		"string":      stringDefinitions(trueValue, falseValue),
 		"system":      systemDefinitions(null),

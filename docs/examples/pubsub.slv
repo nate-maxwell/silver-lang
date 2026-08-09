@@ -1,0 +1,55 @@
+# A small publish/subscribe system. Each key in subscriptions is an event
+# namespace, and each value is an array of functions listening to that event.
+
+let arrays = import("array")
+let core = import("core")
+let maps = import("map")
+let io = import("io")
+
+let subscriptions: map = {}
+
+let subscribe = fn(namespace: str, listener: call) {
+    if !maps.contains(subscriptions, namespace) {
+        subscriptions[namespace] = []
+    }
+
+    subscriptions[namespace] = arrays.append(
+        subscriptions[namespace],
+        listener
+    )
+}
+
+let publish = fn(namespace: str, message) {
+    if !maps.contains(subscriptions, namespace) {
+        return
+    }
+
+    for listener in subscriptions[namespace] {
+        listener(message)
+    }
+}
+
+# More than one listener can subscribe to the same namespace.
+let received_messages: array = []
+
+let record_order = fn(message: str) {
+    received_messages = arrays.append(received_messages, message)
+}
+
+let announce_order = fn(message: str) {
+    io.print("order event:", message)
+}
+
+subscribe("orders.created", record_order)
+subscribe("orders.created", announce_order)
+subscribe("users.created", fn(message: str) {
+    io.print("user event:", message)
+})
+
+publish("orders.created", "order-1001")
+publish("users.created", "ada")
+publish("orders.cancelled", "order-1002") # No subscribers; safely ignored.
+
+assert core.len(subscriptions["orders.created"]) == 2
+assert core.len(received_messages) == 1
+assert received_messages[0] == "order-1001"

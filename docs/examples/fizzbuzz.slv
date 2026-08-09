@@ -1,0 +1,28 @@
+# A classic FizzBuzz program. The function prints one answer for each number:
+# "Fizz" for multiples of three, "Buzz" for multiples of five, and both for
+# multiples of fifteen.
+
+let core = import("core")
+let io = import("io")
+let math = import("math")
+
+let fizzbuzz = fn(n: int) {
+    let answer = ""
+
+    if math.fmod(n, 3) == 0 {
+        answer = answer + "Fizz"
+    }
+    if math.fmod(n, 5) == 0 {
+        answer = answer + "Buzz"
+    }
+
+    if answer == "" {
+        io.print(n)
+    } else {
+        io.print(answer)
+    }
+}
+
+for n in core.range(1, 101) {
+    fizzbuzz(n)
+}

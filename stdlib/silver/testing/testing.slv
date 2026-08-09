@@ -1,5 +1,4 @@
-# A small stateful test runner implemented entirely in Silver. library.go
-# exposes this entry file as import("testing"), independently of its path.
+# A small stateful test runner implemented entirely in Silver.
 
 # Declare capabilities instead of retaining concrete modules. Passing the io
 # and array modules into this function injects their matching exports by name.

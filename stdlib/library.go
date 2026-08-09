@@ -77,6 +77,7 @@ func New(out io.Writer, null *object.Null, trueValue, falseValue *object.Boolean
 		"path":        pathDefinitions(null, trueValue, falseValue),
 		"string":      stringDefinitions(trueValue, falseValue),
 		"system":      systemDefinitions(null),
+		"time":        timeDefinitions(null, trueValue, falseValue),
 	}, []sourceDefinition{
 		{name: "testing", path: "silver/testing/testing.slv"},
 	})

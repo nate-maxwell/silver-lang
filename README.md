@@ -12,6 +12,9 @@ Silver exists to explore a middle ground between scripting-language immediacy an
 
 The implementation is written in Go and includes a REPL, source modules, cached ASTs, tracebacks, and a standard library implemented in both Go and Silver. Silver is currently a young language: it is a good place to experiment, learn, and contribute, but its syntax and APIs may still evolve.
 
+Read the [documentation table of contents](docs/table_of_contents.md), start with [Getting Started](docs/getting_started.md), or dive into the [Language Guide](docs/language_guide/language_guide.md).
+
+
 ## A first taste
 
 Import a module, create values, and use familiar control flow:
@@ -154,8 +157,6 @@ go build -o silver .
 ```
 
 Run a source file with `./silver program.slv` (or `silver.exe program.slv` on Windows). During development, `go run . program.slv` works too.
-
-Read the [documentation table of contents](docs/table_of_contents.md), start with [Getting Started](docs/getting_started.md), or dive into the [Language Guide](docs/language_guide/language_guide.md).
 
 ## Project status and contributing
 

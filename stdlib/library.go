@@ -57,8 +57,20 @@ type sourceModule struct {
 // New constructs Silver's standard library around the evaluator's configured
 // output and canonical singleton values.
 func New(out io.Writer, null *object.Null, trueValue, falseValue *object.Boolean) *Library {
+	return NewWithStreams(nil, out, out, null, trueValue, falseValue)
+}
+
+// NewWithStreams constructs the standard library with explicit process
+// streams. A nil input behaves as an empty stream; nil outputs are discarded.
+func NewWithStreams(in io.Reader, out, errOut io.Writer, null *object.Null, trueValue, falseValue *object.Boolean) *Library {
+	if in == nil {
+		in = &emptyReader{}
+	}
 	if out == nil {
 		out = io.Discard
+	}
+	if errOut == nil {
+		errOut = io.Discard
 	}
 	if null == nil {
 		panic("stdlib: canonical null value must not be nil")
@@ -71,7 +83,7 @@ func New(out io.Writer, null *object.Null, trueValue, falseValue *object.Boolean
 		"array":       arrayDefinitions(null, trueValue, falseValue),
 		"collections": collectionDefinitions(null),
 		"core":        coreDefinitions(),
-		"io":          ioDefinitions(out, null),
+		"io":          ioDefinitions(in, out, errOut, null),
 		"json":        jsonDefinitions(null, trueValue, falseValue),
 		"map":         mapDefinitions(null, trueValue, falseValue),
 		"math":        mathDefinitions(),
@@ -81,9 +93,14 @@ func New(out io.Writer, null *object.Null, trueValue, falseValue *object.Boolean
 		"system":      systemDefinitions(null),
 		"time":        timeDefinitions(null, trueValue, falseValue),
 	}, []sourceDefinition{
+		{name: "logging", path: "silver/logging/logging.slv"},
 		{name: "testing", path: "silver/testing/testing.slv"},
 	})
 }
+
+type emptyReader struct{}
+
+func (*emptyReader) Read([]byte) (int, error) { return 0, io.EOF }
 
 func newLibrary(definitions map[string][]definition, sourceDefinitions []sourceDefinition) *Library {
 	modules := make(map[string]*object.Module, len(definitions))

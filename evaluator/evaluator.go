@@ -32,7 +32,7 @@ type Evaluator struct {
 // synchronizedWriter makes builtin output and warnings safe when tasks write
 // from multiple goroutines.
 type synchronizedWriter struct {
-	mu sync.Mutex
+	mu *sync.Mutex
 	w  io.Writer
 }
 
@@ -44,7 +44,7 @@ func (w *synchronizedWriter) Write(p []byte) (int, error) {
 
 // New constructs an evaluator whose print builtin writes to standard output.
 func New() *Evaluator {
-	return NewWithOutput(os.Stdout)
+	return NewWithStreams(os.Stdin, os.Stdout, os.Stderr)
 }
 
 // NewWithOutput constructs an evaluator with an explicit destination for
@@ -53,8 +53,8 @@ func NewWithOutput(out io.Writer) *Evaluator {
 	if out == nil {
 		out = io.Discard
 	}
-	safe := &synchronizedWriter{w: out}
-	return newEvaluator(safe, safe)
+	safe := &synchronizedWriter{mu: &sync.Mutex{}, w: out}
+	return newEvaluator(os.Stdin, safe, safe, safe)
 }
 
 // NewWithWriters constructs an evaluator with separate program-output and
@@ -67,14 +67,30 @@ func NewWithWriters(out, warnings io.Writer) *Evaluator {
 	if warnings == nil {
 		warnings = io.Discard
 	}
-	safeOut := &synchronizedWriter{w: out}
-	safeWarnings := &synchronizedWriter{w: warnings}
-	return newEvaluator(safeOut, safeWarnings)
+	streamLock := &sync.Mutex{}
+	safeOut := &synchronizedWriter{mu: streamLock, w: out}
+	safeWarnings := &synchronizedWriter{mu: streamLock, w: warnings}
+	return newEvaluator(os.Stdin, safeOut, safeWarnings, safeWarnings)
 }
 
-func newEvaluator(out, warnings io.Writer) *Evaluator {
+// NewWithStreams constructs an evaluator with explicit language-level stdin,
+// stdout, and stderr. Runtime warnings share stderr.
+func NewWithStreams(in io.Reader, out, errOut io.Writer) *Evaluator {
+	if out == nil {
+		out = io.Discard
+	}
+	if errOut == nil {
+		errOut = io.Discard
+	}
+	streamLock := &sync.Mutex{}
+	safeOut := &synchronizedWriter{mu: streamLock, w: out}
+	safeErrOut := &synchronizedWriter{mu: streamLock, w: errOut}
+	return newEvaluator(in, safeOut, safeErrOut, safeErrOut)
+}
+
+func newEvaluator(in io.Reader, out, errOut, warnings io.Writer) *Evaluator {
 	return &Evaluator{
-		standardLibrary: stdlibpkg.New(out, NULL, TRUE, FALSE),
+		standardLibrary: stdlibpkg.NewWithStreams(in, out, errOut, NULL, TRUE, FALSE),
 		constants:       newConstantPool(),
 		modules:         make(map[string]*object.Module),
 		loading:         make(map[string]bool),
@@ -253,10 +269,19 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 		if isError(left) {
 			return left
 		}
+		if node.Operator == "&&" && !isTruthy(left) {
+			return FALSE
+		}
+		if node.Operator == "||" && isTruthy(left) {
+			return TRUE
+		}
 
 		right := e.Eval(node.Right, env)
 		if isError(right) {
 			return right
+		}
+		if node.Operator == "&&" || node.Operator == "||" {
+			return nativeBoolToBooleanObject(isTruthy(right))
 		}
 
 		return e.evalInfixExpression(node, left, right)

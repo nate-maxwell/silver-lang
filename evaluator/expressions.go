@@ -37,6 +37,10 @@ func evalPrefixExpression(operator string, right object.Object) object.Object {
 // common type mismatch checks.
 func evalInfixExpression(operator string, left, right object.Object) object.Object {
 	switch {
+	case operator == "&&":
+		return nativeBoolToBooleanObject(isTruthy(left) && isTruthy(right))
+	case operator == "||":
+		return nativeBoolToBooleanObject(isTruthy(left) || isTruthy(right))
 	case left.Type() == object.INTEGER_OBJ && right.Type() == object.INTEGER_OBJ:
 		return evalIntegerInfixExpression(operator, left, right)
 	case isNumeric(left) && isNumeric(right):

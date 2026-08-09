@@ -32,7 +32,7 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 		repl.Start(in, out)
 		return 0
 	case 1:
-		engine := evaluator.NewWithWriters(out, errOut)
+		engine := evaluator.NewWithStreams(in, out, errOut)
 		result := engine.EvalFile(args[0], object.NewEnvironment())
 		if _, failed := result.(*object.Error); failed {
 			fmt.Fprintln(errOut, result.Inspect())

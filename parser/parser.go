@@ -6,11 +6,13 @@ import (
 	"silver/token"
 )
 
-// Pratt binding powers increase from weak equality/comparison operators to
-// tight calls, indexing, and member access.
+// Pratt binding powers increase from weak logical operators to tight calls,
+// indexing, and member access.
 const (
 	_ int = iota
 	LOWEST
+	OR          // ||
+	AND         // &&
 	EQUALS      // ==
 	LESSGREATER // > or <
 	SUM         // +
@@ -79,6 +81,8 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerInfix(token.INT_DIV, p.parseInfixExpression)
 	p.registerInfix(token.ASTERISK, p.parseInfixExpression)
 	p.registerInfix(token.POWER, p.parsePowerExpression)
+	p.registerInfix(token.AND, p.parseInfixExpression)
+	p.registerInfix(token.OR, p.parseInfixExpression)
 	p.registerInfix(token.EQ, p.parseInfixExpression)
 	p.registerInfix(token.NOT_EQ, p.parseInfixExpression)
 	p.registerInfix(token.LT, p.parseInfixExpression)

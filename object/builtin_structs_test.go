@@ -40,6 +40,20 @@ func TestBuiltinTemplateStringStructShape(t *testing.T) {
 	}
 }
 
+func TestBuiltinIOStreamStructShape(t *testing.T) {
+	stream, ok := BuiltinStructDefinitionByName("IOStream")
+	if !ok {
+		t.Fatal("IOStream definition is not registered")
+	}
+	wantFields := []string{"name", "read", "write"}
+	wantTypes := []string{"str", "call() str | IOError", "call(data: str) | IOError"}
+	for index, want := range wantFields {
+		if stream.Fields[index] != want || stream.FieldTypes[index].String() != wantTypes[index] {
+			t.Fatalf("IOStream field %d is %q: %s, want %q: %s", index, stream.Fields[index], stream.FieldTypes[index].String(), want, wantTypes[index])
+		}
+	}
+}
+
 func TestBuiltinErrorStructsExposeMessage(t *testing.T) {
 	names := []string{"IOError", "FileNotFound", "PermissionDenied"}
 	for _, name := range runtimeErrorStructNames {

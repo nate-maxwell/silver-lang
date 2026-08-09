@@ -47,6 +47,8 @@ const (
 	ASSIGN = "="
 	BANG   = "!"
 	PIPE   = "|"
+	AND    = "&&"
+	OR     = "||"
 
 	PLUS     = "+"
 	MINUS    = "-"

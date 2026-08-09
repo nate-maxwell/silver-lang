@@ -1,10 +1,13 @@
 package stdlib_test
 
 import (
+	"bytes"
+	"errors"
 	"os"
 	"path/filepath"
 	"silver/object"
 	"strconv"
+	"strings"
 	"testing"
 )
 
@@ -145,6 +148,96 @@ func TestOpenRejectsInvalidArguments(t *testing.T) {
 		}
 	}
 }
+
+func TestStandardStreamsUseInjectedIO(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	input := ioImport + `let contents = io.stdin.read()
+io.stdout.write("out:" + contents)
+io.stderr.write("err:" + contents)
+contents`
+	result, ok := testEvalWithStreams(input, strings.NewReader("hello"), &stdout, &stderr).(*object.String)
+	if !ok || result.Value != "hello" {
+		t.Fatalf("stdin read returned %#v, want hello", result)
+	}
+	if got, want := stdout.String(), "out:hello"; got != want {
+		t.Fatalf("stdout is %q, want %q", got, want)
+	}
+	if got, want := stderr.String(), "err:hello"; got != want {
+		t.Fatalf("stderr is %q, want %q", got, want)
+	}
+}
+
+func TestStandardStreamsExposeTypesAndSignatures(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	input := ioImport + coreImport + `let input: IOStream = io.stdin
+let output: IOStream = io.stdout
+let errors: IOStream = io.stderr
+let read: call() str | IOError = input.read
+let write_out: call(data: str) | IOError = output.write
+let write_err: call(data: str) | IOError = errors.write
+core.type(input) == IOStream`
+	testBooleanObject(t, testEvalWithStreams(input, strings.NewReader(""), &stdout, &stderr), true)
+}
+
+func TestStandardStreamsRejectUnsupportedDirections(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	tests := []string{
+		`try { io.stdin.write("data") } catch IOError err { err.message != "" }`,
+		`try { io.stdout.read() } catch IOError err { err.message != "" }`,
+		`try { io.stderr.read() } catch IOError err { err.message != "" }`,
+	}
+	for _, input := range tests {
+		testBooleanObject(t, testEvalWithStreams(ioImport+input, strings.NewReader(""), &stdout, &stderr), true)
+	}
+}
+
+func TestStandardStreamsReturnIOErrors(t *testing.T) {
+	result := testEvalWithStreams(ioImport+`try {
+io.stdin.read()
+} catch IOError err {
+err.message
+}`, failingReader{}, &bytes.Buffer{}, &bytes.Buffer{})
+	message, ok := result.(*object.String)
+	if !ok || !strings.Contains(message.Value, "read failed") {
+		t.Fatalf("read failure returned %#v", result)
+	}
+
+	result = testEvalWithStreams(ioImport+`try {
+io.stdout.write("data")
+} catch IOError err {
+err.message
+}`, strings.NewReader(""), failingWriter{}, &bytes.Buffer{})
+	message, ok = result.(*object.String)
+	if !ok || !strings.Contains(message.Value, "write failed") {
+		t.Fatalf("write failure returned %#v", result)
+	}
+}
+
+func TestStandardStreamsRejectInvalidArguments(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	tests := []struct {
+		input   string
+		message string
+	}{
+		{input: `io.stdin.read(1)`, message: "wrong number of arguments. got=1, want=0"},
+		{input: `io.stdout.write()`, message: "wrong number of arguments. got=0, want=1"},
+		{input: `io.stderr.write(1)`, message: "argument to `IOStream.write` must be STRING, got INTEGER"},
+	}
+	for _, tt := range tests {
+		result, ok := testEvalWithStreams(ioImport+tt.input, strings.NewReader(""), &stdout, &stderr).(*object.Error)
+		if !ok || result.MessageText() != tt.message {
+			t.Fatalf("%s returned %#v, want %q", tt.input, result, tt.message)
+		}
+	}
+}
+
+type failingReader struct{}
+
+func (failingReader) Read([]byte) (int, error) { return 0, errors.New("read failed") }
+
+type failingWriter struct{}
+
+func (failingWriter) Write([]byte) (int, error) { return 0, errors.New("write failed") }
 
 func silverString(path string) string {
 	return strconv.Quote(filepath.ToSlash(path))

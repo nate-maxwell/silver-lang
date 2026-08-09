@@ -95,8 +95,18 @@ func (l *Lexer) NextToken() token.Token {
 		} else {
 			tok = newToken(token.BANG, l.ch, position)
 		}
+	case '&':
+		if l.peekChar() == '&' {
+			tok = l.makeTwoCharToken(token.AND)
+		} else {
+			tok = newToken(token.ILLEGAL, l.ch, position)
+		}
 	case '|':
-		tok = newToken(token.PIPE, l.ch, position)
+		if l.peekChar() == '|' {
+			tok = l.makeTwoCharToken(token.OR)
+		} else {
+			tok = newToken(token.PIPE, l.ch, position)
+		}
 	case '*':
 		if l.peekChar() == '*' {
 			tok = l.makeTwoCharToken(token.POWER)

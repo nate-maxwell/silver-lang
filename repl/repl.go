@@ -7,6 +7,7 @@ import (
 	"silver/lexer"
 	"silver/object"
 	"silver/parser"
+	"strings"
 )
 
 const prompt = ">> "
@@ -14,18 +15,18 @@ const prompt = ">> "
 // Start runs a persistent read-evaluate-print loop. It reuses one environment
 // and evaluator so bindings and imported modules survive between input lines.
 func Start(in io.Reader, out io.Writer) {
-	scanner := bufio.NewScanner(in)
+	reader := bufio.NewReader(in)
 	env := object.NewEnvironment()
-	engine := evaluator.NewWithOutput(out)
+	engine := evaluator.NewWithStreams(reader, out, out)
 
 	for {
 		io.WriteString(out, prompt)
-		scanned := scanner.Scan()
-		if !scanned {
+		line, err := reader.ReadString('\n')
+		if err != nil && len(line) == 0 {
 			return
 		}
-
-		line := scanner.Text()
+		line = strings.TrimSuffix(line, "\n")
+		line = strings.TrimSuffix(line, "\r")
 		l := lexer.NewWithSource(line, "<repl>")
 		p := parser.New(l)
 

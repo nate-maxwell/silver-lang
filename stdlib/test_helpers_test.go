@@ -1,6 +1,7 @@
 package stdlib_test
 
 import (
+	"io"
 	"math"
 	"silver/evaluator"
 	"silver/lexer"
@@ -13,6 +14,12 @@ func testEval(input string) object.Object {
 	p := parser.New(lexer.New(input))
 	program := p.ParseProgram()
 	return evaluator.New().Eval(program, object.NewEnvironment())
+}
+
+func testEvalWithStreams(input string, in io.Reader, out, errOut io.Writer) object.Object {
+	p := parser.New(lexer.New(input))
+	program := p.ParseProgram()
+	return evaluator.NewWithStreams(in, out, errOut).Eval(program, object.NewEnvironment())
 }
 
 func testNullObject(t *testing.T, value object.Object) {

@@ -12,14 +12,79 @@ import (
 	"sync"
 )
 
-// ioDefinitions builds I/O functions around the evaluator's configured
-// writer. Capturing the writer keeps the package independent of os.Stdout and
-// lets callers redirect program output.
-func ioDefinitions(out io.Writer, null *object.Null) []definition {
+// ioDefinitions builds I/O values around the evaluator's configured process
+// streams. Keeping the streams injected makes CLI and test redirection work
+// without binding the standard library directly to os.Stdin/out/err.
+func ioDefinitions(in io.Reader, out, errOut io.Writer, null *object.Null) []definition {
 	return []definition{
 		{name: "open", fn: builtinOpen(null), signature: openSignature()},
 		{name: "print", fn: builtinPrint(out, null)},
+		{name: "stdin", value: newIOStream("stdin", in, nil, null)},
+		{name: "stdout", value: newIOStream("stdout", nil, out, null)},
+		{name: "stderr", value: newIOStream("stderr", nil, errOut, null)},
 	}
+}
+
+// nativeIOStream owns one injected standard stream. Standard streams are not
+// closable from Silver, so they expose only read and write operations.
+type nativeIOStream struct {
+	mu     sync.Mutex
+	name   string
+	reader io.Reader
+	writer io.Writer
+	null   *object.Null
+}
+
+func newIOStream(name string, reader io.Reader, writer io.Writer, null *object.Null) *object.StructInstance {
+	stream := &nativeIOStream{name: name, reader: reader, writer: writer, null: null}
+	definition, _ := object.BuiltinStructDefinitionByName("IOStream")
+	return &object.StructInstance{
+		Struct: definition,
+		Values: map[string]object.Object{
+			"name":  &object.String{Value: name},
+			"read":  &object.Builtin{Fn: stream.read, Signature: streamReadSignature()},
+			"write": &object.Builtin{Fn: stream.write, Signature: streamWriteSignature()},
+		},
+	}
+}
+
+func (stream *nativeIOStream) read(args ...object.Object) object.Object {
+	if err := requireArgumentCount(args, 0); err != nil {
+		return err
+	}
+	if stream.reader == nil {
+		return ioErrorMessage(stream.name + " is not readable")
+	}
+	stream.mu.Lock()
+	defer stream.mu.Unlock()
+	contents, err := io.ReadAll(stream.reader)
+	if err != nil {
+		return ioErrorValue("IOError", err)
+	}
+	return &object.String{Value: string(contents)}
+}
+
+func (stream *nativeIOStream) write(args ...object.Object) object.Object {
+	if err := requireArgumentCount(args, 1); err != nil {
+		return err
+	}
+	contents, ok := args[0].(*object.String)
+	if !ok {
+		return newError(object.RuntimeErrorKindType, "argument to `IOStream.write` must be STRING, got %s", args[0].Type())
+	}
+	if stream.writer == nil {
+		return ioErrorMessage(stream.name + " is not writable")
+	}
+	stream.mu.Lock()
+	defer stream.mu.Unlock()
+	written, err := io.WriteString(stream.writer, contents.Value)
+	if err != nil {
+		return ioErrorValue("IOError", err)
+	}
+	if written != len(contents.Value) {
+		return ioErrorValue("IOError", io.ErrShortWrite)
+	}
+	return stream.null
 }
 
 // nativeFile owns an open OS handle shared by the closures stored in a Silver
@@ -183,6 +248,14 @@ func fileWriteSignature() *ast.TypeAnnotation {
 
 func fileCloseSignature() *ast.TypeAnnotation {
 	return callSignature(nil, nil, nil, "IOError")
+}
+
+func streamReadSignature() *ast.TypeAnnotation {
+	return callSignature(nil, nil, namedType("str"), "IOError")
+}
+
+func streamWriteSignature() *ast.TypeAnnotation {
+	return callSignature([]string{"data"}, []*ast.TypeAnnotation{namedType("str")}, nil, "IOError")
 }
 
 // builtinPrint creates a print function bound to out. Arguments are separated

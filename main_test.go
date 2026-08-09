@@ -25,6 +25,29 @@ func TestRunFile(t *testing.T) {
 	}
 }
 
+func TestRunFileInjectsStandardStreams(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "streams.slv")
+	source := `let io = import("io")
+let contents = io.stdin.read()
+io.stdout.write("stdout:" + contents)
+io.stderr.write("stderr:" + contents)`
+	if err := os.WriteFile(path, []byte(source), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	var stdout, stderr bytes.Buffer
+	code := run([]string{path}, strings.NewReader("input"), &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("run returned %d; stderr: %s", code, stderr.String())
+	}
+	if got, want := stdout.String(), "stdout:input"; got != want {
+		t.Fatalf("stdout is %q, want %q", got, want)
+	}
+	if got, want := stderr.String(), "stderr:input"; got != want {
+		t.Fatalf("stderr is %q, want %q", got, want)
+	}
+}
+
 func TestRunFileReportsErrors(t *testing.T) {
 	var stdout, stderr bytes.Buffer
 	code := run([]string{filepath.Join(t.TempDir(), "missing.slv")}, strings.NewReader(""), &stdout, &stderr)

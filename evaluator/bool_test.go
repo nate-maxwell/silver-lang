@@ -50,3 +50,65 @@ func TestEvalBooleanExpression(t *testing.T) {
 		testBooleanObject(t, evaluated, tt.expected)
 	}
 }
+
+func TestLogicalOperators(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected bool
+	}{
+		{"True && True", true},
+		{"True && False", false},
+		{"False && True", false},
+		{"False || False", false},
+		{"False || True", true},
+		{"True || False", true},
+		{"True || False && False", true},
+		{"False || True && False", false},
+		{"42 && True", true},
+		{"False || \"value\"", true},
+		{"struct Value {}\nValue{} && True", true},
+	}
+
+	for _, test := range tests {
+		t.Run(test.input, func(t *testing.T) {
+			testBooleanObject(t, testEval(test.input), test.expected)
+		})
+	}
+}
+
+func TestLogicalOperatorsShortCircuit(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{
+			name: "and",
+			input: `let called = False
+let mark = fn() bool {
+    called = True
+    return True
+}
+False && mark()
+called`,
+		},
+		{
+			name: "or",
+			input: `let called = False
+let mark = fn() bool {
+    called = True
+    return False
+}
+True || mark()
+called`,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			testBooleanObject(t, testEval(test.input), false)
+		})
+	}
+
+	testBooleanObject(t, testEval("False && missing"), false)
+	testBooleanObject(t, testEval("True || missing"), true)
+}

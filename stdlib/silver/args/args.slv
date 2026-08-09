@@ -1,0 +1,319 @@
+# A command-line argument parser implemented entirely in Silver. Applications
+# provide the argument array to Parser.parse, which keeps the parser useful in
+# command-line programs, tests, and other hosts without depending on process
+# globals.
+
+let _arrays = import("array")
+let _core = import("core")
+let _maps = import("map")
+let _strings = import("string")
+let _append = _arrays.append
+let _len = _core.len
+let _contains = _maps.contains
+let _removeprefix = _strings.removeprefix
+let _startswith = _strings.startswith
+
+enum ArgumentKind {
+    Option,
+    Flag,
+    Count,
+    Positional,
+}
+
+struct Argument {
+    name: str
+    short: str
+    help: str
+    kind: ArgumentKind
+    required: bool
+    default_value: str
+    has_default: bool
+}
+
+struct ArgumentError {
+    message: str
+}
+
+struct ParsedArgs {
+    values: map
+    help_requested: bool
+}
+
+struct Parser {
+    program: str
+    description: str
+    arguments: array
+    add: call(self: Parser, argument: Argument) | ArgumentError
+    parse: call(self: Parser, argv: array) ParsedArgs | ArgumentError
+    help: call(self: Parser) str
+}
+
+# option declares a named string option with no default. Its parsed value is
+# absent from ParsedArgs.values when the option was not supplied.
+let option = fn(name: str, short: str, help: str) Argument {
+    Argument{name, short, help, ArgumentKind.Option, False, "", False}
+}
+
+let option_with_default = fn(
+    name: str,
+    short: str,
+    help: str,
+    default_value: str
+) Argument {
+    Argument{name, short, help, ArgumentKind.Option, False, default_value, True}
+}
+
+let required_option = fn(name: str, short: str, help: str) Argument {
+    Argument{name, short, help, ArgumentKind.Option, True, "", False}
+}
+
+# flag stores a boolean and count stores the number of appearances.
+let flag = fn(name: str, short: str, help: str) Argument {
+    Argument{name, short, help, ArgumentKind.Flag, False, "", False}
+}
+
+let count = fn(name: str, short: str, help: str) Argument {
+    Argument{name, short, help, ArgumentKind.Count, False, "", False}
+}
+
+# Positional arguments are consumed in the order they are added. Required
+# positionals must precede optional positionals.
+let positional = fn(name: str, help: str) Argument {
+    Argument{name, "", help, ArgumentKind.Positional, True, "", False}
+}
+
+let optional_positional = fn(name: str, help: str, default_value: str) Argument {
+    Argument{name, "", help, ArgumentKind.Positional, False, default_value, True}
+}
+
+let _validate_argument = fn(parser: Parser, argument: Argument) | ArgumentError {
+    if argument.name == "" {
+        return ArgumentError{"argument name must not be empty"}
+    }
+    if argument.name == "help" || argument.short == "h" {
+        return ArgumentError{"-h and --help are reserved for parser help"}
+    }
+    if _startswith(argument.name, "-") {
+        return ArgumentError{"argument name must not include leading dashes: " + argument.name}
+    }
+    if argument.short != "" {
+        if _startswith(argument.short, "-") {
+            return ArgumentError{"short argument must not include a leading dash: " + argument.short}
+        }
+        if _len(argument.short) != 1 {
+            return ArgumentError{"short argument must be one character: " + argument.short}
+        }
+    }
+    if argument.kind == ArgumentKind.Positional && argument.short != "" {
+        return ArgumentError{"positional argument cannot have a short name: " + argument.name}
+    }
+
+    let optional_positional_seen = False
+    for existing in parser.arguments {
+        if existing.name == argument.name {
+            return ArgumentError{"duplicate argument name: " + argument.name}
+        }
+        if argument.short != "" && existing.short == argument.short {
+            return ArgumentError{"duplicate short argument: -" + argument.short}
+        }
+        if existing.kind == ArgumentKind.Positional && existing.required == False {
+            optional_positional_seen = True
+        }
+    }
+    if argument.kind == ArgumentKind.Positional && argument.required && optional_positional_seen {
+        return ArgumentError{"required positional argument cannot follow an optional positional: " + argument.name}
+    }
+}
+
+let _add = fn(self: Parser, argument: Argument) | ArgumentError {
+    _validate_argument(self, argument)
+    self.arguments = _append(self.arguments, argument)
+}
+
+let _find_named = fn(parser: Parser, token: str) Argument | ArgumentError {
+    let long_name = ""
+    let short_name = ""
+    if _startswith(token, "--") {
+        long_name = _removeprefix(token, "--")
+    } else {
+        short_name = _removeprefix(token, "-")
+    }
+
+    for argument in parser.arguments {
+        if argument.kind != ArgumentKind.Positional {
+            if long_name != "" && argument.name == long_name {
+                return argument
+            }
+            if short_name != "" && argument.short == short_name {
+                return argument
+            }
+        }
+    }
+    return ArgumentError{"unknown option: " + token}
+}
+
+let _store_defaults = fn(parser: Parser) map {
+    let values = {}
+    for argument in parser.arguments {
+        if argument.kind == ArgumentKind.Flag {
+            values[argument.name] = False
+        } else {
+            if argument.kind == ArgumentKind.Count {
+                values[argument.name] = 0
+            } else {
+                if argument.has_default {
+                    values[argument.name] = argument.default_value
+                }
+            }
+        }
+    }
+    return values
+}
+
+let _store_positional = fn(
+    parser: Parser,
+    values: map,
+    positional_index: int,
+    value: str
+) bool {
+    let current = 0
+    let matched = False
+    for argument in parser.arguments {
+        if argument.kind == ArgumentKind.Positional {
+            if current == positional_index {
+                values[argument.name] = value
+                matched = True
+            }
+            current = current + 1
+        }
+    }
+    return matched
+}
+
+let _validate_required = fn(parser: Parser, values: map) | ArgumentError {
+    for argument in parser.arguments {
+        if argument.required && !_contains(values, argument.name) {
+            if argument.kind == ArgumentKind.Positional {
+                return ArgumentError{"missing required argument: " + argument.name}
+            }
+            return ArgumentError{"missing required option: --" + argument.name}
+        }
+    }
+}
+
+let _parse = fn(self: Parser, argv: array) ParsedArgs | ArgumentError {
+    let values = _store_defaults(self)
+    let index = 0
+    let positional_index = 0
+    let options_enabled = True
+
+    while index < _len(argv) {
+        let token = argv[index]
+        if options_enabled && token == "--" {
+            options_enabled = False
+        } else {
+            if options_enabled && (token == "--help" || token == "-h") {
+                return ParsedArgs{values, True}
+            }
+
+            if options_enabled && _startswith(token, "-") && token != "-" {
+                let argument = _find_named(self, token)
+                if argument.kind == ArgumentKind.Flag {
+                    values[argument.name] = True
+                } else {
+                    if argument.kind == ArgumentKind.Count {
+                        values[argument.name] = values[argument.name] + 1
+                    } else {
+                        index = index + 1
+                        if index >= _len(argv) {
+                            return ArgumentError{"option requires a value: " + token}
+                        }
+                        values[argument.name] = argv[index]
+                    }
+                }
+            } else {
+                if !_store_positional(self, values, positional_index, token) {
+                    return ArgumentError{"unexpected positional argument: " + token}
+                }
+                positional_index = positional_index + 1
+            }
+        }
+        index = index + 1
+    }
+
+    _validate_required(self, values)
+    return ParsedArgs{values, False}
+}
+
+let _option_label = fn(argument: Argument) str {
+    let label = "  "
+    if argument.short != "" {
+        label = label + "-" + argument.short + ", "
+    } else {
+        label = label + "    "
+    }
+    label = label + "--" + argument.name
+    if argument.kind == ArgumentKind.Option {
+        label = label + " <value>"
+    }
+    return label
+}
+
+let _help = fn(self: Parser) str {
+    let usage = "Usage: " + self.program
+    for argument in self.arguments {
+        if argument.kind == ArgumentKind.Positional {
+            if argument.required {
+                usage = usage + " <" + argument.name + ">"
+            } else {
+                usage = usage + " [" + argument.name + "]"
+            }
+        }
+    }
+    usage = usage + " [options]"
+
+    let result = usage + "\n"
+    if self.description != "" {
+        result = result + "\n" + self.description + "\n"
+    }
+
+    let has_positionals = False
+    for argument in self.arguments {
+        if argument.kind == ArgumentKind.Positional {
+            has_positionals = True
+        }
+    }
+    if has_positionals {
+        result = result + "\nArguments:\n"
+        for argument in self.arguments {
+            if argument.kind == ArgumentKind.Positional {
+                result = result + "  " + argument.name + "\t" + argument.help
+                if argument.has_default {
+                    result = result + " (default: " + argument.default_value + ")"
+                }
+                result = result + "\n"
+            }
+        }
+    }
+
+    result = result + "\nOptions:\n"
+    result = result + "  -h, --help\tShow this help message\n"
+    for argument in self.arguments {
+        if argument.kind != ArgumentKind.Positional {
+            result = result + _option_label(argument) + "\t" + argument.help
+            if argument.required {
+                result = result + " (required)"
+            } else {
+                if argument.has_default {
+                    result = result + " (default: " + argument.default_value + ")"
+                }
+            }
+            result = result + "\n"
+        }
+    }
+    return result
+}
+
+let new = fn(program: str, description: str) Parser {
+    Parser{program, description, [], _add, _parse, _help}
+}

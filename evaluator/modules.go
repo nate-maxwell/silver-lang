@@ -11,6 +11,8 @@ import (
 	"strings"
 )
 
+const importPathEnvironment = "SILVER_PATH"
+
 // EvalFile parses and evaluates path in env. It also sets env's source
 // directory so relative imports resolve beside the entry file.
 func (e *Evaluator) EvalFile(path string, env *object.Environment) object.Object {
@@ -117,9 +119,15 @@ func (e *Evaluator) importSourceModule(name, sourceName, source string, cache []
 	return module
 }
 
-// resolveImportPath resolves path relative to sourceDir, falling back to the
-// process working directory for in-memory evaluation.
+// resolveImportPath first resolves path relative to sourceDir, falling back to
+// the process working directory for in-memory evaluation. If that file does
+// not exist, each directory in SILVER_PATH is searched in order. SILVER_PATH
+// uses the platform's native path-list separator.
 func resolveImportPath(path, sourceDir string) (string, error) {
+	if filepath.IsAbs(path) {
+		return filepath.Clean(path), nil
+	}
+
 	if sourceDir == "" {
 		var err error
 		sourceDir, err = os.Getwd()
@@ -127,15 +135,43 @@ func resolveImportPath(path, sourceDir string) (string, error) {
 			return "", err
 		}
 	}
-	if !filepath.IsAbs(path) {
-		path = filepath.Join(sourceDir, path)
-	}
-
-	absolutePath, err := filepath.Abs(path)
+	localPath, err := filepath.Abs(filepath.Join(sourceDir, path))
 	if err != nil {
 		return "", err
 	}
-	return filepath.Clean(absolutePath), nil
+	localPath = filepath.Clean(localPath)
+	if importCandidateExists(localPath) {
+		return localPath, nil
+	}
+
+	for _, searchDir := range filepath.SplitList(os.Getenv(importPathEnvironment)) {
+		if searchDir == "" {
+			continue
+		}
+		candidate, err := filepath.Abs(filepath.Join(searchDir, path))
+		if err != nil {
+			return "", err
+		}
+		candidate = filepath.Clean(candidate)
+		if importCandidateExists(candidate) {
+			return candidate, nil
+		}
+	}
+
+	// Preserve the previous failure behavior: parseFile reports the read error
+	// against the path beside the importer when no search candidate exists.
+	return localPath, nil
+}
+
+// importCandidateExists treats errors other than non-existence as a match so
+// parseFile can report the underlying permission or file-type error instead of
+// silently continuing to a different module with the same name.
+func importCandidateExists(path string) bool {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true
+	}
+	return !os.IsNotExist(err)
 }
 
 // parseFile reads a source file and parses it with its absolute path attached

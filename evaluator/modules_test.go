@@ -114,6 +114,48 @@ func TestImportsAreCached(t *testing.T) {
 	}
 }
 
+func TestImportSearchesSilverPath(t *testing.T) {
+	sourceDir := t.TempDir()
+	firstLibraryDir := t.TempDir()
+	secondLibraryDir := t.TempDir()
+	writeSilverFile(t, filepath.Join(secondLibraryDir, "library.slv"), `let value = 42`)
+	t.Setenv(importPathEnvironment, strings.Join([]string{firstLibraryDir, secondLibraryDir}, string(os.PathListSeparator)))
+
+	env := object.NewEnvironment()
+	env.SetSourceDir(sourceDir)
+	result := evalInput(t, New(), env, `import("library.slv").value`)
+	assertInteger(t, result, 42)
+}
+
+func TestImportPrefersImporterDirectoryOverSilverPath(t *testing.T) {
+	sourceDir := t.TempDir()
+	libraryDir := t.TempDir()
+	writeSilverFile(t, filepath.Join(sourceDir, "library.slv"), `let value = 1`)
+	writeSilverFile(t, filepath.Join(libraryDir, "library.slv"), `let value = 2`)
+	t.Setenv(importPathEnvironment, libraryDir)
+
+	env := object.NewEnvironment()
+	env.SetSourceDir(sourceDir)
+	result := evalInput(t, New(), env, `import("library.slv").value`)
+	assertInteger(t, result, 1)
+}
+
+func TestSilverPathModuleResolvesRelativeImportsBesideItself(t *testing.T) {
+	sourceDir := t.TempDir()
+	libraryDir := t.TempDir()
+	writeSilverFile(t, filepath.Join(libraryDir, "dependency.slv"), `let value = 21`)
+	writeSilverFile(t, filepath.Join(libraryDir, "library.slv"), `
+let dependency = import("./dependency.slv")
+let value = dependency.value * 2
+`)
+	t.Setenv(importPathEnvironment, libraryDir)
+
+	env := object.NewEnvironment()
+	env.SetSourceDir(sourceDir)
+	result := evalInput(t, New(), env, `import("library.slv").value`)
+	assertInteger(t, result, 42)
+}
+
 func TestSilverStandardLibraryImportsAreCached(t *testing.T) {
 	engine := New()
 	env := object.NewEnvironment()

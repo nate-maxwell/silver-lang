@@ -1,0 +1,29 @@
+# `json`
+
+`json` converts between JSON and Silver's null, boolean, string, integer, float, array, and string-keyed map values.
+
+```silver
+let json = import("json")
+
+let value = json.loads("{\"name\":\"Silver\",\"ready\":true}")
+let pretty = json.dumps(value, 2)
+```
+
+| Export                       | Description                                                                     |
+| ---------------------------- | ------------------------------------------------------------------------------- |
+| `loads(document)`            | Decode one complete JSON document.                                              |
+| `load(file)`                 | Read and decode a native file-like object.                                      |
+| `dumps(value, indent?)`      | Encode to a string. Optional indent is an integer number of spaces or a string. |
+| `dump(value, file, indent?)` | Encode and write to a native file-like object; returns null.                    |
+| `JSONDecodeError`            | Nominal decoding error type.                                                    |
+
+`JSONDecodeError` has `message`, `msg`, `doc`, `pos`, `lineno`, and `colno` fields. Invalid syntax and extra
+non-whitespace data produce this error. Integers must fit Silver's signed 64-bit range.
+
+Only string map keys are JSON-serializable. Functions, structs, modules, and other values are rejected, as are
+non-finite floats and circular arrays/maps.
+
+Integer indentation values at or below zero add line breaks without leading spaces; positive indentation is capped at
+1,000 spaces.
+
+[Standard library index](../table_of_contents.md#standard-library)

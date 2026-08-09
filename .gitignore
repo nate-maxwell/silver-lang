@@ -41,6 +41,7 @@ venv/
 
 # Developer
 examples/
+!docs/exmaples/
 dev/
 
 # JetBrains plugin build output

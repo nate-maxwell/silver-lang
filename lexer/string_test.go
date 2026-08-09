@@ -56,3 +56,96 @@ func TestInvalidStringEscapesAreIllegal(t *testing.T) {
 		}
 	}
 }
+
+func TestTemplateStringTokens(t *testing.T) {
+	l := New("```hello {name}!```")
+	want := []struct {
+		tokenType token.TokenType
+		literal   string
+	}{
+		{token.TEMPLATE_START, "```"},
+		{token.TEMPLATE_TEXT, "hello "},
+		{token.LBRACE, "{"},
+		{token.IDENT, "name"},
+		{token.RBRACE, "}"},
+		{token.TEMPLATE_TEXT, "!"},
+		{token.TEMPLATE_END, "```"},
+		{token.EOF, ""},
+	}
+	for index, expected := range want {
+		got := l.NextToken()
+		if got.Type != expected.tokenType || got.Literal != expected.literal {
+			t.Fatalf("token %d is (%q, %q), want (%q, %q)", index, got.Type, got.Literal, expected.tokenType, expected.literal)
+		}
+	}
+}
+
+func TestTemplateStringPreservesMultilineTextAndEscapesBraces(t *testing.T) {
+	l := New("```first\n{{literal}}\n{value}\nlast```")
+	want := []struct {
+		tokenType token.TokenType
+		literal   string
+	}{
+		{token.TEMPLATE_START, "```"},
+		{token.TEMPLATE_TEXT, "first\n{literal}\n"},
+		{token.LBRACE, "{"},
+		{token.IDENT, "value"},
+		{token.RBRACE, "}"},
+		{token.TEMPLATE_TEXT, "\nlast"},
+		{token.TEMPLATE_END, "```"},
+	}
+	for index, expected := range want {
+		got := l.NextToken()
+		if got.Type != expected.tokenType || got.Literal != expected.literal {
+			t.Fatalf("token %d is (%q, %q), want (%q, %q)", index, got.Type, got.Literal, expected.tokenType, expected.literal)
+		}
+	}
+}
+
+func TestTemplateStringTracksNestedExpressionBraces(t *testing.T) {
+	l := New("```{maps.get({\"answer\": 42}, \"answer\")}```")
+	want := []token.TokenType{
+		token.TEMPLATE_START,
+		token.LBRACE,
+		token.IDENT,
+		token.DOT,
+		token.IDENT,
+		token.LPAREN,
+		token.LBRACE,
+		token.STRING,
+		token.COLON,
+		token.INT,
+		token.RBRACE,
+		token.COMMA,
+		token.STRING,
+		token.RPAREN,
+		token.RBRACE,
+		token.TEMPLATE_END,
+	}
+	for index, expected := range want {
+		if got := l.NextToken(); got.Type != expected {
+			t.Fatalf("token %d is %q (%q), want %q", index, got.Type, got.Literal, expected)
+		}
+	}
+}
+
+func TestInvalidTemplateStringsAreIllegal(t *testing.T) {
+	tests := []struct {
+		input   string
+		message string
+	}{
+		{"`one`", "template strings must start with three backticks"},
+		{"```unterminated", "unterminated template string literal"},
+		{"```} unmatched```", "unmatched } in template string literal"},
+	}
+	for _, test := range tests {
+		l := New(test.input)
+		var got token.Token
+		for got.Type != token.ILLEGAL && got.Type != token.EOF {
+			got = l.NextToken()
+		}
+		if got.Type != token.ILLEGAL || got.Literal != test.message {
+			t.Errorf("token for %q is (%q, %q), want (ILLEGAL, %q)", test.input, got.Type, got.Literal, test.message)
+		}
+	}
+}

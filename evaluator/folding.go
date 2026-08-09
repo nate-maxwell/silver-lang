@@ -123,6 +123,13 @@ func foldExpressionConstants(expression ast.Expression) ast.Expression {
 	case *ast.MemberExpression:
 		node.Object = foldExpressionConstants(node.Object)
 
+	case *ast.TemplateStringLiteral:
+		for index, part := range node.Parts {
+			if part.Expression != nil {
+				node.Parts[index].Expression = foldExpressionConstants(part.Expression)
+			}
+		}
+
 	case *ast.ImportExpression:
 		node.Path = foldExpressionConstants(node.Path)
 

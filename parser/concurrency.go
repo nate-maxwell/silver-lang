@@ -134,6 +134,11 @@ func (p *Parser) validateTaskExpression(expression ast.Expression, bindings map[
 			delete(functionBindings, parameter.Value)
 		}
 		p.validateTaskStatements(node.Body.Statements, functionBindings)
+	case *ast.TemplateStringLiteral:
+		templateBindings := cloneTaskBindings(bindings)
+		for _, part := range node.Parts {
+			p.validateTaskExpression(part.Expression, templateBindings)
+		}
 	case *ast.CallExpression:
 		p.validateTaskExpression(node.Function, bindings)
 		for _, argument := range node.Arguments {

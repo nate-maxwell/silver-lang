@@ -2,6 +2,7 @@ package lexer
 
 import (
 	"silver/token"
+	"strings"
 )
 
 // Lexer converts Silver source text into a stream of positioned tokens. It
@@ -16,6 +17,12 @@ type Lexer struct {
 	column       int    // column containing ch
 	nextLine     int    // line to assign to the next byte
 	nextColumn   int    // column to assign to the next byte
+
+	// template string trackers
+	templateMode  templateMode
+	templateDepth int
+	templateOpen  token.Position
+	templateStack []templateContext
 }
 
 // New constructs a lexer for in-memory input using <input> as its diagnostic
@@ -64,6 +71,9 @@ func (l *Lexer) readChar() {
 // number readers advance to the first byte after their token before returning.
 func (l *Lexer) NextToken() token.Token {
 	var tok token.Token
+	if l.templateMode == templateText {
+		return l.nextTemplateToken()
+	}
 
 	l.skipIgnoredCharacters()
 	position := l.currentPosition()
@@ -119,8 +129,18 @@ func (l *Lexer) NextToken() token.Token {
 		tok = newToken(token.RPAREN, l.ch, position)
 	case '{':
 		tok = newToken(token.LBRACE, l.ch, position)
+		if l.templateMode == templateExpression {
+			l.templateDepth++
+		}
 	case '}':
 		tok = newToken(token.RBRACE, l.ch, position)
+		if l.templateMode == templateExpression {
+			if l.templateDepth == 0 {
+				l.templateMode = templateText
+			} else {
+				l.templateDepth--
+			}
+		}
 	case '"':
 		literal, diagnostic := l.readString()
 		if diagnostic != "" {
@@ -131,6 +151,15 @@ func (l *Lexer) NextToken() token.Token {
 			tok.Literal = literal
 		}
 		tok.Position = position
+	case '`':
+		if !l.startsTripleBacktick() {
+			tok = token.Token{Type: token.ILLEGAL, Literal: "template strings must start with three backticks", Position: position}
+			break
+		}
+		l.beginTemplate(position)
+		l.readChar()
+		l.readChar()
+		tok = token.Token{Type: token.TEMPLATE_START, Literal: "```", Position: position}
 	case '[':
 		tok = newToken(token.LBRACKET, l.ch, position)
 	case ']':
@@ -199,6 +228,98 @@ func (l *Lexer) peekChar() byte {
 		return 0 // Set to ascii null for EOF
 	} else {
 		return l.input[l.readPosition]
+	}
+}
+
+func (l *Lexer) peekSecondChar() byte {
+	if l.readPosition+1 >= len(l.input) {
+		return 0
+	}
+	return l.input[l.readPosition+1]
+}
+
+func (l *Lexer) startsTripleBacktick() bool {
+	return l.ch == '`' && l.peekChar() == '`' && l.peekSecondChar() == '`'
+}
+
+func (l *Lexer) beginTemplate(position token.Position) {
+	l.templateStack = append(l.templateStack, templateContext{
+		mode:  l.templateMode,
+		depth: l.templateDepth,
+		open:  l.templateOpen,
+	})
+	l.templateMode = templateText
+	l.templateDepth = 0
+	l.templateOpen = position
+}
+
+func (l *Lexer) endTemplate() {
+	last := len(l.templateStack) - 1
+	context := l.templateStack[last]
+	l.templateStack = l.templateStack[:last]
+	l.templateMode = context.mode
+	l.templateDepth = context.depth
+	l.templateOpen = context.open
+}
+
+// nextTemplateToken preserves template text byte-for-byte, except for doubled
+// braces: {{ and }} spell literal braces without beginning interpolation.
+func (l *Lexer) nextTemplateToken() token.Token {
+	position := l.currentPosition()
+	var literal strings.Builder
+
+	for {
+		switch {
+		case l.ch == 0:
+			if literal.Len() != 0 {
+				return token.Token{Type: token.TEMPLATE_TEXT, Literal: literal.String(), Position: position}
+			}
+			opening := l.templateOpen
+			l.endTemplate()
+			return token.Token{Type: token.ILLEGAL, Literal: "unterminated template string literal", Position: opening}
+
+		case l.startsTripleBacktick():
+			if literal.Len() != 0 {
+				return token.Token{Type: token.TEMPLATE_TEXT, Literal: literal.String(), Position: position}
+			}
+			l.readChar()
+			l.readChar()
+			l.readChar()
+			l.endTemplate()
+			return token.Token{Type: token.TEMPLATE_END, Literal: "```", Position: position}
+
+		case l.ch == '{':
+			if l.peekChar() == '{' {
+				literal.WriteByte('{')
+				l.readChar()
+				l.readChar()
+				continue
+			}
+			if literal.Len() != 0 {
+				return token.Token{Type: token.TEMPLATE_TEXT, Literal: literal.String(), Position: position}
+			}
+			l.templateMode = templateExpression
+			l.templateDepth = 0
+			l.readChar()
+			return token.Token{Type: token.LBRACE, Literal: "{", Position: position}
+
+		case l.ch == '}':
+			if l.peekChar() == '}' {
+				literal.WriteByte('}')
+				l.readChar()
+				l.readChar()
+				continue
+			}
+			if literal.Len() != 0 {
+				return token.Token{Type: token.TEMPLATE_TEXT, Literal: literal.String(), Position: position}
+			}
+			l.readChar()
+			return token.Token{Type: token.ILLEGAL, Literal: "unmatched } in template string literal", Position: position}
+
+		default:
+			literal.WriteByte(l.ch)
+			l.readChar()
+		}
 	}
 }
 

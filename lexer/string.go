@@ -2,6 +2,7 @@ package lexer
 
 import (
 	"fmt"
+	"silver/token"
 	"strings"
 	"unicode/utf8"
 )
@@ -104,4 +105,22 @@ func hexDigit(ch byte) (byte, bool) {
 
 func validUnicodeCodePoint(value uint32) bool {
 	return value <= utf8.MaxRune && !(0xD800 <= value && value <= 0xDFFF)
+}
+
+/* ----------------------------------------------------------------------------------------------------------
+Template Strings
+---------------------------------------------------------------------------------------------------------- */
+
+type templateMode uint8
+
+const (
+	_ templateMode = iota
+	templateText
+	templateExpression
+)
+
+type templateContext struct {
+	mode  templateMode
+	depth int
+	open  token.Position
 }

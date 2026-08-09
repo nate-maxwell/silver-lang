@@ -35,10 +35,13 @@ const (
 	EOF     = "EOF"
 
 	// Identifiers + literals
-	IDENT  = "IDENT"  // add, foobar, x, y, ...
-	INT    = "INT"    // 123456
-	FLOAT  = "FLOAT"  // 123.456
-	STRING = "STRING" // "foobar" / "foo bar"
+	IDENT          = "IDENT"          // add, foobar, x, y, ...
+	INT            = "INT"            // 123456
+	FLOAT          = "FLOAT"          // 123.456
+	STRING         = "STRING"         // "foobar" / "foo bar"
+	TEMPLATE_START = "TEMPLATE_START" // ```
+	TEMPLATE_TEXT  = "TEMPLATE_TEXT"  // uninterpolated template contents
+	TEMPLATE_END   = "TEMPLATE_END"   // ```
 
 	// Operators
 	ASSIGN = "="

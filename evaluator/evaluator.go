@@ -326,6 +326,9 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 	case *ast.StringLiteral:
 		return e.constants.string(node.Value)
 
+	case *ast.TemplateStringLiteral:
+		return e.evalTemplateStringLiteral(node, env)
+
 	case *ast.ArrayLiteral:
 		elements := e.evalExpressions(node.Elements, env)
 		if len(elements) == 1 && isError(elements[0]) {

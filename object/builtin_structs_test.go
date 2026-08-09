@@ -27,6 +27,19 @@ func TestBuiltinFileStructShape(t *testing.T) {
 	}
 }
 
+func TestBuiltinTemplateStringStructShape(t *testing.T) {
+	template, ok := BuiltinStructDefinitionByName("TemplateString")
+	if !ok {
+		t.Fatal("TemplateString definition is not registered")
+	}
+	if len(template.Fields) != 1 || template.Fields[0] != "eval" {
+		t.Fatalf("TemplateString fields are %v, want [eval]", template.Fields)
+	}
+	if got, want := template.FieldTypes[0].String(), "call() str"; got != want {
+		t.Fatalf("TemplateString.eval has type %q, want %q", got, want)
+	}
+}
+
 func TestBuiltinErrorStructsExposeMessage(t *testing.T) {
 	names := []string{"IOError", "FileNotFound", "PermissionDenied"}
 	for _, name := range runtimeErrorStructNames {

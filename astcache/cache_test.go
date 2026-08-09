@@ -80,6 +80,23 @@ func TestLoadBytes(t *testing.T) {
 	}
 }
 
+func TestTemplateStringRoundTrip(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "template.slv")
+	source := []byte("let value = 42\nlet template = ```answer: {value}```\ntemplate.eval()")
+	program := parse(t, path, source)
+
+	if err := astcache.Store(path, source, program); err != nil {
+		t.Fatal(err)
+	}
+	loaded, ok := astcache.Load(path, source)
+	if !ok {
+		t.Fatal("template string AST cache was not loaded")
+	}
+	if got, want := loaded.String(), program.String(); got != want {
+		t.Fatalf("loaded template AST differs:\ngot:  %s\nwant: %s", got, want)
+	}
+}
+
 func TestDamagedCacheIsAMiss(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "main.slv")
 	if err := os.WriteFile(astcache.Path(path), []byte("not an AST cache"), 0600); err != nil {

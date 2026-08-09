@@ -98,6 +98,12 @@ func init() {
 		},
 		Env: environment,
 	}
+	builtinStructDefinitions["TemplateString"] = &Struct{
+		Name:       "TemplateString",
+		Fields:     []string{"eval"},
+		FieldTypes: []*ast.TypeAnnotation{callAnnotation(nil, nil, namedAnnotation("str"))},
+		Env:        environment,
+	}
 	for name, definition := range builtinStructDefinitions {
 		environment.Set(name, definition)
 	}

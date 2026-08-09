@@ -60,6 +60,26 @@ func TestSourceChangeInvalidatesCache(t *testing.T) {
 	}
 }
 
+func TestLoadBytes(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "embedded.slv")
+	source := []byte("let answer = 42")
+	if err := astcache.Store(path, source, parse(t, path, source)); err != nil {
+		t.Fatal(err)
+	}
+	cache, err := os.ReadFile(astcache.Path(path))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	loaded, ok := astcache.LoadBytes(path, source, cache)
+	if !ok || loaded == nil {
+		t.Fatal("in-memory cache was not loaded")
+	}
+	if _, ok := astcache.LoadBytes(path, []byte("let answer = 43"), cache); ok {
+		t.Fatal("in-memory cache matched changed source")
+	}
+}
+
 func TestDamagedCacheIsAMiss(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "main.slv")
 	if err := os.WriteFile(astcache.Path(path), []byte("not an AST cache"), 0600); err != nil {

@@ -84,8 +84,21 @@ func Load(sourcePath string, source []byte) (*ast.Program, bool) {
 	if err != nil || info.Size() > maxCacheSize {
 		return nil, false
 	}
+	return load(file, sourcePath, source)
+}
 
-	reader := bufio.NewReader(file)
+// LoadBytes returns a cached program from in-memory cache data only when its
+// format, source path, and source contents match. Embedded standard-library
+// modules use this without materializing their cache on disk at runtime.
+func LoadBytes(sourcePath string, source, cache []byte) (*ast.Program, bool) {
+	if len(cache) > maxCacheSize {
+		return nil, false
+	}
+	return load(bytes.NewReader(cache), sourcePath, source)
+}
+
+func load(input io.Reader, sourcePath string, source []byte) (*ast.Program, bool) {
+	reader := bufio.NewReader(input)
 	var cachedMagic [len(magic)]byte
 	if _, err := io.ReadFull(reader, cachedMagic[:]); err != nil || cachedMagic != magic {
 		return nil, false

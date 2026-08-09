@@ -138,8 +138,7 @@ let report = fn() bool {
     return _failed == 0
 }
 
-# reset permits more than one independent test run in a long-lived evaluator
-# such as the REPL.
+# reset clears all accumulated results, counters, and the current suite name.
 let reset = fn() {
     _results = []
     _total = 0

@@ -35,15 +35,20 @@ const (
 	EOF     = "EOF"
 
 	// Identifiers + literals
-	IDENT  = "IDENT"  // add, foobar, x, y, ...
-	INT    = "INT"    // 123456
-	FLOAT  = "FLOAT"  // 123.456
-	STRING = "STRING" // "foobar" / "foo bar"
+	IDENT          = "IDENT"          // add, foobar, x, y, ...
+	INT            = "INT"            // 123456
+	FLOAT          = "FLOAT"          // 123.456
+	STRING         = "STRING"         // "foobar" / "foo bar"
+	TEMPLATE_START = "TEMPLATE_START" // ```
+	TEMPLATE_TEXT  = "TEMPLATE_TEXT"  // uninterpolated template contents
+	TEMPLATE_END   = "TEMPLATE_END"   // ```
 
 	// Operators
 	ASSIGN = "="
 	BANG   = "!"
 	PIPE   = "|"
+	AND    = "&&"
+	OR     = "||"
 
 	PLUS     = "+"
 	MINUS    = "-"
@@ -79,6 +84,7 @@ const (
 	IF       = "IF"
 	ELSE     = "ELSE"
 	RETURN   = "RETURN"
+	ASSERT   = "ASSERT"
 	DEFER    = "DEFER"
 	IMPORT   = "IMPORT"
 	ENUM     = "ENUM"
@@ -102,6 +108,7 @@ var keywords = map[string]TokenType{
 	"if":      IF,
 	"else":    ELSE,
 	"return":  RETURN,
+	"assert":  ASSERT,
 	"defer":   DEFER,
 	"import":  IMPORT,
 	"enum":    ENUM,

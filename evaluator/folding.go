@@ -42,6 +42,9 @@ func foldStatementConstants(statement ast.Statement) ast.Statement {
 		node.Value = foldExpressionConstants(node.Value)
 	case *ast.ReturnStatement:
 		node.ReturnValue = foldExpressionConstants(node.ReturnValue)
+	case *ast.AssertStatement:
+		node.Condition = foldExpressionConstants(node.Condition)
+		node.Message = foldExpressionConstants(node.Message)
 	case *ast.DeferStatement:
 		node.Call.Function = foldExpressionConstants(node.Call.Function)
 		foldExpressionSlice(node.Call.Arguments)
@@ -119,6 +122,13 @@ func foldExpressionConstants(expression ast.Expression) ast.Expression {
 
 	case *ast.MemberExpression:
 		node.Object = foldExpressionConstants(node.Object)
+
+	case *ast.TemplateStringLiteral:
+		for index, part := range node.Parts {
+			if part.Expression != nil {
+				node.Parts[index].Expression = foldExpressionConstants(part.Expression)
+			}
+		}
 
 	case *ast.ImportExpression:
 		node.Path = foldExpressionConstants(node.Path)

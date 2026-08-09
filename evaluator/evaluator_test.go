@@ -11,27 +11,27 @@ func TestBuiltinFunctions(t *testing.T) {
 		input    string
 		expected interface{}
 	}{
-		{`len("")`, 0},
-		{`len("four")`, 4},
-		{`len("hello world")`, 11},
-		{`len([1, 2, 3])`, 3},
-		{`len(1)`, "argument to `len` not supported, got INTEGER"},
-		{`len("one", "two")`, "wrong number of arguments. got=2, want=1"},
-		{`first([1, 2, 3])`, 1},
-		{`first([])`, nil},
-		{`first(1)`, "argument to `first` must be ARRAY, got INTEGER"},
-		{`last([1, 2, 3])`, 3},
-		{`last([])`, nil},
-		{`rest([1, 2, 3])`, []int64{2, 3}},
-		{`rest([1])`, []int64{}},
-		{`rest([])`, nil},
-		{`append([1, 2], 3)`, []int64{1, 2, 3}},
-		{`append(1, 2)`, "argument to `append` must be ARRAY, got INTEGER"},
-		{`append([1])`, "wrong number of arguments. got=1, want=2"},
+		{`core.len("")`, 0},
+		{`core.len("four")`, 4},
+		{`core.len("hello world")`, 11},
+		{`core.len([1, 2, 3])`, 3},
+		{`core.len(1)`, "argument to `len` not supported, got INTEGER"},
+		{`core.len("one", "two")`, "wrong number of arguments. got=2, want=1"},
+		{`arrays.first([1, 2, 3])`, 1},
+		{`arrays.first([])`, nil},
+		{`arrays.first(1)`, "argument to `first` must be ARRAY, got INTEGER"},
+		{`arrays.last([1, 2, 3])`, 3},
+		{`arrays.last([])`, nil},
+		{`arrays.rest([1, 2, 3])`, []int64{2, 3}},
+		{`arrays.rest([1])`, []int64{}},
+		{`arrays.rest([])`, nil},
+		{`arrays.append([1, 2], 3)`, []int64{1, 2, 3}},
+		{`arrays.append(1, 2)`, "argument to `append` must be ARRAY, got INTEGER"},
+		{`arrays.append([1])`, "wrong number of arguments. got=1, want=2"},
 	}
 
 	for _, tt := range tests {
-		evaluated := testEval(tt.input)
+		evaluated := testEval(coreImport + arrayImport + tt.input)
 		switch expected := tt.expected.(type) {
 		case int:
 			testIntegerObject(t, evaluated, int64(expected))
@@ -67,7 +67,8 @@ func TestBuiltinFunctions(t *testing.T) {
 
 func TestPrintBuiltinUsesEvaluatorOutput(t *testing.T) {
 	var out bytes.Buffer
-	result := evalInput(t, NewWithOutput(&out), object.NewEnvironment(), `print("hello", 42)`)
+	result := evalInput(t, NewWithOutput(&out), object.NewEnvironment(), `let io = import("io")
+io.print("hello", 42)`)
 
 	testNullObject(t, result)
 	if got, want := out.String(), "hello 42\n"; got != want {

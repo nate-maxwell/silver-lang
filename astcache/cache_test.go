@@ -17,6 +17,7 @@ enum State { Ready, Waiting }
 struct Person { name: string, age: int }
 struct Handler { callback: call(value: int) }
 let values = [1, 2.5, True, "four", {"five": 5}]
+assert values[0] == 1, "cached assertion"
 let person = Person{"Ada", 36}
 person.age = 37
 let choose = fn(value: int) int { if (value > 0) { return -value } else { return 0 } }
@@ -56,6 +57,43 @@ func TestSourceChangeInvalidatesCache(t *testing.T) {
 
 	if _, ok := astcache.Load(path, []byte("let answer = 43")); ok {
 		t.Fatal("cache matched changed source")
+	}
+}
+
+func TestLoadBytes(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "embedded.slv")
+	source := []byte("let answer = 42")
+	if err := astcache.Store(path, source, parse(t, path, source)); err != nil {
+		t.Fatal(err)
+	}
+	cache, err := os.ReadFile(astcache.Path(path))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	loaded, ok := astcache.LoadBytes(path, source, cache)
+	if !ok || loaded == nil {
+		t.Fatal("in-memory cache was not loaded")
+	}
+	if _, ok := astcache.LoadBytes(path, []byte("let answer = 43"), cache); ok {
+		t.Fatal("in-memory cache matched changed source")
+	}
+}
+
+func TestTemplateStringRoundTrip(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "template.slv")
+	source := []byte("let value = 42\nlet template = ```answer: {value}```\ntemplate.eval()")
+	program := parse(t, path, source)
+
+	if err := astcache.Store(path, source, program); err != nil {
+		t.Fatal(err)
+	}
+	loaded, ok := astcache.Load(path, source)
+	if !ok {
+		t.Fatal("template string AST cache was not loaded")
+	}
+	if got, want := loaded.String(), program.String(); got != want {
+		t.Fatalf("loaded template AST differs:\ngot:  %s\nwant: %s", got, want)
 	}
 }
 

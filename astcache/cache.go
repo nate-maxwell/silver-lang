@@ -18,7 +18,7 @@ import (
 const (
 	// Version must change whenever the serialized AST representation or the
 	// parse/optimization pipeline changes.
-	Version uint32 = 21
+	Version uint32 = 23
 
 	cacheSuffix   = ".astc"
 	maxPathLength = 1 << 20
@@ -37,6 +37,7 @@ func init() {
 	gob.Register(&ast.MemberAssignmentStatement{})
 	gob.Register(&ast.IndexAssignmentStatement{})
 	gob.Register(&ast.ReturnStatement{})
+	gob.Register(&ast.AssertStatement{})
 	gob.Register(&ast.DeferStatement{})
 	gob.Register(&ast.EnumStatement{})
 	gob.Register(&ast.StructStatement{})
@@ -58,6 +59,7 @@ func init() {
 	gob.Register(&ast.MemberExpression{})
 	gob.Register(&ast.PrefixExpression{})
 	gob.Register(&ast.StringLiteral{})
+	gob.Register(&ast.TemplateStringLiteral{})
 	gob.Register(&ast.StructLiteral{})
 	gob.Register(&ast.TaskExpression{})
 	gob.Register(&ast.CollectExpression{})
@@ -83,8 +85,21 @@ func Load(sourcePath string, source []byte) (*ast.Program, bool) {
 	if err != nil || info.Size() > maxCacheSize {
 		return nil, false
 	}
+	return load(file, sourcePath, source)
+}
 
-	reader := bufio.NewReader(file)
+// LoadBytes returns a cached program from in-memory cache data only when its
+// format, source path, and source contents match. Embedded standard-library
+// modules use this without materializing their cache on disk at runtime.
+func LoadBytes(sourcePath string, source, cache []byte) (*ast.Program, bool) {
+	if len(cache) > maxCacheSize {
+		return nil, false
+	}
+	return load(bytes.NewReader(cache), sourcePath, source)
+}
+
+func load(input io.Reader, sourcePath string, source []byte) (*ast.Program, bool) {
+	reader := bufio.NewReader(input)
 	var cachedMagic [len(magic)]byte
 	if _, err := io.ReadFull(reader, cachedMagic[:]); err != nil || cachedMagic != magic {
 		return nil, false

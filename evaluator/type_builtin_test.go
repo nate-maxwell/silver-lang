@@ -8,26 +8,26 @@ import (
 
 func TestTypeBuiltinReturnsPrimitiveTypeValues(t *testing.T) {
 	tests := []string{
-		`type(1) == int`,
-		`type(1.5) == float`,
-		`type(True) == bool`,
-		`type("silver") == str`,
-		`type(if False { 1 }) == null`,
-		`type([1, 2]) == array`,
-		`type({"answer": 42}) == map`,
-		`type(fn() {}) == call`,
-		`type(len) == call`,
+		`core.type(1) == int`,
+		`core.type(1.5) == float`,
+		`core.type(True) == bool`,
+		`core.type("silver") == str`,
+		`core.type(if False { 1 }) == null`,
+		`core.type([1, 2]) == array`,
+		`core.type({"answer": 42}) == map`,
+		`core.type(fn() {}) == call`,
+		`core.type(core.len) == call`,
 	}
 
 	for _, input := range tests {
 		t.Run(input, func(t *testing.T) {
-			testBooleanObject(t, testEval(input), true)
+			testBooleanObject(t, testEval(coreImport+input), true)
 		})
 	}
 }
 
 func TestTypeBuiltinReturnsInspectableTypeValue(t *testing.T) {
-	evaluated := testEval(`type(1)`)
+	evaluated := testEval(coreImport + `core.type(1)`)
 	typeValue, ok := evaluated.(*object.TypeDefinition)
 	if !ok {
 		t.Fatalf("result is %T, want *object.TypeDefinition", evaluated)
@@ -40,27 +40,27 @@ func TestTypeBuiltinReturnsInspectableTypeValue(t *testing.T) {
 func TestTypeBuiltinReturnsStructDefinition(t *testing.T) {
 	for _, input := range []string{
 		`struct Point { x: int }
-type(Point) == Point`,
+core.type(Point) == Point`,
 		`struct Point { x: int }
-type(Point{1}) == Point`,
+core.type(Point{1}) == Point`,
 	} {
-		testBooleanObject(t, testEval(input), true)
+		testBooleanObject(t, testEval(coreImport+input), true)
 	}
 }
 
 func TestTypeBuiltinReturnsEnumDefinition(t *testing.T) {
 	for _, input := range []string{
 		`enum Color { Red, Green }
-type(Color) == Color`,
+core.type(Color) == Color`,
 		`enum Color { Red, Green }
-type(Color.Red) == Color`,
+core.type(Color.Red) == Color`,
 	} {
-		testBooleanObject(t, testEval(input), true)
+		testBooleanObject(t, testEval(coreImport+input), true)
 	}
 }
 
 func TestTypeBuiltinIdentifiesCaughtStructError(t *testing.T) {
-	evaluated := testEval(`
+	evaluated := testEval(coreImport + `
 struct FileNotFound { message: str }
 let open = fn() str | FileNotFound {
 	return FileNotFound{"missing"}
@@ -68,14 +68,14 @@ let open = fn() str | FileNotFound {
 try {
 	open()
 } catch FileNotFound err {
-	type(err) == FileNotFound
+	core.type(err) == FileNotFound
 }
 `)
 	testBooleanObject(t, evaluated, true)
 }
 
 func TestTypeDefinitionsAreIdempotent(t *testing.T) {
-	testBooleanObject(t, testEval(`type(type(1)) == int`), true)
+	testBooleanObject(t, testEval(coreImport+`core.type(core.type(1)) == int`), true)
 }
 
 func TestTypeBuiltinReturnsModuleType(t *testing.T) {
@@ -83,16 +83,17 @@ func TestTypeBuiltinReturnsModuleType(t *testing.T) {
 	libraryPath := filepath.Join(dir, "library.slv")
 	mainPath := filepath.Join(dir, "main.slv")
 	writeSilverFile(t, libraryPath, `let answer = 42`)
-	writeSilverFile(t, mainPath, `let library = import("./library.slv")
-type(library) == module`)
+	writeSilverFile(t, mainPath, `let core = import("core")
+let library = import("./library.slv")
+core.type(library) == module`)
 
 	evaluated := New().EvalFile(mainPath, object.NewEnvironment())
 	testBooleanObject(t, evaluated, true)
 }
 
 func TestTypeBuiltinChecksArity(t *testing.T) {
-	for _, input := range []string{`type()`, `type(1, 2)`} {
-		evaluated := testEval(input)
+	for _, input := range []string{`core.type()`, `core.type(1, 2)`} {
+		evaluated := testEval(coreImport + input)
 		if _, ok := evaluated.(*object.Error); !ok {
 			t.Fatalf("%s returned %T, want *object.Error", input, evaluated)
 		}

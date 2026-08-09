@@ -20,11 +20,39 @@ func (p *Parser) parseStatement() ast.Statement {
 		return p.parseWhileStatement()
 	case token.RETURN:
 		return p.parseReturnStatement()
+	case token.ASSERT:
+		return p.parseAssertStatement()
 	case token.DEFER:
 		return p.parseDeferStatement()
 	default:
 		return p.parseExpressionStatement()
 	}
+}
+
+// parseAssertStatement parses Python-style `assert condition` and
+// `assert condition, message` statements.
+func (p *Parser) parseAssertStatement() *ast.AssertStatement {
+	stmt := &ast.AssertStatement{Token: p.curToken}
+	if p.peekTokenIs(token.RBRACE) || p.peekTokenIs(token.EOF) || p.lineBreakBeforePeek() {
+		p.addError(p.curToken.Position, "assert requires a condition")
+		p.consumeStatementEnd()
+		return stmt
+	}
+
+	p.nextToken()
+	stmt.Condition = p.parseExpression(LOWEST)
+	if p.peekTokenIs(token.COMMA) && !p.lineBreakBeforePeek() {
+		p.nextToken()
+		if p.peekTokenIs(token.RBRACE) || p.peekTokenIs(token.EOF) || p.lineBreakBeforePeek() {
+			p.addError(p.curToken.Position, "assert message requires an expression")
+			p.consumeStatementEnd()
+			return stmt
+		}
+		p.nextToken()
+		stmt.Message = p.parseExpression(LOWEST)
+	}
+	p.consumeStatementEnd()
+	return stmt
 }
 
 // parseDeferStatement parses a call that will run when the surrounding

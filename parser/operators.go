@@ -5,6 +5,8 @@ import "silver/token"
 // precedences assigns binding power to infix token types. Tokens absent from
 // the table use LOWEST, which terminates the current Pratt-parser expression.
 var precedences = map[token.TokenType]int{
+	token.OR:       OR,
+	token.AND:      AND,
 	token.EQ:       EQUALS,
 	token.NOT_EQ:   EQUALS,
 	token.LT:       LESSGREATER,

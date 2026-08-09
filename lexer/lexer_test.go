@@ -261,6 +261,29 @@ func TestFloatTokens(t *testing.T) {
 	}
 }
 
+func TestIdentifiersMayContainDigits(t *testing.T) {
+	l := New(`exp2 log1p value42 _2 2fast`)
+	want := []struct {
+		tokenType token.TokenType
+		literal   string
+	}{
+		{token.IDENT, "exp2"},
+		{token.IDENT, "log1p"},
+		{token.IDENT, "value42"},
+		{token.IDENT, "_2"},
+		{token.INT, "2"},
+		{token.IDENT, "fast"},
+		{token.EOF, ""},
+	}
+
+	for index, expected := range want {
+		got := l.NextToken()
+		if got.Type != expected.tokenType || got.Literal != expected.literal {
+			t.Fatalf("token %d is (%q, %q), want (%q, %q)", index, got.Type, got.Literal, expected.tokenType, expected.literal)
+		}
+	}
+}
+
 func TestPowerToken(t *testing.T) {
 	l := NewWithSource("2 ** 3 * 4", "power.slv")
 	want := []struct {
@@ -320,6 +343,32 @@ func TestPipeToken(t *testing.T) {
 	for index, expected := range want {
 		if got := l.NextToken(); got.Type != expected {
 			t.Fatalf("token %d has type %q, want %q", index, got.Type, expected)
+		}
+	}
+}
+
+func TestLogicalOperatorTokens(t *testing.T) {
+	l := NewWithSource("left && right || fallback &", "logical.slv")
+	want := []struct {
+		tokenType token.TokenType
+		literal   string
+		column    int
+	}{
+		{token.IDENT, "left", 1},
+		{token.AND, "&&", 6},
+		{token.IDENT, "right", 9},
+		{token.OR, "||", 15},
+		{token.IDENT, "fallback", 18},
+		{token.ILLEGAL, "&", 27},
+		{token.EOF, "", 28},
+	}
+
+	for index, expected := range want {
+		got := l.NextToken()
+		if got.Type != expected.tokenType || got.Literal != expected.literal || got.Position.Column != expected.column {
+			t.Fatalf("token %d is (%q, %q, column %d), want (%q, %q, column %d)",
+				index, got.Type, got.Literal, got.Position.Column,
+				expected.tokenType, expected.literal, expected.column)
 		}
 	}
 }

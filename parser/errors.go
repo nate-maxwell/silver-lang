@@ -29,7 +29,7 @@ func (p *Parser) addError(position token.Position, message string) {
 // noPrefixParseFnError records that the current token cannot begin an
 // expression.
 func (p *Parser) noPrefixParseFnError(t token.TokenType) {
-	if t == token.ILLEGAL && (strings.Contains(p.curToken.Literal, "string literal") || strings.Contains(p.curToken.Literal, "escape")) {
+	if t == token.ILLEGAL && (strings.Contains(p.curToken.Literal, "string literal") || strings.Contains(p.curToken.Literal, "template string") || strings.Contains(p.curToken.Literal, "escape")) {
 		p.addError(p.curToken.Position, p.curToken.Literal)
 		return
 	}

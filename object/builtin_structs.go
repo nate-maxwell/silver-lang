@@ -9,6 +9,7 @@ type RuntimeErrorKind string
 
 const (
 	RuntimeErrorKindRuntime      RuntimeErrorKind = "runtime"
+	RuntimeErrorKindAssertion    RuntimeErrorKind = "assertion"
 	RuntimeErrorKindType         RuntimeErrorKind = "type"
 	RuntimeErrorKindValue        RuntimeErrorKind = "value"
 	RuntimeErrorKindZeroDivision RuntimeErrorKind = "zero_division"
@@ -23,6 +24,7 @@ const (
 
 var runtimeErrorStructNames = map[RuntimeErrorKind]string{
 	RuntimeErrorKindRuntime:      "RuntimeError",
+	RuntimeErrorKindAssertion:    "AssertionError",
 	RuntimeErrorKindType:         "TypeError",
 	RuntimeErrorKindValue:        "ValueError",
 	RuntimeErrorKindZeroDivision: "ZeroDivisionError",
@@ -45,6 +47,10 @@ func init() {
 		"IOError":          errorStructDefinition("IOError", environment),
 		"FileNotFound":     errorStructDefinition("FileNotFound", environment),
 		"PermissionDenied": errorStructDefinition("PermissionDenied", environment),
+		"ConnectionError":  errorStructDefinition("ConnectionError", environment),
+		"ListenError":      errorStructDefinition("ListenError", environment),
+		"ReadError":        errorStructDefinition("ReadError", environment),
+		"WriteError":       errorStructDefinition("WriteError", environment),
 	}
 	for _, name := range runtimeErrorStructNames {
 		builtinStructDefinitions[name] = errorStructDefinition(name, environment)
@@ -59,6 +65,54 @@ func init() {
 			callAnnotation(nil, nil, nil, "IOError"),
 		},
 		Env: environment,
+	}
+	builtinStructDefinitions["IOStream"] = &Struct{
+		Name:   "IOStream",
+		Fields: []string{"name", "read", "write"},
+		FieldTypes: []*ast.TypeAnnotation{
+			namedAnnotation("str"),
+			callAnnotation(nil, nil, namedAnnotation("str"), "IOError"),
+			callAnnotation([]string{"data"}, []*ast.TypeAnnotation{namedAnnotation("str")}, nil, "IOError"),
+		},
+		Env: environment,
+	}
+	builtinStructDefinitions["ReadFromResult"] = &Struct{
+		Name:   "ReadFromResult",
+		Fields: []string{"data", "address"},
+		FieldTypes: []*ast.TypeAnnotation{
+			namedAnnotation("str"),
+			namedAnnotation("str"),
+		},
+		Env: environment,
+	}
+	builtinStructDefinitions["Connection"] = &Struct{
+		Name:   "Connection",
+		Fields: []string{"address", "read", "write", "write_to", "read_from", "close"},
+		FieldTypes: []*ast.TypeAnnotation{
+			namedAnnotation("str"),
+			callAnnotation([]string{"bytes"}, []*ast.TypeAnnotation{namedAnnotation("int")}, namedAnnotation("str"), "ReadError"),
+			callAnnotation([]string{"data"}, []*ast.TypeAnnotation{namedAnnotation("str")}, nil, "WriteError"),
+			callAnnotation([]string{"data", "address"}, []*ast.TypeAnnotation{namedAnnotation("str"), namedAnnotation("str")}, nil, "WriteError"),
+			callAnnotation([]string{"bytes"}, []*ast.TypeAnnotation{namedAnnotation("int")}, namedAnnotation("ReadFromResult"), "ReadError"),
+			callAnnotation(nil, nil, nil, "ConnectionError"),
+		},
+		Env: environment,
+	}
+	builtinStructDefinitions["Listener"] = &Struct{
+		Name:   "Listener",
+		Fields: []string{"address", "accept", "close"},
+		FieldTypes: []*ast.TypeAnnotation{
+			namedAnnotation("str"),
+			callAnnotation(nil, nil, namedAnnotation("Connection"), "ConnectionError"),
+			callAnnotation(nil, nil, nil, "ConnectionError"),
+		},
+		Env: environment,
+	}
+	builtinStructDefinitions["TemplateString"] = &Struct{
+		Name:       "TemplateString",
+		Fields:     []string{"eval"},
+		FieldTypes: []*ast.TypeAnnotation{callAnnotation(nil, nil, namedAnnotation("str"))},
+		Env:        environment,
 	}
 	for name, definition := range builtinStructDefinitions {
 		environment.Set(name, definition)
@@ -98,7 +152,8 @@ func callAnnotation(parameterNames []string, parameterTypes []*ast.TypeAnnotatio
 	}
 }
 
-// BuiltinStructDefinitionByName resolves File and built-in error structs.
+// BuiltinStructDefinitionByName resolves native standard-library structs and
+// built-in error structs.
 func BuiltinStructDefinitionByName(name string) (*Struct, bool) {
 	definition, ok := builtinStructDefinitions[name]
 	return definition, ok

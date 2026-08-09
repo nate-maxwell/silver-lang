@@ -60,15 +60,16 @@ func (e *Evaluator) evalMemberAssignment(node *ast.MemberAssignmentStatement, en
 	return NULL
 }
 
-// evalIndexAssignment creates or replaces a map entry. Maps are reference
-// values, so the mutation is visible through every alias of the same map.
+// evalIndexAssignment mutates native arrays/maps directly or invokes set_item
+// on structs. Native collection mutations are visible through aliases.
 func (e *Evaluator) evalIndexAssignment(node *ast.IndexAssignmentStatement, env *object.Environment) object.Object {
 	target := e.Eval(node.Target.Left, env)
 	if isError(target) {
 		return target
 	}
-	mapping, ok := target.(*object.Map)
-	if !ok {
+	switch target.(type) {
+	case *object.Array, *object.Map, *object.StructInstance:
+	default:
 		return newError(object.RuntimeErrorKindType, "index assignment not supported on %s", runtimeTypeName(target))
 	}
 
@@ -76,21 +77,46 @@ func (e *Evaluator) evalIndexAssignment(node *ast.IndexAssignmentStatement, env 
 	if isError(key) {
 		return key
 	}
-	hashable, ok := key.(object.Hashable)
-	if !ok {
-		return newError(object.RuntimeErrorKindType, "unusable as hash key: %s", key.Type())
+	var hashable object.Hashable
+	var arrayIndex int
+	switch target := target.(type) {
+	case *object.Array:
+		var indexError *object.Error
+		arrayIndex, indexError = requireArrayIndex(target, key)
+		if indexError != nil {
+			return indexError
+		}
+	case *object.Map:
+		var ok bool
+		hashable, ok = key.(object.Hashable)
+		if !ok {
+			return newError(object.RuntimeErrorKindType, "unusable as hash key: %s", key.Type())
+		}
 	}
 
 	value := e.Eval(node.Value, env)
 	if isError(value) {
 		return value
 	}
-	mapping.Set(hashable.HashKey(), object.MapPair{Key: key, Value: value})
-	return NULL
+
+	switch target := target.(type) {
+	case *object.Array:
+		target.Elements[arrayIndex] = value
+		return NULL
+	case *object.Map:
+		target.Set(hashable.HashKey(), object.MapPair{Key: key, Value: value})
+		return NULL
+	case *object.StructInstance:
+		result := e.callStructIndexMethod(node, target, "set_item", []object.Object{key, value})
+		if isError(result) {
+			return result
+		}
+		return NULL
+	}
+	return newError(object.RuntimeErrorKindType, "index assignment not supported on %s", runtimeTypeName(target))
 }
 
-// evalMember resolves members on modules, enum namespaces, structs, and
-// primitive values with registered builtin methods.
+// evalMember resolves members on modules, enum namespaces, and structs.
 func (e *Evaluator) evalMember(value object.Object, member string) object.Object {
 	switch value := value.(type) {
 	case *object.Module:
@@ -123,32 +149,14 @@ func (e *Evaluator) evalMember(value object.Object, member string) object.Object
 		}
 		return field
 	default:
-		if builtin, ok := e.builtins.LookupMethod(value.Type(), member); ok {
-			return bindBuiltinReceiver(builtin, value)
-		}
 		return newError(object.RuntimeErrorKindType, "member access not supported on %s", value.Type())
 	}
 }
 
-// bindBuiltinReceiver produces a normal builtin value that injects receiver
-// ahead of the arguments supplied by the Silver call expression.
-func bindBuiltinReceiver(builtin *object.Builtin, receiver object.Object) *object.Builtin {
-	return &object.Builtin{Fn: func(args ...object.Object) object.Object {
-		boundArgs := make([]object.Object, 0, len(args)+1)
-		boundArgs = append(boundArgs, receiver)
-		boundArgs = append(boundArgs, args...)
-		return builtin.Fn(boundArgs...)
-	}}
-}
-
-// evalIdentifier resolves lexical bindings before falling back to the native
-// builtin registry.
+// evalIdentifier resolves lexical bindings and built-in type definitions.
 func (e *Evaluator) evalIdentifier(node *ast.Identifier, env *object.Environment) object.Object {
 	if val, ok := env.Get(node.Value); ok {
 		return val
-	}
-	if builtin, ok := e.builtins.Lookup(node.Value); ok {
-		return builtin
 	}
 	if typeDefinition, ok := object.TypeDefinitionByName(node.Value); ok {
 		return typeDefinition

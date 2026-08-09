@@ -1,0 +1,148 @@
+# A small stateful test runner implemented entirely in Silver.
+
+# Declare capabilities instead of retaining concrete modules. Passing the io
+# and array modules into this function injects their matching exports by name.
+struct Dependencies {
+    print: call
+    append: call
+}
+
+let _inject = fn(print: call, append: call) Dependencies {
+    Dependencies{print, append}
+}
+
+let _dependencies = _inject(import("io"), import("array"))
+let _print = _dependencies.print
+let _append = _dependencies.append
+
+struct Result {
+    name: str
+    passed: bool
+    message: str
+}
+
+struct Summary {
+    total: int
+    passed: int
+    failed: int
+}
+
+let _results: array = []
+let _total: int = 0
+let _passed: int = 0
+let _failed: int = 0
+let _current_suite: str = ""
+
+# Assertion helpers use the same catchable AssertionError as Silver's assert
+# statement, so they work both inside and outside run.
+let fail = fn(message: str) {
+    assert False, message
+}
+
+let check = fn(condition, message: str) {
+    assert condition, message
+}
+
+let is_true = fn(value, message: str) {
+    assert value == True, message
+}
+
+let is_false = fn(value, message: str) {
+    assert value == False, message
+}
+
+let equal = fn(actual, expected, message: str) {
+    assert actual == expected, message
+}
+
+let not_equal = fn(actual, expected, message: str) {
+    assert actual != expected, message
+}
+
+let _qualified_name = fn(name: str) str {
+    if _current_suite == "" {
+        return name
+    }
+    return _current_suite + " / " + name
+}
+
+let _record_pass = fn(name: str) {
+    _passed = _passed + 1
+    _results = _append(_results, Result{name, True, ""})
+    _print("PASS", name)
+}
+
+let _record_failure = fn(name: str, message: str) {
+    _failed = _failed + 1
+    _results = _append(_results, Result{name, False, message})
+    _print("FAIL", name)
+    if message != "" {
+        _print("    ", message)
+    }
+}
+
+# run executes one test and records assertion failures without stopping later
+# tests. Unexpected runtime errors are intentionally allowed to propagate so a
+# broken test harness is not mistaken for an ordinary failed assertion.
+let run = fn(name: str, test: call()) {
+    let full_name = _qualified_name(name)
+    _total = _total + 1
+    try {
+        test()
+        _record_pass(full_name)
+    } catch AssertionError err {
+        _record_failure(full_name, err.message)
+    }
+}
+
+let _restore_suite = fn(name: str) {
+    _current_suite = name
+}
+
+# suite groups test names. defer restores the previous prefix even when the
+# suite body raises an unexpected error, and also makes nested suites work.
+let suite = fn(name: str, tests: call()) {
+    let previous = _current_suite
+    if previous == "" {
+        _current_suite = name
+    } else {
+        _current_suite = previous + " / " + name
+    }
+    defer _restore_suite(previous)
+    tests()
+}
+
+# results returns the immutable-by-convention history accumulated so far.
+let results = fn() array {
+    return _results
+}
+
+let summary = fn() Summary {
+    return Summary{_total, _passed, _failed}
+}
+
+# report prints all totals and repeats failure details for convenient viewing
+# at the end of a test file. Its boolean result can be used by callers that
+# need to distinguish a clean run programmatically.
+let report = fn() bool {
+    _print("")
+    _print(_total, "tests:", _passed, "passed,", _failed, "failed")
+    if _failed > 0 {
+        _print("Failed tests:")
+        for result in _results {
+            if result.passed == False {
+                _print("   ", result.name + ":", result.message)
+            }
+        }
+    }
+    return _failed == 0
+}
+
+# reset clears all accumulated results, counters, and the current suite name.
+let reset = fn() {
+    _results = []
+    _total = 0
+    _passed = 0
+    _failed = 0
+    _current_suite = ""
+}

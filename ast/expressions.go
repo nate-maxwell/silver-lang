@@ -143,7 +143,7 @@ func (ie *IfExpression) String() string {
 Index expressions
 ---------------------------------------------------------------------------------------------------------- */
 
-// IndexExpression looks up Index in Left, which may be an array or map.
+// IndexExpression looks up Index in an array, map, or indexable struct.
 type IndexExpression struct {
 	Token token.Token // the [ token
 	Left  Expression

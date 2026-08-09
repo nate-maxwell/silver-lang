@@ -27,6 +27,33 @@ func TestBuiltinFileStructShape(t *testing.T) {
 	}
 }
 
+func TestBuiltinTemplateStringStructShape(t *testing.T) {
+	template, ok := BuiltinStructDefinitionByName("TemplateString")
+	if !ok {
+		t.Fatal("TemplateString definition is not registered")
+	}
+	if len(template.Fields) != 1 || template.Fields[0] != "eval" {
+		t.Fatalf("TemplateString fields are %v, want [eval]", template.Fields)
+	}
+	if got, want := template.FieldTypes[0].String(), "call() str"; got != want {
+		t.Fatalf("TemplateString.eval has type %q, want %q", got, want)
+	}
+}
+
+func TestBuiltinIOStreamStructShape(t *testing.T) {
+	stream, ok := BuiltinStructDefinitionByName("IOStream")
+	if !ok {
+		t.Fatal("IOStream definition is not registered")
+	}
+	wantFields := []string{"name", "read", "write"}
+	wantTypes := []string{"str", "call() str | IOError", "call(data: str) | IOError"}
+	for index, want := range wantFields {
+		if stream.Fields[index] != want || stream.FieldTypes[index].String() != wantTypes[index] {
+			t.Fatalf("IOStream field %d is %q: %s, want %q: %s", index, stream.Fields[index], stream.FieldTypes[index].String(), want, wantTypes[index])
+		}
+	}
+}
+
 func TestBuiltinErrorStructsExposeMessage(t *testing.T) {
 	names := []string{"IOError", "FileNotFound", "PermissionDenied"}
 	for _, name := range runtimeErrorStructNames {
@@ -46,6 +73,7 @@ func TestBuiltinErrorStructsExposeMessage(t *testing.T) {
 func TestRuntimeErrorStructTableConstructsEveryKind(t *testing.T) {
 	want := map[RuntimeErrorKind]string{
 		RuntimeErrorKindRuntime:      "RuntimeError",
+		RuntimeErrorKindAssertion:    "AssertionError",
 		RuntimeErrorKindType:         "TypeError",
 		RuntimeErrorKindValue:        "ValueError",
 		RuntimeErrorKindZeroDivision: "ZeroDivisionError",

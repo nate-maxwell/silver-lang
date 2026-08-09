@@ -114,6 +114,35 @@ func TestImportsAreCached(t *testing.T) {
 	}
 }
 
+func TestSilverStandardLibraryImportsAreCached(t *testing.T) {
+	engine := New()
+	env := object.NewEnvironment()
+
+	first := evalInput(t, engine, env, `import("testing")`)
+	second := evalInput(t, engine, env, `import("testing")`)
+	if first != second {
+		t.Fatal("the same Silver standard-library module was evaluated more than once")
+	}
+}
+
+func TestSilverStandardLibraryDoesNotReplacePathImports(t *testing.T) {
+	dir := t.TempDir()
+	writeSilverFile(t, filepath.Join(dir, "testing.slv"), `let origin = "user"`)
+	env := object.NewEnvironment()
+	env.SetSourceDir(dir)
+
+	result := evalInput(t, New(), env, `
+let standard = import("testing")
+let user = import("./testing.slv")
+standard.check(user.origin == "user", "path import should load the user module")
+user.origin
+`)
+	text, ok := result.(*object.String)
+	if !ok || text.Value != "user" {
+		t.Fatalf("result is %T (%v), want user module value", result, result)
+	}
+}
+
 func TestImportAcceptsPathExpression(t *testing.T) {
 	dir := t.TempDir()
 	writeSilverFile(t, filepath.Join(dir, "module.slv"), `let value = 42`)

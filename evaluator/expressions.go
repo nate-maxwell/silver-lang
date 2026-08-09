@@ -37,6 +37,10 @@ func evalPrefixExpression(operator string, right object.Object) object.Object {
 // common type mismatch checks.
 func evalInfixExpression(operator string, left, right object.Object) object.Object {
 	switch {
+	case operator == "&&":
+		return nativeBoolToBooleanObject(isTruthy(left) && isTruthy(right))
+	case operator == "||":
+		return nativeBoolToBooleanObject(isTruthy(left) || isTruthy(right))
 	case left.Type() == object.INTEGER_OBJ && right.Type() == object.INTEGER_OBJ:
 		return evalIntegerInfixExpression(operator, left, right)
 	case isNumeric(left) && isNumeric(right):
@@ -54,13 +58,16 @@ func evalInfixExpression(operator string, left, right object.Object) object.Obje
 	}
 }
 
-// evalIndexExpression dispatches indexing according to the left operand type.
-func evalIndexExpression(left, index object.Object) object.Object {
-	switch {
-	case left.Type() == object.ARRAY_OBJ && index.Type() == object.INTEGER_OBJ:
+// evalIndexExpression dispatches primitive indexing directly and lets struct
+// values implement bracket reads through get_item.
+func (e *Evaluator) evalIndexExpression(node *ast.IndexExpression, left, index object.Object) object.Object {
+	switch left := left.(type) {
+	case *object.Array:
 		return evalArrayIndexExpression(left, index)
-	case left.Type() == object.MAP_OBJ:
+	case *object.Map:
 		return evalMapIndexExpression(left, index)
+	case *object.StructInstance:
+		return e.callStructIndexMethod(node, left, "get_item", []object.Object{index})
 	default:
 		return newError(object.RuntimeErrorKindType, "index operator not supported: %s", left.Type())
 	}

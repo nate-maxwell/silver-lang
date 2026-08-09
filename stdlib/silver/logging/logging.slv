@@ -1,0 +1,141 @@
+let io = import("io")
+let net = import("networking")
+let pathlib = import("path")
+let times = import("time")
+
+enum Level {
+    Debug,
+    Info,
+    Warning,
+    Error,
+    Critical,
+}
+
+struct StreamHandler {
+    stream: IOStream
+    handle: call(self: StreamHandler, record: str) | IOError
+}
+
+let new_stream_handler = fn(stream: IOStream) StreamHandler {
+    let handle = fn(self: StreamHandler, record: str) | IOError {
+        self.stream.write(record + "\n")
+    }
+
+    StreamHandler{stream, handle}
+}
+
+struct FileHandler {
+    path: pathlib.Path
+    handle: call(self: FileHandler, record: str)
+}
+
+let new_file_handler = fn(path: pathlib.Path) FileHandler {
+    let handle = fn(self: FileHandler, record: str) {
+        let contents = ""
+        if self.path.exists() {
+            contents = self.path.read_text()
+        }
+        self.path.write_text(contents + record + "\n")
+    }
+
+    FileHandler{path, handle}
+}
+
+struct RotatingFileHandler {
+    path: pathlib.Path
+    interval: int
+    last_rotation: int
+    handle: call(self: RotatingFileHandler, record: str)
+}
+
+let new_rotating_file_handler = fn(path: pathlib.Path, interval: int) RotatingFileHandler {
+    let handle = fn(self: RotatingFileHandler, record: str) {
+        let now = times.unix()
+        if self.path.exists() && now - self.last_rotation >= self.interval {
+            let timestamp = times.format(times.now(), "YYYY-MM-DD-HHmmss-SSSSSSSSS")
+            let rotated_path = pathlib.new(self.path.path + "." + timestamp)
+            self.path.rename(rotated_path)
+            self.last_rotation = now
+        }
+
+        let contents = ""
+        if self.path.exists() {
+            contents = self.path.read_text()
+        }
+        self.path.write_text(contents + record + "\n")
+    }
+
+    RotatingFileHandler{path, interval, times.unix(), handle}
+}
+
+struct TCPSocketHandler {
+    address: str
+    handle: call(self: TCPSocketHandler, record: str) | ConnectionError | WriteError
+}
+
+let new_tcp_socket_handler = fn(address: str) TCPSocketHandler {
+    let handle = fn(self: TCPSocketHandler, record: str) | ConnectionError | WriteError {
+        let connection = net.dial("tcp", self.address)
+        defer connection.close()
+        connection.write(record + "\n")
+    }
+
+    TCPSocketHandler{address, handle}
+}
+
+struct UDPSocketHandler {
+    address: str
+    handle: call(self: UDPSocketHandler, record: str) | ConnectionError | WriteError
+}
+
+let new_udp_socket_handler = fn(address: str) UDPSocketHandler {
+    let handle = fn(self: UDPSocketHandler, record: str) | ConnectionError | WriteError {
+        let connection = net.dial("udp", self.address)
+        defer connection.close()
+        connection.write(record + "\n")
+    }
+
+    UDPSocketHandler{address, handle}
+}
+
+struct NullHandler {
+    handle: call(self: NullHandler, record: str)
+}
+
+let new_null_handler = fn() NullHandler {
+    let handle = fn(self: NullHandler, record: str) {}
+    NullHandler{handle}
+}
+
+struct Logger {
+    level: Level
+    format: TemplateString
+    handle: call(self: Logger, message: str)
+}
+
+struct LogContext {
+    level: Level
+    time: str
+    message: str
+}
+
+let standard_format = fn(context: LogContext) TemplateString {
+    ```[{context.level}] {context.time} {context.message}```
+}
+
+let new_logger = fn(
+    level: Level,
+    format: call(context: LogContext) TemplateString,
+    handler
+) Logger {
+    let context = LogContext{level, "", ""}
+    let rendered_format = format(context)
+
+    let handle = fn(self: Logger, message: str) {
+        context.time = times.format(times.now(), "YYYY-MM-DD HH:mm:ss")
+        context.message = message
+        handler.handle(self.format.eval())
+    }
+
+    Logger{level, rendered_format, handle}
+}

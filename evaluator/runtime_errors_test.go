@@ -14,7 +14,7 @@ func TestRuntimeFaultsProduceSpecificErrorStructs(t *testing.T) {
 		want  string
 	}{
 		{name: "type", input: `1 + True`, want: "TypeError"},
-		{name: "value", input: `range(0, 1000001)`, want: "ValueError"},
+		{name: "value", input: coreImport + `core.range(0, 1000001)`, want: "ValueError"},
 		{name: "zero division", input: `1 / 0`, want: "ZeroDivisionError"},
 		{name: "name", input: `missing`, want: "NameError"},
 		{name: "attribute", input: `struct Point { x: int }

@@ -38,6 +38,9 @@ func (p *Parser) validateTaskStatements(statements []ast.Statement, bindings map
 			p.validateTaskExpression(node.Value, bindings)
 		case *ast.ReturnStatement:
 			p.validateTaskExpression(node.ReturnValue, bindings)
+		case *ast.AssertStatement:
+			p.validateTaskExpression(node.Condition, bindings)
+			p.validateTaskExpression(node.Message, bindings)
 		case *ast.DeferStatement:
 			p.validateTaskExpression(node.Call, bindings)
 		case *ast.ForStatement:
@@ -131,6 +134,11 @@ func (p *Parser) validateTaskExpression(expression ast.Expression, bindings map[
 			delete(functionBindings, parameter.Value)
 		}
 		p.validateTaskStatements(node.Body.Statements, functionBindings)
+	case *ast.TemplateStringLiteral:
+		templateBindings := cloneTaskBindings(bindings)
+		for _, part := range node.Parts {
+			p.validateTaskExpression(part.Expression, templateBindings)
+		}
 	case *ast.CallExpression:
 		p.validateTaskExpression(node.Function, bindings)
 		for _, argument := range node.Arguments {

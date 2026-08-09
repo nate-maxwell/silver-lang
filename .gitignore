@@ -19,6 +19,8 @@ profile.cov
 
 # Silver parsed-AST caches
 *.astc
+# Embedded standard-library caches are build inputs and are committed.
+!stdlib/silver/**/*.astc
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
@@ -26,6 +28,9 @@ profile.cov
 # Go workspace file
 go.work
 go.work.sum
+
+# Python
+venv/
 
 # env file
 .env
@@ -36,3 +41,7 @@ go.work.sum
 
 # Developer
 examples/
+dev/
+
+# JetBrains plugin build output
+tools/

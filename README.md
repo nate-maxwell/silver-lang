@@ -47,18 +47,26 @@ apply(double, 21) # 42
 Silver functions can destructure structs by parameter name. Here, `move` declares three float parameters, but receives one `Location`:
 
 ```silver
-struct Location {
+let print = import("io").print
+
+struct MovableLocation {
     x: float
     y: float
     z: float
+    move: call(self: MovableLocation)
 }
 
-let move = fn(x: float, y: float, z: float) Location {
-    return Location{ x + 5.0, y + 5.0, z + 5.0 }
+let move = fn(self: MovableLocation) {
+    self.x = self.x + 5
+    self.y = self.y + 5
+    self.z = self.z + 5
 }
 
-let location = Location{ 0.0, 0.0, 0.0 }
-location = move(location) # the actor moves diagonally by 5 units
+let location = MovableLocation{0.0, 0.0, 0.0, move}
+location.move()
+print(location.x, location.y, location.z)
+
+>> 5.0 5.0 5.0
 ```
 
 `Location` is not a `float`, so it cannot bind directly to `x`. Silver instead offers its fields to the function's

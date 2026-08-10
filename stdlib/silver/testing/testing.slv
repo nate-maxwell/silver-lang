@@ -1,19 +1,12 @@
 # A small stateful test runner implemented entirely in Silver.
 
-# Declare capabilities instead of retaining concrete modules. Passing the io
-# and array modules into this function injects their matching exports by name.
-struct Dependencies {
-    print: call
-    append: call
-}
-
-let _inject = fn(print: call, append: call) Dependencies {
-    Dependencies{print, append}
-}
-
-let _dependencies = _inject(import("io"), import("array"))
-let _print = _dependencies.print
-let _append = _dependencies.append
+# Select the dependencies explicitly. In particular, retaining the io module
+# keeps additions such as stdin, stdout, and stderr from changing how the test
+# runner binds its output function.
+let _io = import("io")
+let _arrays = import("array")
+let _print = _io.print
+let _append = _arrays.append
 
 struct Result {
     name: str

@@ -130,6 +130,40 @@ t.run("top level", fn() {})
 	}
 }
 
+func TestSilverTestingModuleCoexistsWithStandardStreams(t *testing.T) {
+	p := parser.New(lexer.New(`
+let t = import("testing")
+let io = import("io")
+
+t.run("standard streams", fn() {
+    t.equal(io.stdin.read(), "input", "stdin should remain available")
+    io.stdout.write("program stdout\n")
+    io.stderr.write("program stderr\n")
+})
+t.report()
+`))
+	program := p.ParseProgram()
+	if len(p.Errors()) != 0 {
+		t.Fatalf("parser errors: %v", p.Errors())
+	}
+
+	var stdout, stderr bytes.Buffer
+	result := evaluator.NewWithStreams(strings.NewReader("input"), &stdout, &stderr).Eval(program, object.NewEnvironment())
+	if failure, ok := result.(*object.Error); ok {
+		t.Fatalf("evaluation failed:\n%s", failure.Inspect())
+	}
+	testBooleanObject(t, result, true)
+
+	for _, line := range []string{"program stdout", "PASS standard streams", "1 tests: 1 passed, 0 failed"} {
+		if !strings.Contains(stdout.String(), line) {
+			t.Fatalf("stdout does not contain %q:\n%s", line, stdout.String())
+		}
+	}
+	if got, want := stderr.String(), "program stderr\n"; got != want {
+		t.Fatalf("stderr is %q, want %q", got, want)
+	}
+}
+
 func evalTesting(t *testing.T, input string) (object.Object, string) {
 	t.Helper()
 	p := parser.New(lexer.New(input))
@@ -137,12 +171,15 @@ func evalTesting(t *testing.T, input string) (object.Object, string) {
 	if len(p.Errors()) != 0 {
 		t.Fatalf("parser errors: %v", p.Errors())
 	}
-	var output bytes.Buffer
-	result := evaluator.NewWithOutput(&output).Eval(program, object.NewEnvironment())
+	var stdout, stderr bytes.Buffer
+	result := evaluator.NewWithStreams(strings.NewReader(""), &stdout, &stderr).Eval(program, object.NewEnvironment())
 	if failure, ok := result.(*object.Error); ok {
 		t.Fatalf("evaluation failed:\n%s", failure.Inspect())
 	}
-	return result, output.String()
+	if stderr.Len() != 0 {
+		t.Fatalf("evaluation wrote to stderr:\n%s", stderr.String())
+	}
+	return result, stdout.String()
 }
 
 func assertStructInteger(t *testing.T, instance *object.StructInstance, field string, want int64) {

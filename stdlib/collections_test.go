@@ -86,13 +86,13 @@ func TestStackOperationsAreMethods(t *testing.T) {
 	}
 }
 
-func TestDefaultDictCreatesAndStoresMissingValues(t *testing.T) {
+func TestDefaultMapCreatesAndStoresMissingValues(t *testing.T) {
 	result := testEval(collectionsImport + `let calls = {"count": 0}
 let make_list = fn() array {
     calls["count"] = calls["count"] + 1
     return []
 }
-let grouped = collections.defaultdict(make_list, {"known": [1]})
+let grouped = collections.defaultmap(make_list, {"known": [1]})
 let first = grouped["missing"]
 let second = grouped["missing"]
 [grouped["known"], first == second, calls["count"], grouped.values]`)
@@ -102,12 +102,12 @@ let second = grouped["missing"]
 	}
 }
 
-func TestDefaultDictSetAndNominalType(t *testing.T) {
+func TestDefaultMapSetAndNominalType(t *testing.T) {
 	result := testEval(collectionsImport + `let core = import("core")
 let make_count = fn() int { 0 }
-let counts = collections.defaultdict(make_count)
+let counts = collections.defaultmap(make_count)
 counts["silver"] = counts["silver"] + 1
-[counts["silver"], core.type(counts) == collections.DefaultDict]`)
+[counts["silver"], core.type(counts) == collections.DefaultMap]`)
 
 	if got, want := result.Inspect(), `[1, true]`; got != want {
 		t.Fatalf("result is %q, want %q", got, want)
@@ -121,7 +121,7 @@ func TestCollectionErrors(t *testing.T) {
 	}{
 		{input: `collections.stack().pop()`, message: "pop from an empty collection"},
 		{input: `collections.stack().peek()`, message: "peek from an empty stack"},
-		{input: `collections.defaultdict(0)`, message: "default factory must be a Silver function, got INTEGER"},
+		{input: `collections.defaultmap(0)`, message: "default factory must be a Silver function, got INTEGER"},
 		{input: `collections.rotate([], "one")`, message: "rotation argument to `rotate` must be INTEGER, got STRING"},
 	}
 

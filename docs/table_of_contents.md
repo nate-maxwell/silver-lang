@@ -10,7 +10,7 @@
 
 - [`args`](stdlib/args.md) — command-line argument parsing.
 - [`array`](stdlib/array.md) — non-mutating array transformations and queries.
-- [`collections`](stdlib/collections.md) — mutable deques, stacks, and default dictionaries.
+- [`collections`](stdlib/collections.md) — mutable deques, stacks, and default maps.
 - [`core`](stdlib/core.md) — length, ranges, and first-class type inspection.
 - [`io`](stdlib/io.md) — printing, process streams, and files.
 - [`json`](stdlib/json.md) — JSON encoding and decoding.

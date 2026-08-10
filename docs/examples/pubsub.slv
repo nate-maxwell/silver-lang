@@ -2,17 +2,14 @@
 # namespace, and each value is an array of functions listening to that event.
 
 let arrays = import("array")
+let collections = import("collections")
 let core = import("core")
-let maps = import("map")
 let io = import("io")
 
-let subscriptions: map = {}
+let new_listener_list = fn() array { [] }
+let subscriptions = collections.defaultmap(new_listener_list)
 
 let subscribe = fn(namespace: str, listener: call) {
-    if !maps.contains(subscriptions, namespace) {
-        subscriptions[namespace] = []
-    }
-
     subscriptions[namespace] = arrays.append(
         subscriptions[namespace],
         listener
@@ -20,10 +17,6 @@ let subscribe = fn(namespace: str, listener: call) {
 }
 
 let publish = fn(namespace: str, message) {
-    if !maps.contains(subscriptions, namespace) {
-        return
-    }
-
     for listener in subscriptions[namespace] {
         listener(message)
     }

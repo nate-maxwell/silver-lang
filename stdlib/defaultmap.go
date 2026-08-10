@@ -7,12 +7,12 @@ import (
 	"silver/parser"
 )
 
-// DefaultDict is a standard-library-owned map-like struct. Its get_item method
+// DefaultMap is a standard-library-owned map-like struct. Its get_item method
 // is a Silver closure so it can invoke a user-supplied Silver factory.
-func newDefaultDictStructDefinition() *object.Struct {
+func newDefaultMapStructDefinition() *object.Struct {
 	environment := object.NewEnvironment()
 	definition := &object.Struct{
-		Name: "DefaultDict",
+		Name: "DefaultMap",
 		Fields: []string{
 			"values",
 			"factory",
@@ -23,14 +23,14 @@ func newDefaultDictStructDefinition() *object.Struct {
 		},
 		Env: environment,
 	}
-	environment.Set("DefaultDict", definition)
+	environment.Set("DefaultMap", definition)
 	return definition
 }
 
-// newDefaultDict accepts a zero-argument Silver factory and an optional
-// initial map. Missing values are created by DefaultDict.get and retained in
-// the ordinary map exposed by DefaultDict.values.
-func newDefaultDict(definition *object.Struct, null *object.Null) object.BuiltinFunction {
+// newDefaultMap accepts a zero-argument Silver factory and an optional
+// initial map. Missing values are created by DefaultMap.get and retained in
+// the ordinary map exposed by DefaultMap.values.
+func newDefaultMap(definition *object.Struct, null *object.Null) object.BuiltinFunction {
 	return func(args ...object.Object) object.Object {
 		if len(args) < 1 || len(args) > 2 {
 			return newError(object.RuntimeErrorKindType, "wrong number of arguments. got=%d, want=1 or 2", len(args))
@@ -43,7 +43,7 @@ func newDefaultDict(definition *object.Struct, null *object.Null) object.Builtin
 
 		pairs := make(map[object.HashKey]object.MapPair)
 		if len(args) == 2 {
-			initial, err := requireMap("defaultdict", args[1])
+			initial, err := requireMap("defaultmap", args[1])
 			if err != nil {
 				return err
 			}
@@ -58,10 +58,10 @@ func newDefaultDict(definition *object.Struct, null *object.Null) object.Builtin
 		instance := &object.StructInstance{Struct: definition, Values: values}
 		getter := &object.Function{
 			Name:       "get_item",
-			Parameters: defaultDictGetTemplate.Parameters,
+			Parameters: defaultMapGetTemplate.Parameters,
 			ReturnType: returnType,
 			ErrorTypes: errorTypes,
-			Body:       defaultDictGetTemplate.Body,
+			Body:       defaultMapGetTemplate.Body,
 			Env:        factoryEnvironment,
 		}
 		values["get_item"] = &object.BoundMethod{Method: getter, Receiver: instance, Name: "get_item"}
@@ -91,9 +91,9 @@ func defaultFactoryResult(factory object.Object) (*ast.TypeAnnotation, []*ast.Ty
 	}
 }
 
-var defaultDictGetTemplate = parseDefaultDictGetTemplate()
+var defaultMapGetTemplate = parseDefaultMapGetTemplate()
 
-func parseDefaultDictGetTemplate() *ast.FunctionLiteral {
+func parseDefaultMapGetTemplate() *ast.FunctionLiteral {
 	const source = `fn(self, key) int {
 	let maps = import("map")
 	if maps.contains(self.values, key) {
@@ -103,18 +103,18 @@ func parseDefaultDictGetTemplate() *ast.FunctionLiteral {
 	self.values[key] = value
 	return value
 }`
-	p := parser.New(lexer.NewWithSource(source, "<stdlib collections.DefaultDict.get_item>"))
+	p := parser.New(lexer.NewWithSource(source, "<stdlib collections.DefaultMap.get_item>"))
 	program := p.ParseProgram()
 	if len(p.Errors()) != 0 || len(program.Statements) != 1 {
-		panic("stdlib: invalid DefaultDict.get_item implementation")
+		panic("stdlib: invalid DefaultMap.get_item implementation")
 	}
 	statement, ok := program.Statements[0].(*ast.ExpressionStatement)
 	if !ok {
-		panic("stdlib: DefaultDict.get_item is not an expression")
+		panic("stdlib: DefaultMap.get_item is not an expression")
 	}
 	function, ok := statement.Expression.(*ast.FunctionLiteral)
 	if !ok {
-		panic("stdlib: DefaultDict.get_item is not a function")
+		panic("stdlib: DefaultMap.get_item is not a function")
 	}
 	return function
 }

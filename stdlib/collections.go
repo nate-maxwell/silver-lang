@@ -8,15 +8,15 @@ import (
 // collectionDefinitions provides mutable deque and stack operations over
 // arrays.
 func collectionDefinitions(null *object.Null) []definition {
-	defaultDictType := newDefaultDictStructDefinition()
+	defaultMapType := newDefaultMapStructDefinition()
 	dequeType := newSequenceStructDefinition("Deque")
 	stackType := newSequenceStructDefinition("Stack")
 	return []definition{
-		{name: "DefaultDict", value: defaultDictType},
+		{name: "DefaultMap", value: defaultMapType},
 		{name: "Deque", value: dequeType},
 		{name: "Stack", value: stackType},
 		{name: "deque", fn: newSequence("deque", dequeType, null)},
-		{name: "defaultdict", fn: newDefaultDict(defaultDictType, null)},
+		{name: "defaultmap", fn: newDefaultMap(defaultMapType, null)},
 		{name: "stack", fn: newSequence("stack", stackType, null)},
 		{name: "clear", fn: collectionClear(null)},
 		{name: "copy", fn: collectionCopy(null)},

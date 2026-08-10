@@ -1,6 +1,6 @@
 # `collections`
 
-`collections` adds mutable sequence helpers, deques, stacks, and a default dictionary. Most module-level operations
+`collections` adds mutable sequence helpers, deques, stacks, and a default map. Most module-level operations
 accept a native array, `Deque`, or `Stack` and mutate the collection in place.
 
 ```silver
@@ -24,15 +24,15 @@ stack.pop() # "second"
   `pop`; bracket reads and writes are supported.
 - `stack(initial?)` / `Stack`: Mutable stack copied from an optional array. Its methods are `push`, `peek`, and `pop`;
   bracket reads and writes are supported.
-- `defaultdict(factory, initial?)` / `DefaultDict`: Map-like value that uses a zero-argument Silver function to create
+- `defaultmap(factory, initial?)` / `DefaultMap`: Map-like value that uses a zero-argument Silver function to create
   and retain missing values. The optional initial value is a map.
 
-The backing array is available as `.values`. A default dictionary also exposes `.factory`; `dictionary[key]` creates a
-missing value and `dictionary[key] = value` stores one.
+The backing map is available as `.values`. A default map also exposes `.factory`; `mapping[key]` creates a
+missing value and `mapping[key] = value` stores one.
 
 ```silver
 let make_zero = fn() int { 0 }
-let counts = collections.defaultdict(make_zero)
+let counts = collections.defaultmap(make_zero)
 counts["silver"] = counts["silver"] + 1
 ```
 

@@ -1,7 +1,7 @@
 # `collections`
 
-`collections` adds mutable sequence helpers, deques, stacks, and a default map. Most module-level operations
-accept a native array, `Deque`, or `Stack` and mutate the collection in place.
+`collections` provides three mutable structures: `Deque`, `Stack`, and `DefaultMap`. Their supported methods and
+module-level operations differ as described below.
 
 ```silver
 let collections = import("collections")
@@ -24,8 +24,21 @@ stack.pop() # "second"
   `pop`; bracket reads and writes are supported.
 - `stack(initial?)` / `Stack`: Mutable stack copied from an optional array. Its methods are `push`, `peek`, and `pop`;
   bracket reads and writes are supported.
-- `defaultmap(factory, initial?)` / `DefaultMap`: Map-like value that uses a zero-argument Silver function to create
+- `defaultmap(factory, initial?)` / `DefaultMap`: Map-like value that uses a zero-argument function to create
   and retain missing values. The optional initial value is a map.
+
+The `?` after a parameter name means that argument is optional; it is documentation notation, not Silver syntax.
+
+### Supported behavior
+
+| Behavior                                  | `Deque` | `Stack` | `DefaultMap` |
+| ----------------------------------------- | :-----: | :-----: | :----------: |
+| Bracket reads and writes                  |   Yes   |   Yes   |     Yes      |
+| `append`, `appendleft` methods            |   Yes   |   No    |      No      |
+| `push`, `peek` methods                    |   No    |   Yes   |      No      |
+| `pop` method                              |   Yes   |   Yes   |      No      |
+| Missing-key creation through `.factory`   |   No    |   No    |     Yes      |
+| Functions in **Mutable operations** below |   Yes   |   Yes   |      No      |
 
 The backing map is available as `.values`. A default map also exposes `.factory`; `mapping[key]` creates a
 missing value and `mapping[key] = value` stores one.
@@ -37,6 +50,9 @@ counts["silver"] = counts["silver"] + 1
 ```
 
 ## Mutable operations
+
+Every function in this section accepts `Deque` and `Stack`. None accepts `DefaultMap`. For `extend` and `extendleft`,
+both `collection` and `other` may be a `Deque` or `Stack`.
 
 | Export                             | Description                                                        |
 | ---------------------------------- | ------------------------------------------------------------------ |

@@ -24,25 +24,29 @@ let last = queue.pop()                  # "package"
 
 ### Methods and indexing
 
-- `append(value)`: Add a value to the right end.
-- `appendleft(value)`: Add a value to the left end.
-- `pop()`: Remove and return the value at the right end. Raises `IndexError` when empty.
-- `deque[index]`: Read a value by zero-based index. Raises `IndexError` when out of range.
-- `deque[index] = value`: Replace a value by zero-based index. Raises `IndexError` when out of range.
+| Method or operation       | Description                                                                            |
+| ------------------------- | -------------------------------------------------------------------------------------- |
+| `append(value)`           | Add a value to the right end.                                                          |
+| `appendleft(value)`       | Add a value to the left end.                                                           |
+| `pop()`                   | Remove and return the value at the right end. Raises `IndexError` when empty.          |
+| `deque[index]`            | Read a value by zero-based index. Raises `IndexError` when out of range.               |
+| `deque[index] = value`    | Replace a value by zero-based index. Raises `IndexError` when out of range.            |
 
 ### Functions
 
-- `clear(deque)`: Remove all values.
-- `copy(deque)`: Return a shallow `Deque` copy.
-- `count(deque, value)`: Return the number of matching values.
-- `extend(deque, other)`: Append all values from another `Deque` or `Stack`.
-- `extendleft(deque, other)`: Prepend all values from another `Deque` or `Stack` in reverse order.
-- `index(deque, value)`: Return the first matching index. Raises `ValueError` when absent.
-- `insert(deque, index, value)`: Insert at an index, normalizing negative indexes and clamping at either end.
-- `popleft(deque)`: Remove and return the value at the left end. Raises `IndexError` when empty.
-- `remove(deque, value)`: Remove the first matching value. Raises `ValueError` when absent.
-- `reverse(deque)`: Reverse the values in place.
-- `rotate(deque, amount)`: Rotate right by `amount`; a negative amount rotates left.
+| Function                      | Description                                                                                |
+| ----------------------------- | ------------------------------------------------------------------------------------------ |
+| `clear(deque)`                | Remove all values.                                                                         |
+| `copy(deque)`                 | Return a shallow `Deque` copy.                                                              |
+| `count(deque, value)`         | Return the number of matching values.                                                       |
+| `extend(deque, other)`        | Append all values from another `Deque` or `Stack`.                                          |
+| `extendleft(deque, other)`    | Prepend all values from another `Deque` or `Stack` in reverse order.                        |
+| `index(deque, value)`         | Return the first matching index. Raises `ValueError` when absent.                           |
+| `insert(deque, index, value)` | Insert at an index, normalizing negative indexes and clamping at either end.                |
+| `popleft(deque)`              | Remove and return the value at the left end. Raises `IndexError` when empty.                |
+| `remove(deque, value)`        | Remove the first matching value. Raises `ValueError` when absent.                           |
+| `reverse(deque)`              | Reverse the values in place.                                                                |
+| `rotate(deque, amount)`       | Rotate right by `amount`; a negative amount rotates left.                                  |
 
 Functions that mutate the deque return null.
 
@@ -64,25 +68,29 @@ let previous = history.pop() # "edit"
 
 ### Methods and indexing
 
-- `push(value)`: Add a value to the top.
-- `peek()`: Return the top value without removing it. Raises `IndexError` when empty.
-- `pop()`: Remove and return the top value. Raises `IndexError` when empty.
-- `stack[index]`: Read a value by zero-based index. Raises `IndexError` when out of range.
-- `stack[index] = value`: Replace a value by zero-based index. Raises `IndexError` when out of range.
+| Method or operation      | Description                                                                         |
+| ------------------------ | ----------------------------------------------------------------------------------- |
+| `push(value)`            | Add a value to the top.                                                             |
+| `peek()`                 | Return the top value without removing it. Raises `IndexError` when empty.           |
+| `pop()`                  | Remove and return the top value. Raises `IndexError` when empty.                    |
+| `stack[index]`           | Read a value by zero-based index. Raises `IndexError` when out of range.            |
+| `stack[index] = value`   | Replace a value by zero-based index. Raises `IndexError` when out of range.         |
 
 ### Functions
 
-- `clear(stack)`: Remove all values.
-- `copy(stack)`: Return a shallow `Stack` copy.
-- `count(stack, value)`: Return the number of matching values.
-- `extend(stack, other)`: Add all values from another `Deque` or `Stack` to the top in iteration order.
-- `extendleft(stack, other)`: Prepend all values from another `Deque` or `Stack` in reverse order.
-- `index(stack, value)`: Return the first matching index. Raises `ValueError` when absent.
-- `insert(stack, index, value)`: Insert at an index, normalizing negative indexes and clamping at either end.
-- `popleft(stack)`: Remove and return the bottom value. Raises `IndexError` when empty.
-- `remove(stack, value)`: Remove the first matching value. Raises `ValueError` when absent.
-- `reverse(stack)`: Reverse the values in place.
-- `rotate(stack, amount)`: Rotate right by `amount`; a negative amount rotates left.
+| Function                      | Description                                                                                         |
+| ----------------------------- | --------------------------------------------------------------------------------------------------- |
+| `clear(stack)`                | Remove all values.                                                                                  |
+| `copy(stack)`                 | Return a shallow `Stack` copy.                                                                      |
+| `count(stack, value)`         | Return the number of matching values.                                                               |
+| `extend(stack, other)`        | Add all values from another `Deque` or `Stack` to the top in iteration order.                       |
+| `extendleft(stack, other)`    | Prepend all values from another `Deque` or `Stack` in reverse order.                                |
+| `index(stack, value)`         | Return the first matching index. Raises `ValueError` when absent.                                   |
+| `insert(stack, index, value)` | Insert at an index, normalizing negative indexes and clamping at either end.                        |
+| `popleft(stack)`              | Remove and return the bottom value. Raises `IndexError` when empty.                                 |
+| `remove(stack, value)`        | Remove the first matching value. Raises `ValueError` when absent.                                   |
+| `reverse(stack)`              | Reverse the values in place.                                                                        |
+| `rotate(stack, amount)`       | Rotate right by `amount`; a negative amount rotates left.                                          |
 
 Functions that mutate the stack return null. Prefer `push`, `peek`, and `pop` when ordinary stack behavior is sufficient.
 
@@ -104,10 +112,12 @@ counts["silver"] = counts["silver"] + 1
 
 ### Operations and fields
 
-- `mapping[key]`: Return the stored value. For a missing key, call `.factory`, store its result, and return it.
-- `mapping[key] = value`: Store or replace a value.
-- `mapping.values`: Access the backing map containing all stored pairs.
-- `mapping.factory`: Access the zero-argument function used to create missing values.
+| Operation or property    | Description                                                                                         |
+| ------------------------ | --------------------------------------------------------------------------------------------------- |
+| `mapping[key]`           | Return the stored value. For a missing key, call `.factory`, store its result, and return it.       |
+| `mapping[key] = value`   | Store or replace a value.                                                                           |
+| `mapping.values`         | Access the backing map containing all stored pairs.                                                  |
+| `mapping.factory`        | Access the zero-argument function used to create missing values.                                     |
 
 `DefaultMap` has no collection methods. The module functions listed for `Deque` and `Stack` do not accept a
 `DefaultMap`.

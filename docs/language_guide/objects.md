@@ -39,7 +39,7 @@ Struct types are nominal. Two declarations with identical field names are still 
 ## Object destructuring
 
 Functions bind ordinary positional arguments first. When an argument does not satisfy the parameter at its position and
-the argument is a struct or module, Silver offers its named fields or exports to the remaining unbound parameters.
+the argument is a struct or module, Silver offers its named fields or members to the remaining unbound parameters.
 
 ```silver
 struct Location {
@@ -92,7 +92,7 @@ It can also combine several objects. Extra fields are ignored; missing parameter
 field with the right name but wrong type produces a type error for that parameter.
 
 Modules implement the same named-value interface. Passing `import("io")` to a function with a `print` parameter injects
-the module export:
+the matching module member:
 
 ```silver
 let announce = fn(print: call) {
@@ -229,23 +229,10 @@ let direction: Direction = Direction.North
 Members may be separated by commas or newlines, and a trailing comma is accepted. Access members through the enum
 namespace. Values compare by identity, carry the enum's nominal type, and can be used as map keys.
 
-## Modules as objects
+## Modules
 
-An imported module is a namespace object whose members are its top-level bindings:
-
-```silver
-let strings = import("string")
-strings.upper("Silver")
-```
-
-Modules are cached, so their top-level state is shared by every import within one interpreter session. Member assignment
-is limited to struct fields; importers cannot replace module exports through member syntax.
-
-Use a qualified annotation to refer to a nominal type exported by a module:
-
-```silver
-let paths = import("path")
-let current: paths.Path = paths.cwd()
-```
+Module namespaces, member access, qualified types, caching, and shared state are covered in
+[Modules and imports](modules.md). Modules participate in the destructuring rules described above but do not support
+member assignment.
 
 [Documentation index](../table_of_contents.md)

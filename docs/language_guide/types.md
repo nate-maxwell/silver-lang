@@ -55,7 +55,7 @@ Strings support concatenation with `+`, equality, and lexical ordering compariso
 [`string`](../stdlib/string.md) module provides Unicode-aware operations; note that `core.len(string)` counts UTF-8
 bytes rather than code points.
 
-Triple-backtick [template strings](language_guide.md#template-strings) are separate `TemplateString` values and become
+Triple-backtick [template strings](template_strings.md) are separate `TemplateString` values and become
 ordinary strings only after `.eval()`.
 
 ## Arrays
@@ -121,7 +121,7 @@ let age: int = 36
 # age = "unknown" # TypeError
 ```
 
-Annotations can name primitive types, structs, enums, built-in nominal types, or qualified definitions exported by
+Annotations can name primitive types, structs, enums, built-in nominal types, or qualified definitions belonging to
 modules:
 
 ```silver
@@ -131,111 +131,10 @@ let working_directory: paths.Path = paths.cwd()
 
 An unknown type name raises `NameError` when the contract is resolved.
 
-## Function parameters and returns
+## Functions and errors
 
-Annotate parameters after their names and put the return type after `)`:
-
-```silver
-let distance = fn(x: float, y: float) float {
-    import("math").sqrt(x * x + y * y)
-}
-```
-
-Arguments are checked as they bind to parameters. Structs and modules may instead undergo named
-[object destructuring](objects.md) when they do not satisfy the current parameter.
-
-An annotated function returns its final expression implicitly or an explicit `return` value. Silver checks the result
-against the declared return type. A function without a return annotation always returns null, regardless of a body
-value:
-
-```silver
-let side_effect = fn() {
-    42
-}
-
-# side_effect() produces null.
-```
-
-Use `fn() null` when an explicit null return contract is useful.
-
-## Callable types
-
-Bare `call` accepts any Silver function or native callable:
-
-```silver
-let callback: call = fn(value: int) int { value }
-```
-
-A detailed callable annotation constrains its parameters, result, and declared errors:
-
-```silver
-let apply = fn(operation: call(int) int, value: int) int {
-    operation(value)
-}
-```
-
-Parameter types may be unnamed, as in `call(int) int`, or named:
-
-```text
-call(value: int) int
-```
-
-When names are present, both names and types must match the supplied callable. This named form is what lets a callable
-struct field declare and bind a [method receiver](objects.md).
-
-Callable return contracts are useful for higher-order functions:
-
-```silver
-let make_adder = fn(amount: int) call(int) int {
-    fn(value: int) int { value + amount }
-}
-```
-
-## Typed error contracts
-
-Any struct type can be an expected error alternative. List alternatives after a function's successful return type:
-
-```silver
-struct NotFound { message: str, path: str }
-struct PermissionProblem { message: str }
-
-let read = fn(path: str) str | NotFound | PermissionProblem {
-    NotFound{"file does not exist", path}
-}
-```
-
-Producing a declared error struct unwinds the function instead of returning it as an ordinary success value. The caller
-can handle it with [`try`/`catch`](control_flow.md#try-and-catch).
-
-If success is null, omit the success type and begin with `|`:
-
-```silver
-let save = fn() | PermissionProblem {
-    return
-}
-```
-
-An error that escapes a function must be listed in that function's own contract. Error alternatives must resolve to
-struct definitions. A callable value with fewer possible errors satisfies a callable contract that permits more; a
-callable that may produce an undeclared error does not.
-
-Silver's interpreter failures are built-in error structs with `message: str`:
-
-- `RuntimeError`
-- `AssertionError`
-- `TypeError`
-- `ValueError`
-- `ZeroDivisionError`
-- `NameError`
-- `AttributeError`
-- `ImportError`
-- `SyntaxError`
-- `KeyError`
-- `IndexError`
-- `TaskError`
-
-I/O and networking add types such as `IOError`, `FileNotFound`, `PermissionDenied`, `ConnectionError`, `ListenError`,
-`ReadError`, and `WriteError`.
+Parameter, return, and detailed `call(...)` contracts are covered in [Functions](functions.md). Error alternatives and
+the nominal structs used by `try`/`catch` are covered in [Errors and diagnostics](errors.md).
 
 ## Nominal types
 

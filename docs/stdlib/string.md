@@ -13,19 +13,21 @@ strings.join(["one", "two", "three"], ", ") # "one, two, three"
 
 ## Transformations
 
-- `capitalize(value)`: Uppercase the first rune and lowercase the rest.
-- `lower(value)` / `upper(value)`: Apply Unicode case conversion.
-- `swapcase(value)` / `title(value)`: Swap letter case or title-case words.
-- `strip(value)` / `lstrip(value)` / `rstrip(value)`: Remove Unicode whitespace.
-- `removeprefix(value, prefix)` / `removesuffix(value, suffix)`: Remove one matching affix.
-- `replace(value, old, new)`: Replace all occurrences.
-- `repeat(value, count)`: Repeat a nonnegative number of times, up to a 1,000,000-byte result.
-- `reverse(value)`: Reverse by Unicode code point.
+| Function                                                        | Description                                                                  |
+| --------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `capitalize(value)`                                             | Uppercase the first rune and lowercase the rest.                             |
+| `lower(value)` / `upper(value)`                                 | Apply Unicode case conversion.                                               |
+| `swapcase(value)` / `title(value)`                              | Swap letter case or title-case words.                                        |
+| `strip(value)` / `lstrip(value)` / `rstrip(value)`              | Remove Unicode whitespace.                                                   |
+| `removeprefix(value, prefix)` / `removesuffix(value, suffix)`   | Remove one matching affix.                                                   |
+| `replace(value, old, new)`                                      | Replace all occurrences.                                                     |
+| `repeat(value, count)`                                          | Repeat a nonnegative number of times, up to a 1,000,000-byte result.         |
+| `reverse(value)`                                                | Reverse by Unicode code point.                                               |
 
 ## Splitting and composition
 
-| Export                    | Description                                                   |
-| ------------------------- | ------------------------------------------------------------- |
+| Function                  | Description                                                   |
+|---------------------------| ------------------------------------------------------------- |
 | `chars(value)`            | Array of Unicode code-point strings.                          |
 | `fields(value)`           | Split around runs of Unicode whitespace.                      |
 | `split(value, separator)` | Split on a nonempty separator.                                |
@@ -34,7 +36,7 @@ strings.join(["one", "two", "three"], ", ") # "one, two, three"
 
 ## Search and comparison
 
-| Export                                                  | Description                               |
+| Function                                                  | Description                               |
 | ------------------------------------------------------- | ----------------------------------------- |
 | `compare(left, right)`                                  | `-1`, `0`, or `1` in lexical order.       |
 | `contains(value, substring)`                            | Whether a substring occurs.               |

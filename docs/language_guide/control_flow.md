@@ -79,76 +79,13 @@ while count > 0 {
 }
 ```
 
-Silver currently has no `break` or `continue` statement. A `return` inside a function can leave a loop and the
-surrounding function.
+Silver currently has no `break` or `continue` statement. A [`return`](functions.md#return-behavior) inside a function can
+leave a loop and the surrounding function.
 
-## Return behavior
+## Returns and errors
 
-`return expression` immediately leaves the current function. `return` by itself produces null:
-
-```silver
-let find_positive = fn(values: array) int {
-    for value in values {
-        if value > 0 {
-            return value
-        }
-    }
-    return 0
-}
-```
-
-An annotated function also returns its final expression implicitly. An unannotated function always produces null; any
-explicit return expression is evaluated but its value is discarded at the function boundary.
-
-## Assertions
-
-`assert` raises the built-in `AssertionError` when its condition is falsey:
-
-```silver
-assert amount >= 0
-assert amount <= balance, "amount exceeds balance"
-```
-
-The optional expression after the comma supplies the error's `message`. Assertions are ordinary catchable runtime
-errors, which lets the [`testing`](../stdlib/testing.md) module record failed checks without terminating the entire test
-run.
-
-## `try` and `catch`
-
-`try` is a value-producing expression followed by one or more typed handlers:
-
-```silver
-struct NotFound { message: str }
-struct Denied { message: str }
-
-let read = fn(path: str) str | NotFound | Denied {
-    NotFound{"missing: " + path}
-}
-
-let contents = try {
-    read("settings.json")
-} catch NotFound err {
-    "{}"
-} catch Denied err {
-    "access denied: " + err.message
-}
-```
-
-Catch clauses are tested in source order and match by exact nominal struct type. The declared binding receives the
-caught struct, including all its fields. An unmatched error continues to an enclosing `try` or escapes the current
-function.
-
-Built-in runtime failures use this same mechanism:
-
-```silver
-let message = try {
-    1 + True
-} catch TypeError err {
-    err.message
-}
-```
-
-See [Typed error contracts](types.md#typed-error-contracts) for declaring the errors a function may propagate.
+Function return behavior is documented in [Functions](functions.md#return-behavior). Typed propagation, `try`/`catch`,
+and assertions are documented in [Errors and diagnostics](errors.md).
 
 ## Deferred calls
 

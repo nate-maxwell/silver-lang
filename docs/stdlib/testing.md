@@ -23,7 +23,7 @@ testing.report()
 
 All assertion helpers require a message and raise the built-in `AssertionError` on failure:
 
-| Export                                 | Description                   |
+| Function                               | Description                   |
 | -------------------------------------- | ----------------------------- |
 | `fail(message)`                        | Fail unconditionally.         |
 | `check(condition, message)`            | Require a truthy condition.   |
@@ -34,16 +34,32 @@ All assertion helpers require a message and raise the built-in `AssertionError` 
 
 ## Running and reporting
 
-- `run(name, test: call())`: Run one zero-argument test, record `AssertionError`, and continue. Unexpected errors
-  propagate.
-- `suite(name, tests: call())`: Prefix contained test names; suites may nest.
-- `results() array`: Return recorded `Result` values in execution order.
-- `summary() Summary`: Return current total, passed, and failed counts.
-- `report() bool`: Print totals and failure details; return whether all tests passed.
-- `reset()`: Clear results, counters, and suite state.
+| Function                    | Description                                                                                     |
+| --------------------------- | ----------------------------------------------------------------------------------------------- |
+| `run(name, test: call())`   | Run one zero-argument test, record `AssertionError`, and continue. Unexpected errors propagate. |
+| `suite(name, tests: call())` | Prefix contained test names; suites may nest.                                                   |
+| `results() array`           | Return recorded `Result` values in execution order.                                             |
+| `summary() Summary`         | Return current total, passed, and failed counts.                                                 |
+| `report() bool`             | Print totals and failure details; return whether all tests passed.                               |
+| `reset()`                   | Clear results, counters, and suite state.                                                        |
 
-`Result` has `name`, `passed`, and `message`. `Summary` has `total`, `passed`, and `failed`. Module state is shared
-because standard-library imports are cached within an interpreter session; call `reset` when reusing the runner for an
-independent batch.
+## `Result`
+
+| Property  | Description                                                         |
+| --------- | ------------------------------------------------------------------- |
+| `name`    | Qualified test name, including its suite path.                      |
+| `passed`  | Whether the test completed without an assertion failure.            |
+| `message` | Assertion message for a failed test, or an empty string on success. |
+
+## `Summary`
+
+| Property | Description              |
+| -------- | ------------------------ |
+| `total`  | Number of tests run.     |
+| `passed` | Number of passing tests. |
+| `failed` | Number of failed tests.  |
+
+Module state is shared because standard-library imports are cached within an interpreter session; call `reset` when
+reusing the runner for an independent batch.
 
 [Standard library index](../table_of_contents.md#standard-library)

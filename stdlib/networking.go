@@ -1,7 +1,6 @@
 package stdlib
 
 import (
-	"fmt"
 	"io"
 	"net"
 	"silver/ast"
@@ -9,20 +8,26 @@ import (
 	"sync"
 )
 
-// networkingDefinitions contains the TCP and UDP entry points exported by
-// import("networking"). Connections themselves are ordinary Silver structs
-// whose call fields close over the native socket.
+// networkingDefinitions contains the protocol-specific native operations
+// wrapped by the Silver-authored networking module. Connections themselves
+// are ordinary Silver structs whose call fields close over the native socket.
 func networkingDefinitions(null *object.Null) []definition {
 	return []definition{
-		{name: "dial", fn: builtinDial(null), signature: callSignature(
-			[]string{"network", "address"},
-			[]*ast.TypeAnnotation{namedType("str"), namedType("str")},
+		{name: "dial_tcp", fn: builtinDialTCP(null), signature: callSignature(
+			[]string{"address"},
+			[]*ast.TypeAnnotation{namedType("str")},
+			namedType("Connection"),
+			"ConnectionError",
+		)},
+		{name: "dial_udp", fn: builtinDialUDP(null), signature: callSignature(
+			[]string{"address"},
+			[]*ast.TypeAnnotation{namedType("str")},
 			namedType("Connection"),
 			"ConnectionError",
 		)},
 		{name: "listen", fn: builtinListen(null), signature: callSignature(
-			[]string{"network", "address"},
-			[]*ast.TypeAnnotation{namedType("str"), namedType("str")},
+			[]string{"address"},
+			[]*ast.TypeAnnotation{namedType("str")},
 			namedType("Listener"),
 			"ListenError",
 		)},
@@ -49,71 +54,67 @@ type nativeListener struct {
 	null     *object.Null
 }
 
-func builtinDial(null *object.Null) object.BuiltinFunction {
+func builtinDialTCP(null *object.Null) object.BuiltinFunction {
 	return func(args ...object.Object) object.Object {
-		if err := requireArgumentCount(args, 2); err != nil {
+		if err := requireArgumentCount(args, 1); err != nil {
 			return err
 		}
-		network, err := requireString("dial", 0, args[0])
-		if err != nil {
-			return err
-		}
-		address, err := requireString("dial", 1, args[1])
+		address, err := requireString("dial_tcp", 0, args[0])
 		if err != nil {
 			return err
 		}
 
-		switch network {
-		case "tcp":
-			connection, dialErr := net.Dial("tcp", address)
-			if dialErr != nil {
-				return networkingError("ConnectionError", dialErr)
-			}
-			state := &nativeConnection{network: network, stream: connection, null: null}
-			return state.value(address)
-		case "udp":
-			remote, resolveErr := net.ResolveUDPAddr("udp", address)
-			if resolveErr != nil {
-				return networkingError("ConnectionError", resolveErr)
-			}
-			packetNetwork := udpNetworkForAddress(remote)
-			local, localErr := udpLocalAddress(packetNetwork, remote)
-			if localErr != nil {
-				return networkingError("ConnectionError", localErr)
-			}
-			connection, listenErr := net.ListenUDP(packetNetwork, local)
-			if listenErr != nil {
-				return networkingError("ConnectionError", listenErr)
-			}
-			state := &nativeConnection{
-				network:        network,
-				packet:         connection,
-				packetNetwork:  packetNetwork,
-				defaultAddress: remote,
-				null:           null,
-			}
-			return state.value(udpConnectionAddress(connection, packetNetwork))
-		default:
-			return networkingErrorMessage("ConnectionError", fmt.Sprintf("unsupported network %q: expected tcp or udp", network))
+		connection, dialErr := net.Dial("tcp", address)
+		if dialErr != nil {
+			return networkingError("ConnectionError", dialErr)
 		}
+		state := &nativeConnection{network: "tcp", stream: connection, null: null}
+		return state.value(address)
+	}
+}
+
+func builtinDialUDP(null *object.Null) object.BuiltinFunction {
+	return func(args ...object.Object) object.Object {
+		if err := requireArgumentCount(args, 1); err != nil {
+			return err
+		}
+		address, err := requireString("dial_udp", 0, args[0])
+		if err != nil {
+			return err
+		}
+
+		remote, resolveErr := net.ResolveUDPAddr("udp", address)
+		if resolveErr != nil {
+			return networkingError("ConnectionError", resolveErr)
+		}
+		packetNetwork := udpNetworkForAddress(remote)
+		local, localErr := udpLocalAddress(packetNetwork, remote)
+		if localErr != nil {
+			return networkingError("ConnectionError", localErr)
+		}
+		connection, listenErr := net.ListenUDP(packetNetwork, local)
+		if listenErr != nil {
+			return networkingError("ConnectionError", listenErr)
+		}
+		state := &nativeConnection{
+			network:        "udp",
+			packet:         connection,
+			packetNetwork:  packetNetwork,
+			defaultAddress: remote,
+			null:           null,
+		}
+		return state.value(udpConnectionAddress(connection, packetNetwork))
 	}
 }
 
 func builtinListen(null *object.Null) object.BuiltinFunction {
 	return func(args ...object.Object) object.Object {
-		if err := requireArgumentCount(args, 2); err != nil {
+		if err := requireArgumentCount(args, 1); err != nil {
 			return err
 		}
-		network, err := requireString("listen", 0, args[0])
+		address, err := requireString("listen", 0, args[0])
 		if err != nil {
 			return err
-		}
-		address, err := requireString("listen", 1, args[1])
-		if err != nil {
-			return err
-		}
-		if network != "tcp" {
-			return networkingErrorMessage("ListenError", fmt.Sprintf("unsupported listener network %q: expected tcp", network))
 		}
 
 		listener, listenErr := net.Listen("tcp", address)

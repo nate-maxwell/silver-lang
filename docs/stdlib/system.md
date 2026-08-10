@@ -10,7 +10,7 @@ io.print(system.system(), system.release(), system.machine())
 io.print(system.getenv("PATH"))
 ```
 
-| Export                | Description                                                     |
+| Function              | Description                                                     |
 | --------------------- | --------------------------------------------------------------- |
 | `system()`            | Friendly OS name such as `"Windows"`, `"Linux"`, or `"Darwin"`. |
 | `release()`           | OS/kernel release when available.                               |

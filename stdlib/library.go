@@ -87,7 +87,7 @@ func NewWithStreams(in io.Reader, out, errOut io.Writer, null *object.Null, true
 		"json":        jsonDefinitions(null, trueValue, falseValue),
 		"map":         mapDefinitions(null, trueValue, falseValue),
 		"math":        mathDefinitions(),
-		"networking":  networkingDefinitions(null),
+		"_networking": networkingDefinitions(null),
 		"path":        pathDefinitions(null, trueValue, falseValue),
 		"string":      stringDefinitions(trueValue, falseValue),
 		"system":      systemDefinitions(null),
@@ -95,6 +95,7 @@ func NewWithStreams(in io.Reader, out, errOut io.Writer, null *object.Null, true
 	}, []sourceDefinition{
 		{name: "args", path: "silver/args/args.slv"},
 		{name: "logging", path: "silver/logging/logging.slv"},
+		{name: "networking", path: "silver/networking/networking.slv"},
 		{name: "testing", path: "silver/testing/testing.slv"},
 	})
 }

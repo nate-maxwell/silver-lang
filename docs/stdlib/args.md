@@ -19,7 +19,7 @@ parsed.values["force"]       # True
 
 ## Constructors
 
-| Export                                            | Description                                    |
+| Function                                          | Description                                    |
 | ------------------------------------------------- | ---------------------------------------------- |
 | `new(program, description) Parser`                | Create an empty parser.                        |
 | `option(name, short, help) Argument`              | Optional string-valued option.                 |
@@ -44,7 +44,7 @@ positional arguments must be added before optional ones.
 Long (`--output`) and separate short (`-o`) forms are supported; combined short flags and `--name=value` are not. `--`
 disables option parsing. `-h` or `--help` returns early with `help_requested == True`.
 
-`ParsedArgs` contains `values: map` and `help_requested: bool`. `ArgumentError` contains `message: str`. The module also
-exports `Argument`, `ArgumentKind`, `ParsedArgs`, `Parser`, and `ArgumentError` for annotations and inspection.
+`ParsedArgs` contains `values: map` and `help_requested: bool`. `ArgumentError` contains `message: str`. The types
+`Argument`, `ArgumentKind`, `ParsedArgs`, `Parser`, and `ArgumentError` are also available for annotations and inspection.
 
 [Standard library index](../table_of_contents.md#standard-library)

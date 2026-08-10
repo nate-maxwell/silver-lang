@@ -6,7 +6,7 @@ structs with typed callable fields.
 ```silver
 let net = import("networking")
 
-let connection = net.dial("tcp", "example.com:80")
+let connection = net.dial(net.Network.TCP, "example.com:80")
 defer connection.close()
 connection.write("GET / HTTP/1.0\r\nHost: example.com\r\n\r\n")
 let response = connection.read(4096)
@@ -14,10 +14,12 @@ let response = connection.read(4096)
 
 ## Entry points
 
-| Export                                                           | Description                                   |
-| ---------------------------------------------------------------- | --------------------------------------------- |
-| `dial(network: str, address: str) Connection \| ConnectionError` | Connect using `"tcp"` or `"udp"`.             |
-| `listen(network: str, address: str) Listener \| ListenError`     | Create a listener. Only `"tcp"` is supported. |
+| Function                                                            | Description                             |
+| ------------------------------------------------------------------- | --------------------------------------- |
+| `dial(network: Network, address: str) Connection \| ConnectionError` | Connect using `Network.TCP` or `Network.UDP`. |
+| `listen(address: str) Listener \| ListenError`                       | Create a TCP listener.                  |
+
+`Network` is an enum with `TCP` and `UDP` members.
 
 ## `Connection`
 

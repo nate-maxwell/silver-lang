@@ -93,10 +93,11 @@ io.print(helpers.double(helpers.answer))
 ```
 
 Relative imports resolve from the importing file. A non-relative file import first checks the importing file's directory
-and then each directory in the platform-separated `SILVERPATH` environment variable. Bare standard-library names such as
+and then each directory in the platform-separated `SILVER_PATH` environment variable. Bare standard-library names such as
 `"io"` and `"array"` resolve to embedded modules.
 
 Imports are evaluated once per interpreter session and then cached. Circular imports are reported as errors.
+See [Modules and imports](language_guide/modules.md) for the complete resolution and module-member rules.
 
 ## Learn the library
 

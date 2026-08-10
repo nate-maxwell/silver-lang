@@ -10,7 +10,7 @@ const networkingImport = `let net = import("networking")
 `
 
 func TestNetworkingTCPRoundTrip(t *testing.T) {
-	input := `let listener: Listener = net.listen("tcp", "127.0.0.1:0")
+	input := `let listener: Listener = net.listen("127.0.0.1:0")
 let echo = fn() {
     let connection: Connection = listener.accept()
     let data = connection.read(1024)
@@ -18,7 +18,7 @@ let echo = fn() {
     connection.close()
 }
 let server = task echo
-let connection: Connection = net.dial("tcp", listener.address)
+let connection: Connection = net.dial(net.Network.TCP, listener.address)
 connection.write("hello over tcp")
 let response = connection.read(1024)
 connection.close()
@@ -36,8 +36,8 @@ response`
 }
 
 func TestNetworkingUDPRoundTrip(t *testing.T) {
-	input := `let receiver = net.dial("udp", "127.0.0.1:9")
-let sender = net.dial("udp", "127.0.0.1:9")
+	input := `let receiver = net.dial(net.Network.UDP, "127.0.0.1:9")
+let sender = net.dial(net.Network.UDP, "127.0.0.1:9")
 sender.write_to("hello over udp", receiver.address)
 let packet: ReadFromResult = receiver.read_from(1024)
 sender.close()
@@ -54,8 +54,8 @@ packet.data`
 }
 
 func TestNetworkingUDPReadFromReportsSender(t *testing.T) {
-	input := `let receiver = net.dial("udp", "127.0.0.1:9")
-let sender = net.dial("udp", "127.0.0.1:9")
+	input := `let receiver = net.dial(net.Network.UDP, "127.0.0.1:9")
+let sender = net.dial(net.Network.UDP, "127.0.0.1:9")
 sender.write_to("packet", receiver.address)
 let packet = receiver.read_from(64)
 let matches = packet.address == sender.address
@@ -66,8 +66,8 @@ matches`
 }
 
 func TestNetworkingUDPWriteUsesDefaultPeer(t *testing.T) {
-	input := `let receiver = net.dial("udp", "127.0.0.1:9")
-let sender = net.dial("udp", receiver.address)
+	input := `let receiver = net.dial(net.Network.UDP, "127.0.0.1:9")
+let sender = net.dial(net.Network.UDP, receiver.address)
 sender.write("default peer")
 let packet = receiver.read_from(64)
 sender.close()
@@ -80,9 +80,9 @@ packet.data`
 }
 
 func TestNetworkingExposesDeclaredSignatures(t *testing.T) {
-	input := `let dialer: call(network: str, address: str) Connection | ConnectionError = net.dial
-let listener_factory: call(network: str, address: str) Listener | ListenError = net.listen
-let connection = net.dial("udp", "127.0.0.1:9")
+	input := `let dialer: call(network: net.Network, address: str) Connection | ConnectionError = net.dial
+let listener_factory: call(address: str) Listener | ListenError = net.listen
+let connection = net.dial(net.Network.UDP, "127.0.0.1:9")
 let reader: call(bytes: int) str | ReadError = connection.read
 let writer: call(data: str) | WriteError = connection.write
 let write_to: call(data: str, address: str) | WriteError = connection.write_to
@@ -101,7 +101,7 @@ func TestNetworkingOperationsReturnTypedErrors(t *testing.T) {
 		{
 			name: "dial",
 			input: `try {
-net.dial("invalid", "localhost:80")
+net.dial(net.Network.TCP, "not-an-address")
 False
 } catch ConnectionError err {
 err.message != ""
@@ -110,7 +110,7 @@ err.message != ""
 		{
 			name: "listen",
 			input: `try {
-net.listen("udp", "127.0.0.1:0")
+net.listen("not-an-address")
 False
 } catch ListenError err {
 err.message != ""
@@ -118,7 +118,7 @@ err.message != ""
 		},
 		{
 			name: "read after close",
-			input: `let connection = net.dial("udp", "127.0.0.1:9")
+			input: `let connection = net.dial(net.Network.UDP, "127.0.0.1:9")
 connection.close()
 try {
 connection.read(1)
@@ -129,7 +129,7 @@ err.message != ""
 		},
 		{
 			name: "write after close",
-			input: `let connection = net.dial("udp", "127.0.0.1:9")
+			input: `let connection = net.dial(net.Network.UDP, "127.0.0.1:9")
 connection.close()
 try {
 connection.write("data")
@@ -140,7 +140,7 @@ err.message != ""
 		},
 		{
 			name: "close twice",
-			input: `let connection = net.dial("udp", "127.0.0.1:9")
+			input: `let connection = net.dial(net.Network.UDP, "127.0.0.1:9")
 connection.close()
 try {
 connection.close()
@@ -163,10 +163,10 @@ func TestNetworkingRejectsInvalidArguments(t *testing.T) {
 		input   string
 		message string
 	}{
-		{input: `net.dial("tcp")`, message: "wrong number of arguments. got=1, want=2"},
-		{input: `net.dial(1, "localhost:80")`, message: "argument 1 to `dial` must be STRING, got INTEGER"},
-		{input: `net.listen("tcp", 1)`, message: "argument 2 to `listen` must be STRING, got INTEGER"},
-		{input: `let connection = net.dial("udp", "127.0.0.1:9")
+		{input: `net.dial(net.Network.TCP)`, message: "wrong number of arguments. got=1, want=2"},
+		{input: `net.dial("tcp", "localhost:80")`, message: `type mismatch for parameter "network": expected Network, got str`},
+		{input: `net.listen(1)`, message: `type mismatch for parameter "address": expected str, got int`},
+		{input: `let connection = net.dial(net.Network.UDP, "127.0.0.1:9")
 connection.read(-1)`, message: "argument to `Connection.read` must be nonnegative"},
 	}
 
@@ -182,13 +182,13 @@ connection.read(-1)`, message: "argument to `Connection.read` must be nonnegativ
 }
 
 func TestNetworkingConnectionProtocolErrors(t *testing.T) {
-	input := `let listener = net.listen("tcp", "127.0.0.1:0")
+	input := `let listener = net.listen("127.0.0.1:0")
 let accept_once = fn() {
     let connection = listener.accept()
     connection.close()
 }
 let server = task accept_once
-let connection = net.dial("tcp", listener.address)
+let connection = net.dial(net.Network.TCP, listener.address)
 let handled = try {
     connection.write_to("data", listener.address)
     False
@@ -202,7 +202,7 @@ handled`
 	testBooleanObject(t, testEval(networkingImport+input), true)
 
 	result := testEval(networkingImport + `try {
-net.listen("tcp", "not-an-address")
+net.listen("not-an-address")
 } catch ListenError err {
 err.message
 }`)

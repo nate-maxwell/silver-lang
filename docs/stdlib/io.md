@@ -13,17 +13,25 @@ let old_contents = file.read()
 file.write(old_contents + "\nupdated")
 ```
 
-## Exports
+## Functions and streams
 
-- `print(...values)`: Print inspected values separated by spaces and followed by a newline; return null.
-- `open(path) File | FileNotFound | PermissionDenied`: Open an existing file for reading and writing. It does not create
-  a missing file.
-- `stdin`: An `IOStream` with `read() str | IOError`. Reading consumes all remaining input.
-- `stdout`: An `IOStream` with `write(data: str) | IOError`.
-- `stderr`: An `IOStream` with `write(data: str) | IOError`.
+| Function or property                                      | Description                                                                                 |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `print(...values)`                                        | Print inspected values separated by spaces and followed by a newline; return null.          |
+| `open(path) File \| FileNotFound \| PermissionDenied`     | Open an existing file for reading and writing. It does not create a missing file.           |
+| `stdin`                                                   | An `IOStream` whose `read() str \| IOError` consumes all remaining input.                   |
+| `stdout`                                                  | An `IOStream` with `write(data: str) \| IOError`.                                           |
+| `stderr`                                                  | An `IOStream` with `write(data: str) \| IOError`.                                           |
 
-`File` has `path`, `read() str | IOError`, `write(contents: str) | IOError`, and `close() | IOError`. `write` truncates
-and replaces the complete file. Standard streams cannot be closed.
+`File` exposes its source path through the `path` field and provides these methods:
+
+| Method                       | Description                                                                 |
+| ---------------------------- | --------------------------------------------------------------------------- |
+| `read() str \| IOError`      | Read and return the complete file contents from the beginning.              |
+| `write(contents: str) \| IOError` | Truncate the file and replace its complete contents; return null on success. |
+| `close() \| IOError`         | Close the file; later operations return `IOError`.                          |
+
+Standard streams cannot be closed.
 
 `IOError`, `FileNotFound`, and `PermissionDenied` have a `message: str` field and can be handled with `try`/`catch`.
 

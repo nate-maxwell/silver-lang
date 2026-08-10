@@ -75,7 +75,7 @@ struct TCPSocketHandler {
 
 let new_tcp_socket_handler = fn(address: str) TCPSocketHandler {
     let handle = fn(self: TCPSocketHandler, record: str) | ConnectionError | WriteError {
-        let connection = net.dial("tcp", self.address)
+        let connection = net.dial(net.Network.TCP, self.address)
         defer connection.close()
         connection.write(record + "\n")
     }
@@ -90,7 +90,7 @@ struct UDPSocketHandler {
 
 let new_udp_socket_handler = fn(address: str) UDPSocketHandler {
     let handle = fn(self: UDPSocketHandler, record: str) | ConnectionError | WriteError {
-        let connection = net.dial("udp", self.address)
+        let connection = net.dial(net.Network.UDP, self.address)
         defer connection.close()
         connection.write(record + "\n")
     }

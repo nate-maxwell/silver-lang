@@ -13,8 +13,8 @@ maps.get(updated, "year")    # 2026
 maps.contains(updated, "name") # True
 ```
 
-| Export                     | Description                                      |
-| -------------------------- | ------------------------------------------------ |
+| Function                   | Description                                      |
+|----------------------------| ------------------------------------------------ |
 | `get(mapping, key)`        | Associated value, or null when missing.          |
 | `set(mapping, key, value)` | Copy with the pair inserted or replaced.         |
 | `delete(mapping, key)`     | Copy without the key; a missing key is harmless. |

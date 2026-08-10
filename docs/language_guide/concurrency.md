@@ -95,7 +95,8 @@ let outcome = try {
 }
 ```
 
-The error propagates from `collect`, so normal [`try`/`catch`](control_flow.md#try-and-catch) rules apply at that point.
+The error propagates from `collect`, so normal [`try`/`catch`](errors.md#handling-errors-with-try-and-catch) rules apply
+at that point.
 A runtime error such as `TypeError` is retained in the same way.
 
 When several handles are collected together, collection joins all of them. If a collected task failed, its error is

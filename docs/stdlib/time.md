@@ -11,9 +11,9 @@ let elapsed = time.diff(started, time.now())
 elapsed.milliseconds
 ```
 
-## Exports
+## Functions and types
 
-| Export                                                              | Description                                |
+| Function or type                                                    | Description                                |
 | ------------------------------------------------------------------- | ------------------------------------------ |
 | `now() Time`                                                        | Current local time.                        |
 | `unix() int`                                                        | Current Unix timestamp in whole seconds.   |
@@ -29,8 +29,21 @@ elapsed.milliseconds
 Accepted duration units are nanoseconds (`ns`), microseconds (`us`), milliseconds (`ms`), seconds (`s`), minutes (`m`),
 hours (`h`), and days (`d`), including singular and plural names.
 
-`Time` fields are `year`, `month`, `day`, `hour`, `minute`, `second`, `nanosecond`, and `timezone`. `Duration` exposes
-total `hours`, `minutes`, `seconds`, and `milliseconds` as floats, and total `nanoseconds` as an integer.
+## `Time` properties
+
+| Property     | Type  | Description                                           |
+| ------------ | ----- | ----------------------------------------------------- |
+| `year`       | `int` | Calendar year.                                        |
+| `month`      | `int` | Month number from `1` through `12`.                   |
+| `day`        | `int` | Day of the month.                                     |
+| `hour`       | `int` | Hour from `0` through `23`.                           |
+| `minute`     | `int` | Minute from `0` through `59`.                         |
+| `second`     | `int` | Second from `0` through `59`.                         |
+| `nanosecond` | `int` | Nanoseconds within the second, from `0` through `999999999`. |
+| `timezone`   | `str` | Time-zone abbreviation, name, or numeric offset.      |
+
+`Duration` exposes total `hours`, `minutes`, `seconds`, and `milliseconds` as floats, and total `nanoseconds` as an
+integer.
 
 ## Format tokens
 

@@ -47,6 +47,31 @@ apply(double, 21) # 42
 Silver functions can destructure structs by parameter name. Here, `move` declares three float parameters, but receives one `Location`:
 
 ```silver
+struct Location {
+    x: float
+    y: float
+    z: float
+}
+
+let move = fn(x: float, y: float, z: float) Location {
+    return Location{ x + 5.0, y + 5.0, z + 5.0 }
+}
+
+let location = Location{ 0.0, 0.0, 0.0 }
+location = move(location) # the actor moves diagonally by 5 units
+```
+
+`Location` is not a `float`, so it cannot bind directly to `x`. Silver instead offers its fields to the function's
+unbound parameters, matching `x`, `y`, and `z` by name and checking each field's type. The one argument therefore
+supplies all three parameters. If a parameter expected a `Location`, Silver would pass the value intact instead.
+
+This destructuring mechanism allows silver code to be highly reusable. Functions can operator on multiple structs
+without needing to reference their exact type.
+
+Struct methods extend this idea: functions can be data too. Add a callable field and store the behavior beside
+the values it acts on:
+
+```silver
 let print = import("io").print
 
 struct MovableLocation {
@@ -67,37 +92,6 @@ location.move()
 print(location.x, location.y, location.z)
 
 >> 5.0 5.0 5.0
-```
-
-`Location` is not a `float`, so it cannot bind directly to `x`. Silver instead offers its fields to the function's
-unbound parameters, matching `x`, `y`, and `z` by name and checking each field's type. The one argument therefore
-supplies all three parameters. If a parameter expected a `Location`, Silver would pass the value intact instead.
-
-This destructuring mechanism allows silver code to be highly reusable. Functions can operator on multiple structs
-without needing to reference their exact type.
-
-Struct methods extend this idea: functions can be data too. Add a callable field and store the behavior beside
-the values it acts on:
-
-```silver
-struct MovableLocation {
-    x: float
-    y: float
-    z: float
-    move: call(self: MovableLocation) MovableLocation
-}
-
-let move = fn(self: MovableLocation) MovableLocation {
-    MovableLocation{
-        self.x + 5.0,
-        self.y + 5.0,
-        self.z + 5.0,
-        move
-    }
-}
-
-let location = MovableLocation{0.0, 0.0, 0.0, move}
-location = location.move()
 ```
 
 Because `move` has a detailed `call(self: MovableLocation)` field contract, reading `location.move` binds `location`

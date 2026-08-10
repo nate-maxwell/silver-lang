@@ -66,7 +66,7 @@ unbound parameters, matching `x`, `y`, and `z` by name and checking each field's
 supplies all three parameters. If a parameter expected a `Location`, Silver would pass the value intact instead.
 
 This destructuring mechanism allows silver code to be highly reusable. Functions can operator on multiple structs
-without needing to reference their exact type.
+without needing to reference their exact type or shape.
 
 Struct methods extend this idea: functions can be data too. Add a callable field and store the behavior beside
 the values it acts on:

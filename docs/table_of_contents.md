@@ -19,6 +19,7 @@
 - [`math`](stdlib/math.md) — numeric functions and constants.
 - [`networking`](stdlib/networking.md) — TCP and UDP connections and TCP listeners.
 - [`path`](stdlib/path.md) — object-oriented filesystem paths.
+- [`regex`](stdlib/regex.md) — regular-expression matching, searching, replacement, and splitting.
 - [`string`](stdlib/string.md) — Unicode-aware string operations.
 - [`system`](stdlib/system.md) — host and process-environment information.
 - [`testing`](stdlib/testing.md) — a small stateful test runner.

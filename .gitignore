@@ -42,6 +42,7 @@ venv/
 # Developer
 /examples/
 dev/
+game/
 
 # JetBrains plugin build output
 tools/

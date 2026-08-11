@@ -119,6 +119,8 @@ func (l *Lexer) NextToken() token.Token {
 		} else {
 			tok = newToken(token.SLASH, l.ch, position)
 		}
+	case '%':
+		tok = newToken(token.MODULO, l.ch, position)
 	case '<':
 		if l.peekChar() == '=' {
 			tok = l.makeTwoCharToken(token.LTE)

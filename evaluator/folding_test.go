@@ -71,6 +71,7 @@ func TestFoldConstantsLeavesRuntimeErrors(t *testing.T) {
 	}{
 		{"1 / 0", "division by zero"},
 		{"1 // 0", "division by zero"},
+		{"1 % 0", "division by zero"},
 		{"1 + True", "type mismatch: INTEGER + BOOLEAN"},
 		{`"left" - "right"`, "unknown operator: STRING - STRING"},
 	}

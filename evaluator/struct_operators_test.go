@@ -11,8 +11,9 @@ struct Number {
     value: int
     add: call(self: Number, other: int) int
     sub: call(self: Number, other: int) int
-    mul: call(self: Number, other: int) int
+	mul: call(self: Number, other: int) int
 	div: call(self: Number, other: int) float
+	mod: call(self: Number, other: int) int
 	int_div: call(self: Number, other: int) int
     pow: call(self: Number, other: int) int
     eq: call(self: Number, other: int) bool
@@ -26,6 +27,7 @@ let add = fn(self: Number, other: int) int { self.value + other }
 let sub = fn(self: Number, other: int) int { self.value - other }
 let mul = fn(self: Number, other: int) int { self.value * other }
 let div = fn(self: Number, other: int) float { self.value / other }
+let mod = fn(self: Number, other: int) int { self.value % other }
 let int_div = fn(self: Number, other: int) int { self.value // other }
 let pow = fn(self: Number, other: int) int { self.value ** other }
 let eq = fn(self: Number, other: int) bool { self.value == other }
@@ -34,7 +36,7 @@ let lt = fn(self: Number, other: int) bool { self.value < other }
 let gt = fn(self: Number, other: int) bool { self.value > other }
 let lte = fn(self: Number, other: int) bool { self.value <= other }
 let gte = fn(self: Number, other: int) bool { self.value >= other }
-let number = Number{10, add, sub, mul, div, int_div, pow, eq, not_eq, lt, gt, lte, gte}
+let number = Number{10, add, sub, mul, div, mod, int_div, pow, eq, not_eq, lt, gt, lte, gte}
 `
 
 func TestStructArithmeticOperatorMethods(t *testing.T) {
@@ -45,6 +47,7 @@ func TestStructArithmeticOperatorMethods(t *testing.T) {
 		{"number + 2", 12},
 		{"number - 2", 8},
 		{"number * 2", 20},
+		{"number % 3", 1},
 		{"number // 3", 3},
 		{"number ** 2", 100},
 	}
@@ -135,7 +138,7 @@ if (Empty{}) { 1 } else { 0 }
 
 func TestStructOperatorRegistryCoversEveryBinaryOperator(t *testing.T) {
 	want := map[string]string{
-		"+": "add", "-": "sub", "*": "mul", "/": "div", "//": "int_div", "**": "pow",
+		"+": "add", "-": "sub", "*": "mul", "/": "div", "%": "mod", "//": "int_div", "**": "pow",
 		"==": "eq", "!=": "not_eq", "<": "lt", ">": "gt",
 		"<=": "lte", ">=": "gte",
 	}

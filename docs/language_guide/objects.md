@@ -154,7 +154,8 @@ A struct opts into a binary operator by storing a callable in the corresponding 
 | -------- | --------- | -------- | -------- |
 | `+`      | `add`     | `-`      | `sub`    |
 | `*`      | `mul`     | `/`      | `div`    |
-| `//`     | `int_div` | `**`     | `pow`    |
+| `%`      | `mod`     | `//`     | `int_div` |
+| `**`     | `pow`     |          |          |
 | `==`     | `eq`      | `!=`     | `not_eq` |
 | `<`      | `lt`      | `>`      | `gt`     |
 | `<=`     | `lte`     | `>=`     | `gte`    |

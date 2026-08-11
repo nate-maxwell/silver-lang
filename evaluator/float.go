@@ -45,6 +45,11 @@ func evalFloatInfixExpression(operator string, left, right object.Object) object
 			return newError(object.RuntimeErrorKindValue, "integer division result out of range")
 		}
 		return &object.Integer{Value: int64(quotient)}
+	case "%":
+		if rightValue == 0 {
+			return newError(object.RuntimeErrorKindZeroDivision, "division by zero")
+		}
+		return &object.Float{Value: math.Mod(leftValue, rightValue)}
 	case "<", ">", "<=", ">=", "==", "!=":
 		return nativeBoolToBooleanObject(compareNumeric(operator, left, right))
 	default:

@@ -14,6 +14,7 @@ var structInfixOperatorMethods = map[string]string{
 	"-": "sub",
 	"*": "mul",
 	"/": "div",
+	"%": "mod",
 
 	"**": "pow",
 	"//": "int_div",

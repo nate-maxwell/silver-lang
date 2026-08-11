@@ -386,6 +386,10 @@ func TestOperatorPrecedenceParsing(t *testing.T) {
 			"(a + ((b // c) * d))",
 		},
 		{
+			"a + b % c * d",
+			"(a + ((b % c) * d))",
+		},
+		{
 			"a + b * c + d / e - f",
 			"(((a + (b * c)) + (d / e)) - f)",
 		},
@@ -498,6 +502,7 @@ func TestParsingInfixExpressions(t *testing.T) {
 		{"5 + 5", 5, "+", 5},
 		{"5 - 5", 5, "-", 5},
 		{"5 * 5", 5, "*", 5},
+		{"5 % 2", 5, "%", 2},
 		{"5 ** 5", 5, "**", 5},
 		{"5 / 5", 5, "/", 5},
 		{"5 // 5", 5, "//", 5},

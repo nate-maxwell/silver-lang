@@ -56,6 +56,7 @@ const (
 	POWER    = "**"
 	SLASH    = "/"
 	INT_DIV  = "//"
+	MODULO   = "%"
 
 	LT     = "<"
 	GT     = ">"

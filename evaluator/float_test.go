@@ -20,6 +20,8 @@ func TestFloatEvaluation(t *testing.T) {
 		{"9 ** 0.5", 3.0},
 		{"4.0 ** 3", 64.0},
 		{"2 ** -2", 0.25},
+		{"5.5 % 2", 1.5},
+		{"7 % 2.5", 2.0},
 	}
 
 	for _, tt := range tests {
@@ -89,6 +91,16 @@ func TestFloatDivisionByZero(t *testing.T) {
 
 func TestIntegerDivisionByNumericZero(t *testing.T) {
 	for _, input := range []string{"1 // 0", "1.0 // 0", "1 // 0.0"} {
+		evaluated := testEval(input)
+		err, ok := evaluated.(*object.Error)
+		if !ok || err.MessageText() != "division by zero" {
+			t.Fatalf("%s result is %#v, want division-by-zero error", input, evaluated)
+		}
+	}
+}
+
+func TestModuloByNumericZero(t *testing.T) {
+	for _, input := range []string{"1 % 0", "1.0 % 0", "1 % 0.0"} {
 		evaluated := testEval(input)
 		err, ok := evaluated.(*object.Error)
 		if !ok || err.MessageText() != "division by zero" {

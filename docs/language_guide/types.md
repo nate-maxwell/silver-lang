@@ -28,17 +28,18 @@ Silver currently has no `any` annotation. Leave a binding or parameter unannotat
 Integer literals use base 10. Float literals contain a decimal point. Unary `-` negates either numeric type.
 
 Numeric arithmetic and comparisons may mix integers and floats. `/` always produces a float; `//` produces the integer
-quotient. Exponentiation uses `**`.
+quotient; and `%` produces the remainder. Exponentiation uses `**`.
 
 ```silver
 5 / 2   # 2.5
 5 // 2  # 2
+5 % 2   # 1
 2 ** 10 # 1024
 ```
 
-Division by numeric zero raises `ZeroDivisionError`. Integer arithmetic uses signed 64-bit values; ordinary arithmetic
-overflow follows the implementation's wrapping integer behavior. Standard-library functions may add stricter range
-checks where documented.
+Division or remainder by numeric zero raises `ZeroDivisionError`. Integer arithmetic uses signed 64-bit values;
+ordinary arithmetic overflow follows the implementation's wrapping integer behavior. Standard-library functions may
+add stricter range checks where documented.
 
 ## Strings
 

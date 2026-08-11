@@ -226,6 +226,28 @@ func TestIntegerDivideToken(t *testing.T) {
 	}
 }
 
+func TestModuloToken(t *testing.T) {
+	got := NewWithSource("10 % 3", "modulo.slv")
+	want := []struct {
+		tokenType token.TokenType
+		literal   string
+		column    int
+	}{
+		{token.INT, "10", 1},
+		{token.MODULO, "%", 4},
+		{token.INT, "3", 6},
+		{token.EOF, "", 7},
+	}
+	for index, expected := range want {
+		tok := got.NextToken()
+		if tok.Type != expected.tokenType || tok.Literal != expected.literal || tok.Position.Column != expected.column {
+			t.Fatalf("token %d is (%q, %q, column %d), want (%q, %q, column %d)",
+				index, tok.Type, tok.Literal, tok.Position.Column,
+				expected.tokenType, expected.literal, expected.column)
+		}
+	}
+}
+
 func TestSemicolonIsIllegal(t *testing.T) {
 	tok := New(";").NextToken()
 	if tok.Type != token.ILLEGAL || tok.Literal != ";" {

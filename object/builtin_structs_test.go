@@ -45,8 +45,11 @@ func TestBuiltinIOStreamStructShape(t *testing.T) {
 	if !ok {
 		t.Fatal("IOStream definition is not registered")
 	}
-	wantFields := []string{"name", "read", "write"}
-	wantTypes := []string{"str", "call() str | IOError", "call(data: str) | IOError"}
+	wantFields := []string{"name", "read", "read_line", "write"}
+	wantTypes := []string{"str", "call() str | IOError", "call() str | IOError", "call(data: str) | IOError"}
+	if len(stream.Fields) != len(wantFields) || len(stream.FieldTypes) != len(wantTypes) {
+		t.Fatalf("IOStream has %d fields and %d field types, want %d", len(stream.Fields), len(stream.FieldTypes), len(wantFields))
+	}
 	for index, want := range wantFields {
 		if stream.Fields[index] != want || stream.FieldTypes[index].String() != wantTypes[index] {
 			t.Fatalf("IOStream field %d is %q: %s, want %q: %s", index, stream.Fields[index], stream.FieldTypes[index].String(), want, wantTypes[index])

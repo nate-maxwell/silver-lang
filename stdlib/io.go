@@ -1,6 +1,7 @@
 package stdlib
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"io"
@@ -26,24 +27,35 @@ func ioDefinitions(in io.Reader, out, errOut io.Writer, null *object.Null) []def
 }
 
 // nativeIOStream owns one injected standard stream. Standard streams are not
-// closable from Silver, so they expose only read and write operations.
+// closable from Silver, so they expose only read and write operations. Input
+// is buffered so read and read_line can consume the same stream without losing
+// data read ahead while looking for a newline.
 type nativeIOStream struct {
 	mu     sync.Mutex
 	name   string
-	reader io.Reader
+	reader *bufio.Reader
 	writer io.Writer
 	null   *object.Null
 }
 
 func newIOStream(name string, reader io.Reader, writer io.Writer, null *object.Null) *object.StructInstance {
-	stream := &nativeIOStream{name: name, reader: reader, writer: writer, null: null}
+	var bufferedReader *bufio.Reader
+	if reader != nil {
+		if existing, ok := reader.(*bufio.Reader); ok {
+			bufferedReader = existing
+		} else {
+			bufferedReader = bufio.NewReader(reader)
+		}
+	}
+	stream := &nativeIOStream{name: name, reader: bufferedReader, writer: writer, null: null}
 	definition, _ := object.BuiltinStructDefinitionByName("IOStream")
 	return &object.StructInstance{
 		Struct: definition,
 		Values: map[string]object.Object{
-			"name":  &object.String{Value: name},
-			"read":  &object.Builtin{Fn: stream.read, Signature: streamReadSignature()},
-			"write": &object.Builtin{Fn: stream.write, Signature: streamWriteSignature()},
+			"name":      &object.String{Value: name},
+			"read":      &object.Builtin{Fn: stream.read, Signature: streamReadSignature()},
+			"read_line": &object.Builtin{Fn: stream.readLine, Signature: streamReadLineSignature()},
+			"write":     &object.Builtin{Fn: stream.write, Signature: streamWriteSignature()},
 		},
 	}
 }
@@ -62,6 +74,24 @@ func (stream *nativeIOStream) read(args ...object.Object) object.Object {
 		return ioErrorValue("IOError", err)
 	}
 	return &object.String{Value: string(contents)}
+}
+
+func (stream *nativeIOStream) readLine(args ...object.Object) object.Object {
+	if err := requireArgumentCount(args, 0); err != nil {
+		return err
+	}
+	if stream.reader == nil {
+		return ioErrorMessage(stream.name + " is not readable")
+	}
+	stream.mu.Lock()
+	defer stream.mu.Unlock()
+	line, err := stream.reader.ReadString('\n')
+	if err != nil && !errors.Is(err, io.EOF) {
+		return ioErrorValue("IOError", err)
+	}
+	line = strings.TrimSuffix(line, "\n")
+	line = strings.TrimSuffix(line, "\r")
+	return &object.String{Value: line}
 }
 
 func (stream *nativeIOStream) write(args ...object.Object) object.Object {
@@ -251,6 +281,10 @@ func fileCloseSignature() *ast.TypeAnnotation {
 }
 
 func streamReadSignature() *ast.TypeAnnotation {
+	return callSignature(nil, nil, namedType("str"), "IOError")
+}
+
+func streamReadLineSignature() *ast.TypeAnnotation {
 	return callSignature(nil, nil, namedType("str"), "IOError")
 }
 

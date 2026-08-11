@@ -68,9 +68,10 @@ func init() {
 	}
 	builtinStructDefinitions["IOStream"] = &Struct{
 		Name:   "IOStream",
-		Fields: []string{"name", "read", "write"},
+		Fields: []string{"name", "read", "read_line", "write"},
 		FieldTypes: []*ast.TypeAnnotation{
 			namedAnnotation("str"),
+			callAnnotation(nil, nil, namedAnnotation("str"), "IOError"),
 			callAnnotation(nil, nil, namedAnnotation("str"), "IOError"),
 			callAnnotation([]string{"data"}, []*ast.TypeAnnotation{namedAnnotation("str")}, nil, "IOError"),
 		},

@@ -167,12 +167,40 @@ contents`
 	}
 }
 
+func TestStandardInputReadsOneLineAtATime(t *testing.T) {
+	input := ioImport + `[io.stdin.read_line(), io.stdin.read_line(), io.stdin.read_line(), io.stdin.read_line()]`
+	result, ok := testEvalWithStreams(input, strings.NewReader("first\r\nsecond\nthird"), &bytes.Buffer{}, &bytes.Buffer{}).(*object.Array)
+	if !ok {
+		t.Fatalf("line reads returned %T, want *object.Array", result)
+	}
+	want := []string{"first", "second", "third", ""}
+	if len(result.Elements) != len(want) {
+		t.Fatalf("line reads returned %d elements, want %d", len(result.Elements), len(want))
+	}
+	for index, expected := range want {
+		line, ok := result.Elements[index].(*object.String)
+		if !ok || line.Value != expected {
+			t.Fatalf("line %d is %#v, want %q", index, result.Elements[index], expected)
+		}
+	}
+}
+
+func TestStandardInputReadContinuesAfterReadLine(t *testing.T) {
+	input := ioImport + `let first = io.stdin.read_line()
+first + "|" + io.stdin.read()`
+	result, ok := testEvalWithStreams(input, strings.NewReader("first\nremaining"), &bytes.Buffer{}, &bytes.Buffer{}).(*object.String)
+	if !ok || result.Value != "first|remaining" {
+		t.Fatalf("mixed reads returned %#v, want first|remaining", result)
+	}
+}
+
 func TestStandardStreamsExposeTypesAndSignatures(t *testing.T) {
 	var stdout, stderr bytes.Buffer
 	input := ioImport + coreImport + `let input: IOStream = io.stdin
 let output: IOStream = io.stdout
 let errors: IOStream = io.stderr
 let read: call() str | IOError = input.read
+let read_line: call() str | IOError = input.read_line
 let write_out: call(data: str) | IOError = output.write
 let write_err: call(data: str) | IOError = errors.write
 core.type(input) == IOStream`
@@ -184,7 +212,9 @@ func TestStandardStreamsRejectUnsupportedDirections(t *testing.T) {
 	tests := []string{
 		`try { io.stdin.write("data") } catch IOError err { err.message != "" }`,
 		`try { io.stdout.read() } catch IOError err { err.message != "" }`,
+		`try { io.stdout.read_line() } catch IOError err { err.message != "" }`,
 		`try { io.stderr.read() } catch IOError err { err.message != "" }`,
+		`try { io.stderr.read_line() } catch IOError err { err.message != "" }`,
 	}
 	for _, input := range tests {
 		testBooleanObject(t, testEvalWithStreams(ioImport+input, strings.NewReader(""), &stdout, &stderr), true)
@@ -211,6 +241,16 @@ err.message
 	if !ok || !strings.Contains(message.Value, "write failed") {
 		t.Fatalf("write failure returned %#v", result)
 	}
+
+	result = testEvalWithStreams(ioImport+`try {
+io.stdin.read_line()
+} catch IOError err {
+err.message
+}`, failingReader{}, &bytes.Buffer{}, &bytes.Buffer{})
+	message, ok = result.(*object.String)
+	if !ok || !strings.Contains(message.Value, "read failed") {
+		t.Fatalf("line read failure returned %#v", result)
+	}
 }
 
 func TestStandardStreamsRejectInvalidArguments(t *testing.T) {
@@ -220,6 +260,7 @@ func TestStandardStreamsRejectInvalidArguments(t *testing.T) {
 		message string
 	}{
 		{input: `io.stdin.read(1)`, message: "wrong number of arguments. got=1, want=0"},
+		{input: `io.stdin.read_line(1)`, message: "wrong number of arguments. got=1, want=0"},
 		{input: `io.stdout.write()`, message: "wrong number of arguments. got=0, want=1"},
 		{input: `io.stderr.write(1)`, message: "argument to `IOStream.write` must be STRING, got INTEGER"},
 	}

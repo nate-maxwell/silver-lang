@@ -267,6 +267,35 @@ func TestIfElseExpression(t *testing.T) {
 	}
 }
 
+func TestElseIfExpression(t *testing.T) {
+	input := `if x < y { x } else if x > y { y } else { 0 }`
+
+	p := New(lexer.New(input))
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	expression := program.Statements[0].(*ast.ExpressionStatement).Expression.(*ast.IfExpression)
+	if len(expression.Alternative.Statements) != 1 {
+		t.Fatalf("alternative contains %d statements, want 1", len(expression.Alternative.Statements))
+	}
+
+	statement, ok := expression.Alternative.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("alternative statement is %T, want *ast.ExpressionStatement", expression.Alternative.Statements[0])
+	}
+
+	elseIf, ok := statement.Expression.(*ast.IfExpression)
+	if !ok {
+		t.Fatalf("alternative expression is %T, want *ast.IfExpression", statement.Expression)
+	}
+	if !testInfixExpression(t, elseIf.Condition, "x", ">", "y") {
+		t.FailNow()
+	}
+	if elseIf.Alternative == nil {
+		t.Fatal("else-if expression did not retain its final else branch")
+	}
+}
+
 func TestParenthesizedIfConditionRemainsValid(t *testing.T) {
 	p := New(lexer.New(`if (x < y) { x }`))
 	program := p.ParseProgram()

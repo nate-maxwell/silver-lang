@@ -34,6 +34,18 @@ let label = if score >= 90 {
 
 Only the selected branch runs. When an `if` expression has no `else` and its condition is falsey, its value is null.
 
+Additional conditions may be chained with `else if`:
+
+```silver
+let label = if score >= 90 {
+    "excellent"
+} else if score >= 70 {
+    "passing"
+} else {
+    "keep going"
+}
+```
+
 ```silver
 if ready {
     import("io").print("starting")

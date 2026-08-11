@@ -232,7 +232,7 @@ func (p *Parser) parseGroupedExpression() ast.Expression {
 	return exp
 }
 
-// parseIfExpression parses a condition, consequence, and optional else block.
+// parseIfExpression parses a condition, consequence, and optional else branch.
 func (p *Parser) parseIfExpression() ast.Expression {
 	expression := &ast.IfExpression{Token: p.curToken}
 	previous := p.stopAtBlockBrace
@@ -255,6 +255,25 @@ func (p *Parser) parseIfExpression() ast.Expression {
 
 	if p.peekTokenIs(token.ELSE) {
 		p.nextToken()
+
+		if p.peekTokenIs(token.IF) {
+			p.nextToken()
+			ifToken := p.curToken
+			alternative := p.parseIfExpression()
+			if alternative == nil {
+				return nil
+			}
+
+			// Keep alternatives represented as blocks by desugaring `else if`
+			// into an alternative block containing another if expression.
+			expression.Alternative = &ast.BlockStatement{
+				Token: ifToken,
+				Statements: []ast.Statement{
+					&ast.ExpressionStatement{Token: ifToken, Expression: alternative},
+				},
+			}
+			return expression
+		}
 
 		if !p.expectPeek(token.LBRACE) {
 			return nil

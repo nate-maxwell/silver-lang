@@ -38,6 +38,7 @@ type Parser struct {
 	l                *lexer.Lexer // token source
 	errors           []string     // accumulated diagnostics; parsing attempts to continue
 	stopAtBlockBrace bool         // top-level { terminates an unparenthesized if condition
+	loopDepth        int          // lexical loop nesting for break/continue validation
 
 	curToken  token.Token // token currently being parsed
 	peekToken token.Token // one-token lookahead

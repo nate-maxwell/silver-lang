@@ -9,7 +9,22 @@ let strings = import("string")
 strings.upper("Silver")                    # "SILVER"
 strings.split("one,two,three", ",")        # ["one", "two", "three"]
 strings.join(["one", "two", "three"], ", ") # "one, two, three"
+strings.from_int(42)                        # "42"
+strings.to_int("42")                       # 42
 ```
+
+## Primitive conversions
+
+| Function                  | Description                                                               |
+| ------------------------- | ------------------------------------------------------------------------- |
+| `to_int(value) int \| ValueError`       | Parse a signed base-10 integer; reject invalid or out-of-range text.       |
+| `from_int(value) str`                    | Format an integer in base 10.                                              |
+| `to_float(value) float \| ValueError`   | Parse a 64-bit floating-point value; reject invalid text.                  |
+| `from_float(value) str`                  | Format a float using Silver's compact display form.                        |
+| `to_bool(value) bool \| ValueError`     | Parse `true` or `false`, case-insensitively; reject other text.            |
+| `from_bool(value) str`                   | Format a boolean as `"true"` or `"false"`.                                |
+
+Conversion input is strict: surrounding whitespace is not removed. Use `strip` first when accepting padded input.
 
 ## Transformations
 

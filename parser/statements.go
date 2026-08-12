@@ -18,6 +18,10 @@ func (p *Parser) parseStatement() ast.Statement {
 		return p.parseForStatement()
 	case token.WHILE:
 		return p.parseWhileStatement()
+	case token.BREAK:
+		return p.parseBreakStatement()
+	case token.CONTINUE:
+		return p.parseContinueStatement()
 	case token.RETURN:
 		return p.parseReturnStatement()
 	case token.ASSERT:
@@ -27,6 +31,28 @@ func (p *Parser) parseStatement() ast.Statement {
 	default:
 		return p.parseExpressionStatement()
 	}
+}
+
+// parseBreakStatement parses a loop exit and rejects it outside a lexical
+// loop body.
+func (p *Parser) parseBreakStatement() *ast.BreakStatement {
+	stmt := &ast.BreakStatement{Token: p.curToken}
+	if p.loopDepth == 0 {
+		p.addError(p.curToken.Position, "break is only valid inside a loop")
+	}
+	p.consumeStatementEnd()
+	return stmt
+}
+
+// parseContinueStatement parses an iteration skip and rejects it outside a
+// lexical loop body.
+func (p *Parser) parseContinueStatement() *ast.ContinueStatement {
+	stmt := &ast.ContinueStatement{Token: p.curToken}
+	if p.loopDepth == 0 {
+		p.addError(p.curToken.Position, "continue is only valid inside a loop")
+	}
+	p.consumeStatementEnd()
+	return stmt
 }
 
 // parseAssertStatement parses Python-style `assert condition` and

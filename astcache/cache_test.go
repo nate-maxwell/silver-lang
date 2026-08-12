@@ -25,9 +25,9 @@ let apply = fn(operation: call(int) int, value: int) int { operation(value) }
 struct Missing { message: str }
 let read = fn() str | Missing { Missing{"missing"} }
 try { read() } catch Missing err { err.message }
-for value in values { print(value) }
+for value in values { continue }
 for key, value in ({"answer": 42}) { print(key, value) }
-while False { print("never") }
+while False { break }
 let module = import("./library.slv")
 module.member(choose(values[0]))
 `)

@@ -18,7 +18,13 @@ func (e *Evaluator) evalForStatement(statement *ast.ForStatement, env *object.En
 		}
 		for _, element := range collection.Elements {
 			env.Set(statement.Key.Value, element)
-			if result := e.Eval(statement.Body, env); loopMustStop(result) {
+			result := e.Eval(statement.Body, env)
+			switch result.(type) {
+			case *object.Break:
+				return NULL
+			case *object.Continue:
+				continue
+			case *object.ReturnValue, *object.Error:
 				return result
 			}
 		}
@@ -29,7 +35,13 @@ func (e *Evaluator) evalForStatement(statement *ast.ForStatement, env *object.En
 		for _, pair := range collection.Snapshot() {
 			env.Set(statement.Key.Value, pair.Key)
 			env.Set(statement.Value.Value, pair.Value)
-			if result := e.Eval(statement.Body, env); loopMustStop(result) {
+			result := e.Eval(statement.Body, env)
+			switch result.(type) {
+			case *object.Break:
+				return NULL
+			case *object.Continue:
+				continue
+			case *object.ReturnValue, *object.Error:
 				return result
 			}
 		}
@@ -49,17 +61,14 @@ func (e *Evaluator) evalWhileStatement(statement *ast.WhileStatement, env *objec
 		if !isTruthy(condition) {
 			return NULL
 		}
-		if result := e.Eval(statement.Body, env); loopMustStop(result) {
+		result := e.Eval(statement.Body, env)
+		switch result.(type) {
+		case *object.Break:
+			return NULL
+		case *object.Continue:
+			continue
+		case *object.ReturnValue, *object.Error:
 			return result
 		}
-	}
-}
-
-func loopMustStop(result object.Object) bool {
-	switch result.(type) {
-	case *object.ReturnValue, *object.Error:
-		return true
-	default:
-		return false
 	}
 }

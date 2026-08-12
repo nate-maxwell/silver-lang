@@ -70,3 +70,40 @@ func TestLoopsRequireHeaderExpressions(t *testing.T) {
 		}
 	}
 }
+
+func TestLoopControlStatements(t *testing.T) {
+	p := New(lexer.New(`for value in values {
+continue
+break
+}`))
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	body := program.Statements[0].(*ast.ForStatement).Body.Statements
+	if _, ok := body[0].(*ast.ContinueStatement); !ok {
+		t.Fatalf("first body statement is %T, want *ast.ContinueStatement", body[0])
+	}
+	if _, ok := body[1].(*ast.BreakStatement); !ok {
+		t.Fatalf("second body statement is %T, want *ast.BreakStatement", body[1])
+	}
+}
+
+func TestLoopControlRequiresLexicalLoop(t *testing.T) {
+	tests := []string{
+		"break",
+		"continue",
+		"while True { let callback = fn() { break } }",
+		"for value in values { let callback = fn() { continue } }",
+	}
+
+	for _, input := range tests {
+		p := New(lexer.New(input))
+		p.ParseProgram()
+		if len(p.Errors()) == 0 {
+			t.Fatalf("parser accepted %q", input)
+		}
+		if !strings.Contains(p.Errors()[0], "only valid inside a loop") {
+			t.Fatalf("unexpected parser errors for %q: %v", input, p.Errors())
+		}
+	}
+}

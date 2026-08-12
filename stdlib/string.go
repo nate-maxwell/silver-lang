@@ -2,7 +2,9 @@ package stdlib
 
 import (
 	"math"
+	"silver/ast"
 	"silver/object"
+	"strconv"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -20,6 +22,9 @@ func stringDefinitions(trueValue, falseValue *object.Boolean) []definition {
 		{name: "equal_fold", fn: binaryStringPredicate("equal_fold", strings.EqualFold, trueValue, falseValue)},
 		{name: "fields", fn: stringFields},
 		{name: "find", fn: stringFind},
+		{name: "from_bool", fn: stringFromBool, signature: callSignature([]string{"value"}, []*ast.TypeAnnotation{namedType("bool")}, namedType("str"))},
+		{name: "from_float", fn: stringFromFloat, signature: callSignature([]string{"value"}, []*ast.TypeAnnotation{namedType("float")}, namedType("str"))},
+		{name: "from_int", fn: stringFromInt, signature: callSignature([]string{"value"}, []*ast.TypeAnnotation{namedType("int")}, namedType("str"))},
 		{name: "isalnum", fn: stringClassifier("isalnum", isAlphanumeric, trueValue, falseValue)},
 		{name: "isalpha", fn: stringClassifier("isalpha", isAlpha, trueValue, falseValue)},
 		{name: "isascii", fn: stringClassifier("isascii", isASCII, trueValue, falseValue)},
@@ -47,8 +52,94 @@ func stringDefinitions(trueValue, falseValue *object.Boolean) []definition {
 		{name: "strip", fn: unaryStringFunction("strip", strings.TrimSpace)},
 		{name: "swapcase", fn: unaryStringFunction("swapcase", swapCase)},
 		{name: "title", fn: unaryStringFunction("title", titleString)},
+		{name: "to_bool", fn: stringToBool(trueValue, falseValue), signature: callSignature([]string{"value"}, []*ast.TypeAnnotation{namedType("str")}, namedType("bool"), "ValueError")},
+		{name: "to_float", fn: stringToFloat, signature: callSignature([]string{"value"}, []*ast.TypeAnnotation{namedType("str")}, namedType("float"), "ValueError")},
+		{name: "to_int", fn: stringToInt, signature: callSignature([]string{"value"}, []*ast.TypeAnnotation{namedType("str")}, namedType("int"), "ValueError")},
 		{name: "upper", fn: unaryStringFunction("upper", strings.ToUpper)},
 	}
+}
+
+func stringFromBool(args ...object.Object) object.Object {
+	if err := requireArgumentCount(args, 1); err != nil {
+		return err
+	}
+	value, ok := args[0].(*object.Boolean)
+	if !ok {
+		return newError(object.RuntimeErrorKindType, "argument 1 to `from_bool` must be BOOLEAN, got %s", args[0].Type())
+	}
+	return &object.String{Value: value.Inspect()}
+}
+
+func stringFromFloat(args ...object.Object) object.Object {
+	if err := requireArgumentCount(args, 1); err != nil {
+		return err
+	}
+	value, ok := args[0].(*object.Float)
+	if !ok {
+		return newError(object.RuntimeErrorKindType, "argument 1 to `from_float` must be FLOAT, got %s", args[0].Type())
+	}
+	return &object.String{Value: value.Inspect()}
+}
+
+func stringFromInt(args ...object.Object) object.Object {
+	if err := requireArgumentCount(args, 1); err != nil {
+		return err
+	}
+	value, ok := args[0].(*object.Integer)
+	if !ok {
+		return newError(object.RuntimeErrorKindType, "argument 1 to `from_int` must be INTEGER, got %s", args[0].Type())
+	}
+	return &object.String{Value: value.Inspect()}
+}
+
+func stringToBool(trueValue, falseValue *object.Boolean) object.BuiltinFunction {
+	return func(args ...object.Object) object.Object {
+		if err := requireArgumentCount(args, 1); err != nil {
+			return err
+		}
+		value, err := requireString("to_bool", 0, args[0])
+		if err != nil {
+			return err
+		}
+		switch strings.ToLower(value) {
+		case "true":
+			return trueValue
+		case "false":
+			return falseValue
+		default:
+			return newError(object.RuntimeErrorKindValue, "could not convert %q to bool", value)
+		}
+	}
+}
+
+func stringToFloat(args ...object.Object) object.Object {
+	if err := requireArgumentCount(args, 1); err != nil {
+		return err
+	}
+	value, err := requireString("to_float", 0, args[0])
+	if err != nil {
+		return err
+	}
+	converted, parseErr := strconv.ParseFloat(value, 64)
+	if parseErr != nil {
+		return newError(object.RuntimeErrorKindValue, "could not convert %q to float", value)
+	}
+	return &object.Float{Value: converted}
+}
+
+func stringToInt(args ...object.Object) object.Object {
+	if err := requireArgumentCount(args, 1); err != nil {
+		return err
+	}
+	value, err := requireString("to_int", 0, args[0])
+	if err != nil {
+		return err
+	}
+	converted, parseErr := strconv.ParseInt(value, 10, 64)
+	if parseErr != nil {
+		return newError(object.RuntimeErrorKindValue, "could not convert %q to int", value)
+	}
+	return &object.Integer{Value: converted}
 }
 
 func requireString(name string, index int, value object.Object) (string, *object.Error) {

@@ -152,6 +152,12 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 		}
 		return &object.ReturnValue{Value: val}
 
+	case *ast.BreakStatement:
+		return &object.Break{}
+
+	case *ast.ContinueStatement:
+		return &object.Continue{}
+
 	case *ast.AssertStatement:
 		condition := e.Eval(node.Condition, env)
 		if isError(condition) {

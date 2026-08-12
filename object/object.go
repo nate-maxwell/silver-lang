@@ -18,6 +18,8 @@ const (
 	STRING_OBJ       = "STRING"
 	NULL_OBJ         = "NULL"
 	RETURN_VALUE_OBJ = "RETURN_VALUE"
+	BREAK_OBJ        = "BREAK"
+	CONTINUE_OBJ     = "CONTINUE"
 	ERROR_OBJ        = "ERROR"
 	FUNCTION_OBJ     = "FUNCTION"
 	BUILTIN_OBJ      = "BUILTIN"
@@ -136,6 +138,20 @@ func (rv *ReturnValue) Type() ObjectType { return RETURN_VALUE_OBJ }
 
 // Inspect delegates to the wrapped language value.
 func (rv *ReturnValue) Inspect() string { return rv.Value.Inspect() }
+
+// Break is an internal control-flow signal consumed by the nearest loop.
+type Break struct{}
+
+func (b *Break) Type() ObjectType { return BREAK_OBJ }
+
+func (b *Break) Inspect() string { return "break" }
+
+// Continue is an internal control-flow signal consumed by the nearest loop.
+type Continue struct{}
+
+func (c *Continue) Type() ObjectType { return CONTINUE_OBJ }
+
+func (c *Continue) Inspect() string { return "continue" }
 
 // Null is the absence-of-value object. It carries no per-instance state.
 type Null struct{}

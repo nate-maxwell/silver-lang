@@ -41,6 +41,87 @@ func TestStringTransformFunctions(t *testing.T) {
 	}
 }
 
+func TestStringToNumberConversions(t *testing.T) {
+	integerTests := []struct {
+		input string
+		want  int64
+	}{
+		{`strings.to_int("42")`, 42},
+		{`strings.to_int("-42")`, -42},
+		{`strings.to_int("+42")`, 42},
+		{`strings.to_int("-9223372036854775808")`, -9223372036854775808},
+	}
+	for _, test := range integerTests {
+		t.Run(test.input, func(t *testing.T) {
+			testIntegerObject(t, testEval(stringImport+test.input), test.want)
+		})
+	}
+
+	floatTests := []struct {
+		input string
+		want  float64
+	}{
+		{`strings.to_float("42")`, 42},
+		{`strings.to_float("-2.5")`, -2.5},
+		{`strings.to_float("1.25e2")`, 125},
+	}
+	for _, test := range floatTests {
+		t.Run(test.input, func(t *testing.T) {
+			testFloatObject(t, testEval(stringImport+test.input), test.want)
+		})
+	}
+}
+
+func TestStringToBoolConversion(t *testing.T) {
+	tests := []struct {
+		input string
+		want  bool
+	}{
+		{`strings.to_bool("true")`, true},
+		{`strings.to_bool("True")`, true},
+		{`strings.to_bool("FALSE")`, false},
+		{`strings.to_bool("false")`, false},
+	}
+	for _, test := range tests {
+		t.Run(test.input, func(t *testing.T) {
+			testBooleanObject(t, testEval(stringImport+test.input), test.want)
+		})
+	}
+}
+
+func TestStringFromPrimitiveConversions(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{`strings.from_int(42)`, "42"},
+		{`strings.from_int(-42)`, "-42"},
+		{`strings.from_float(42.0)`, "42.0"},
+		{`strings.from_float(-2.5)`, "-2.5"},
+		{`strings.from_bool(True)`, "true"},
+		{`strings.from_bool(False)`, "false"},
+	}
+	for _, test := range tests {
+		t.Run(test.input, func(t *testing.T) {
+			result, ok := testEval(stringImport + test.input).(*object.String)
+			if !ok || result.Value != test.want {
+				t.Fatalf("result is %#v, want %q", result, test.want)
+			}
+		})
+	}
+}
+
+func TestStringConversionSignatures(t *testing.T) {
+	input := stringImport + coreImport + `let to_int: call(value: str) int | ValueError = strings.to_int
+let from_int: call(value: int) str = strings.from_int
+let to_float: call(value: str) float | ValueError = strings.to_float
+let from_float: call(value: float) str = strings.from_float
+let to_bool: call(value: str) bool | ValueError = strings.to_bool
+let from_bool: call(value: bool) str = strings.from_bool
+core.type(from_bool) == call`
+	testBooleanObject(t, testEval(input), true)
+}
+
 func TestStringSearchFunctions(t *testing.T) {
 	tests := []struct {
 		input string
@@ -131,6 +212,17 @@ func TestStringFunctionErrors(t *testing.T) {
 		{input: `strings.repeat("one", -1)`, message: "argument 2 to `repeat` must be nonnegative"},
 		{input: `strings.repeat("one", 1000000)`, message: "result of `repeat` exceeds 1000000 bytes"},
 		{input: `strings.split("one", "")`, message: "separator argument to `split` must not be empty"},
+		{input: `strings.to_int("12.5")`, message: `could not convert "12.5" to int`},
+		{input: `strings.to_int("9223372036854775808")`, message: `could not convert "9223372036854775808" to int`},
+		{input: `strings.to_float("1.2.3")`, message: `could not convert "1.2.3" to float`},
+		{input: `strings.to_bool("yes")`, message: `could not convert "yes" to bool`},
+		{input: `strings.to_int(1)`, message: "argument 1 to `to_int` must be STRING, got INTEGER"},
+		{input: `strings.from_int("1")`, message: "argument 1 to `from_int` must be INTEGER, got STRING"},
+		{input: `strings.to_float(1.0)`, message: "argument 1 to `to_float` must be STRING, got FLOAT"},
+		{input: `strings.from_float(1)`, message: "argument 1 to `from_float` must be FLOAT, got INTEGER"},
+		{input: `strings.to_bool(True)`, message: "argument 1 to `to_bool` must be STRING, got BOOLEAN"},
+		{input: `strings.from_bool("true")`, message: "argument 1 to `from_bool` must be BOOLEAN, got STRING"},
+		{input: `strings.from_int()`, message: "wrong number of arguments. got=0, want=1"},
 	}
 
 	for _, tt := range tests {

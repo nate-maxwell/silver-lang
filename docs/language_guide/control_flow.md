@@ -91,8 +91,24 @@ while count > 0 {
 }
 ```
 
-Silver currently has no `break` or `continue` statement. A [`return`](functions.md#return-behavior) inside a function can
-leave a loop and the surrounding function.
+## Loop control
+
+`continue` skips the rest of the current iteration. `break` exits the nearest enclosing loop:
+
+```silver
+let firstLargeOdd = 0
+for value in [2, 7, 10, 13, 18] {
+    if value % 2 == 0 { continue }
+    if value > 10 {
+        firstLargeOdd = value
+        break
+    }
+}
+```
+
+Both statements work in `for` and `while` loops and apply only to the innermost loop when loops are nested. They are
+only valid inside a loop body. A [`return`](functions.md#return-behavior) inside a function leaves both the loop and the
+surrounding function.
 
 ## Returns and errors
 

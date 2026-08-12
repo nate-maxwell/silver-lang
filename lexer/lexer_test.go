@@ -131,6 +131,26 @@ func TestNextToken(t *testing.T) {
 	}
 }
 
+func TestLoopControlKeywords(t *testing.T) {
+	l := New("break continue")
+	want := []struct {
+		tokenType token.TokenType
+		literal   string
+	}{
+		{token.BREAK, "break"},
+		{token.CONTINUE, "continue"},
+		{token.EOF, ""},
+	}
+
+	for index, expected := range want {
+		got := l.NextToken()
+		if got.Type != expected.tokenType || got.Literal != expected.literal {
+			t.Fatalf("token %d is (%q, %q), want (%q, %q)",
+				index, got.Type, got.Literal, expected.tokenType, expected.literal)
+		}
+	}
+}
+
 func TestLineComments(t *testing.T) {
 	input := `
 	# A comment may occupy an entire line.

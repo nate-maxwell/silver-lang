@@ -14,7 +14,7 @@ func (e *Evaluator) evalBlockStatement(block *ast.BlockStatement, env *object.En
 		result = e.Eval(statement, env)
 
 		switch result.(type) {
-		case *object.ReturnValue, *object.Error:
+		case *object.ReturnValue, *object.Break, *object.Continue, *object.Error:
 			return result
 		}
 	}

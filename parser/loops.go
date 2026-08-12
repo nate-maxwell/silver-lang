@@ -40,7 +40,9 @@ func (p *Parser) parseForStatement() *ast.ForStatement {
 	if !p.expectPeek(token.LBRACE) {
 		return nil
 	}
+	p.loopDepth++
 	statement.Body = p.parseBlockStatement()
+	p.loopDepth--
 	p.consumeStatementEnd()
 	return statement
 }
@@ -62,7 +64,9 @@ func (p *Parser) parseWhileStatement() *ast.WhileStatement {
 	if !p.expectPeek(token.LBRACE) {
 		return nil
 	}
+	p.loopDepth++
 	statement.Body = p.parseBlockStatement()
+	p.loopDepth--
 	p.consumeStatementEnd()
 	return statement
 }

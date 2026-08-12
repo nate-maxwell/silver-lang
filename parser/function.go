@@ -28,7 +28,10 @@ func (p *Parser) parseFunctionLiteral() ast.Expression {
 		return nil
 	}
 
+	previousLoopDepth := p.loopDepth
+	p.loopDepth = 0
 	lit.Body = p.parseBlockStatement()
+	p.loopDepth = previousLoopDepth
 
 	return lit
 }

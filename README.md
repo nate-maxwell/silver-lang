@@ -107,9 +107,9 @@ struct MissingUser { message: str, id: int }
 
 let find_user = fn(id: int) str | MissingUser {
     if id == 7 {
-        "Ada"
+        return "Ada"
     } else {
-        MissingUser{"user not found", id}
+        return MissingUser{"user not found", id}
     }
 }
 

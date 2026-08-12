@@ -9,7 +9,7 @@ scope exits.
 Place `task` before an unparenthesized callable name or member:
 
 ```silver
-let fetch_user = fn() str { "Ada" }
+let fetch_user = fn() str { return "Ada" }
 let user = task fetch_user
 ```
 
@@ -32,7 +32,7 @@ task(fetch_user)
 Store the returned handle in a binding so it can be collected:
 
 ```silver
-let calculation = task fn() int { 6 * 7 }
+let calculation = task fn() int { return 6 * 7 }
 ```
 
 ## Collecting results
@@ -40,8 +40,8 @@ let calculation = task fn() int { 6 * 7 }
 `collect` takes an unparenthesized, comma-separated list of task-handle identifiers:
 
 ```silver
-let fetch_user = fn() str { "Ada" }
-let fetch_score = fn() int { 100 }
+let fetch_user = fn() str { return "Ada" }
+let fetch_score = fn() int { return 100 }
 
 let user = task fetch_user
 let score = task fetch_score
@@ -82,7 +82,7 @@ handle is collected:
 struct Missing { message: str }
 
 let read = fn() str | Missing {
-    Missing{"not found"}
+    return Missing{"not found"}
 }
 
 let pending = task read
@@ -108,7 +108,7 @@ Task handles are affine values: one task result may be consumed only once. Alias
 result:
 
 ```silver
-let work = fn() int { 42 }
+let work = fn() int { return 42 }
 let original = task work
 let alias = original
 
@@ -155,10 +155,10 @@ let times = import("time")
 
 let slow_answer = fn() int {
     times.sleep(times.duration(25, "ms"))
-    40
+    return 40
 }
 
-let quick_answer = fn() int { 2 }
+let quick_answer = fn() int { return 2 }
 
 let slow = task slow_answer
 let quick = task quick_answer

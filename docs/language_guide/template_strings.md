@@ -18,6 +18,19 @@ let rendered: str = query.eval()
 Template text is raw and may span physical lines. Newlines and other text between the delimiters are preserved. Unlike
 ordinary quoted strings, backslash escape sequences in literal template text are not decoded.
 
+Template strings are also Silver's multi-line string type by evaluating them.
+````silver
+let multi_line: TemplateString = ```
+hello from
+multiple lines
+```
+
+io.print(multi_line.eval())
+
+>> helo from
+>> multiple lines
+````
+
 ## Interpolations are Silver expressions
 
 Text between a single pair of braces is parsed as an ordinary expression:

@@ -63,7 +63,7 @@ struct Point { x: int, y: int }
 
 let origin = Point{0, 0}
 let translate = fn(point: Point, amount: int) Point {
-    Point{point.x + amount, point.y + amount}
+    return Point{point.x + amount, point.y + amount}
 }
 ```
 
@@ -102,7 +102,7 @@ such as the stateful [`testing`](../stdlib/testing.md) runner, but libraries sho
 let count = 0
 let next = fn() int {
     count = count + 1
-    count
+    return count
 }
 ```
 

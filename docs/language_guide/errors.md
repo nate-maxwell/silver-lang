@@ -28,7 +28,7 @@ List possible application errors after a function's successful return type:
 
 ```silver
 let read = fn(path: str) str | NotFound | PermissionProblem {
-    NotFound{"file does not exist", path}
+    return NotFound{"file does not exist", path}
 }
 ```
 

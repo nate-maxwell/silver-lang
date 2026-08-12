@@ -9,7 +9,7 @@ A function lists its parameters between parentheses and places an optional retur
 
 ```silver
 let add = fn(left: int, right: int) int {
-    left + right
+    return left + right
 }
 
 add(20, 22) # 42
@@ -19,11 +19,11 @@ Functions are expressions, so an anonymous function can be passed or called dire
 
 ```silver
 let apply = fn(operation: call(int) int, value: int) int {
-    operation(value)
+    return operation(value)
 }
 
-apply(fn(value: int) int { value * 2 }, 21) # 42
-fn(value: int) int { value + 1 }(41)        # 42
+apply(fn(value: int) int { return value * 2 }, 21) # 42
+fn(value: int) int { return value + 1 }(41)        # 42
 ```
 
 Arguments are evaluated from left to right and normally bind by position. Every parameter must be filled and extra
@@ -36,7 +36,7 @@ Parameter annotations are optional and checked when arguments bind:
 
 ```silver
 let choose = fn(value: int, enabled) int {
-    if enabled { value } else { 0 }
+    if enabled { return value } else { return 0 }
 }
 ```
 
@@ -50,7 +50,7 @@ An annotation can name a primitive type, struct, enum, built-in nominal type, or
 let paths = import("path")
 
 let describe = fn(value: paths.Path) str {
-    value.path
+    return value.path
 }
 ```
 
@@ -66,7 +66,7 @@ let first_positive = fn(values: array) int {
             return value
         }
     }
-    0
+    return 0
 }
 ```
 
@@ -76,12 +76,17 @@ An unannotated function always returns null. Its body still runs, and an express
 but that value is discarded at the function boundary:
 
 ```silver
+let print = import("io").print
+
 let announce = fn(message: str) {
     import("io").print(message)
-    42
+    return 42
 }
 
-announce("ready") # null
+print(announce("hello"))
+
+>> hello
+>> null
 ```
 
 Functions that may propagate typed application errors place their alternatives after the success type. See
@@ -90,11 +95,11 @@ Functions that may propagate typed application errors place their alternatives a
 ## Closures
 
 A function captures its lexical environment. The captured bindings remain available after the declaring function has
-returned:
+returned. Here is a clsoure example of function currying:
 
 ```silver
 let make_adder = fn(amount: int) call(int) int {
-    fn(value: int) int { value + amount }
+    return fn(value: int) int { value + amount }
 }
 
 let add_two = make_adder(2)
@@ -120,7 +125,7 @@ next() # 2
 The primitive `call` type accepts any Silver function or native callable:
 
 ```silver
-let callback: call = fn(value: int) int { value }
+let callback: call = fn(value: int) int { return value }
 ```
 
 A detailed callable annotation constrains parameter types, its result, and any declared errors:

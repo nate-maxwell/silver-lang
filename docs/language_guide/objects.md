@@ -49,7 +49,7 @@ struct Location {
 }
 
 let move = fn(x: float, y: float, z: float) Location {
-    Location{x + 5.0, y + 5.0, z + 5.0}
+    return Location{x + 5.0, y + 5.0, z + 5.0}
 }
 
 let location = Location{0.0, 0.0, 0.0}
@@ -82,7 +82,7 @@ Destructuring can combine with normal positional arguments:
 struct Point { x: int, y: int }
 
 let encode = fn(offset: int, x: int, y: int) int {
-    offset + x * 10 + y
+    return offset + x * 10 + y
 }
 
 encode(100, Point{2, 3}) # 123
@@ -117,7 +117,7 @@ struct Counter {
 
 let increment = fn(self: Counter, amount: int) int {
     self.value = self.value + amount
-    self.value
+    return self.value
 }
 
 let counter = Counter{0, increment}
@@ -133,7 +133,7 @@ operate on another.
 A field annotated with bare `call` is an ordinary callback. It accepts any callable and does not bind a receiver:
 
 ```silver
-let identity = fn(value: int) int { value }
+let identity = fn(value: int) int { return value }
 
 struct Box {
     callback: call
@@ -148,17 +148,23 @@ methods because their structs carry callables that close over native state.
 
 ## Operator protocols
 
-A struct opts into a binary operator by storing a callable in the corresponding field:
+A struct opts into an infix operator by storing a callable in the corresponding field:
 
-| Operator | Field     | Operator | Field    |
-| -------- | --------- | -------- | -------- |
-| `+`      | `add`     | `-`      | `sub`    |
-| `*`      | `mul`     | `/`      | `div`    |
-| `%`      | `mod`     | `//`     | `int_div` |
-| `**`     | `pow`     |          |          |
-| `==`     | `eq`      | `!=`     | `not_eq` |
-| `<`      | `lt`      | `>`      | `gt`     |
-| `<=`     | `lte`     | `>=`     | `gte`    |
+| Operator | Field     |
+| -------- |-----------|
+| `+`      | `add`     |
+| `*`      | `mul`     |
+| `%`      | `mod`     |
+| `**`     | `pow`     |
+| `==`     | `eq`      |
+| `<`      | `lt`      |
+| `<=`     | `lte`     |
+| `-`      | `sub`     |
+| `/`      | `div`     |
+| `//`     | `int_div` |
+| `!=`     | `not_eq`  |
+| `>`      | `gt`      |
+| `>=`     | `gte`     |
 
 The left operand provides the method; the right operand becomes its explicit argument:
 
@@ -170,7 +176,7 @@ struct Vector {
 }
 
 let add = fn(self: Vector, other: Vector) Vector {
-    Vector{self.x + other.x, self.y + other.y, add}
+    return Vector{self.x + other.x, self.y + other.y, add}
 }
 
 let left = Vector{2, 3, add}
@@ -194,7 +200,7 @@ struct IntBuffer {
 }
 
 let get_item = fn(self: IntBuffer, index: int) int {
-    self.values[index]
+    return self.values[index]
 }
 
 let set_item = fn(self: IntBuffer, index: int, value: int) {

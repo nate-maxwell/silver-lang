@@ -1,6 +1,8 @@
 # Silver
 
-Silver is an interpreted, struct-centric programming language where behavior is data. A struct describes both the values an object carries and the callable fields that give it behavior. Methods, operator overloads, indexing, dependency injection, and even standard-library objects all grow from that small idea.
+Silver is an interpreted, struct-centric programming language where behavior is data. A struct describes both
+the values an object carries and the callable fields that give it behavior. Methods, operator overloads, indexing,
+dependency injection, and even standard-library objects all grow from that small idea.
 
 Silver exists to explore a middle ground between scripting-language immediacy and explicit program contracts:
 
@@ -10,9 +12,12 @@ Silver exists to explore a middle ground between scripting-language immediacy an
 - compose behavior from ordinary functions stored in ordinary structs;
 - use concurrency without losing track of task results.
 
-The implementation is written in Go and includes a REPL, source modules, cached ASTs, tracebacks, and a standard library implemented in both Go and Silver. Silver is currently a young language: it is a good place to experiment, learn, and contribute, but its syntax and APIs may still evolve.
+The implementation is written in Go and includes a REPL, source modules, cached ASTs, tracebacks, and a standard
+library implemented in both Go and Silver. Silver is currently a young language: it is a good place to experiment,
+learn, and contribute, but its syntax and APIs may still evolve.
 
-Read the [documentation table of contents](docs/table_of_contents.md), start with [Getting Started](docs/getting_started.md), or dive into the [Language Guide](docs/language_guide/language_guide.md).
+Read the [documentation table of contents](docs/table_of_contents.md), start with [Getting Started](docs/getting_started.md), or dive into the
+[Language Guide](docs/language_guide/language_guide.md).
 
 
 ## A first taste
@@ -44,7 +49,8 @@ apply(double, 21) # 42
 
 ## Behavior is data
 
-Silver functions can destructure structs by parameter name. Here, `move` declares three float parameters, but receives one `Location`:
+Silver functions can destructure structs by parameter name. Here, `move` declares three float parameters, but
+receives one `Location`:
 
 ```silver
 struct Location {
@@ -100,7 +106,8 @@ in an ordinary field. Silver builds operator overloading and custom indexing on 
 
 ## Errors are part of the signature
 
-Any struct can be an expected error type. Returning one of a function's declared error alternatives unwinds to a matching `catch`:
+Any struct can be an expected error type. Returning one of a function's declared error alternatives unwinds to
+a matching `catch`:
 
 ```silver
 struct MissingUser { message: str, id: int }
@@ -133,11 +140,12 @@ name = "world"
 greeting.eval() # "Hello, world!"
 ````
 
-Tasks run zero-argument callables concurrently. `collect` joins them and names each non-null result after its handle:
+Tasks run zero-argument callables concurrently. `collect` joins them and names each non-null result after its
+handle:
 
 ```silver
-let answer = fn() int { 6 * 7 }
-let greeting = fn() str { "hello" }
+let answer = fn() int { return 6 * 7 }
+let greeting = fn() str { return "hello" }
 
 let calculation = task answer
 let message = task greeting
@@ -158,7 +166,8 @@ go build -o silver .
 ./silver
 ```
 
-Run a source file with `./silver program.slv` (or `silver.exe program.slv` on Windows). During development, `go run . program.slv` works too.
+Run a source file with `./silver program.slv` (or `silver.exe program.slv` on Windows). During development,
+`go run . program.slv` works too.
 
 ## Project status and contributing
 
@@ -168,4 +177,5 @@ The test suite is the executable specification for the language today:
 go test ./...
 ```
 
-Changes to syntax or semantics should include parser/evaluator tests and matching documentation. See the repository's [MIT license](LICENSE).
+Changes to syntax or semantics should include parser/evaluator tests and matching documentation. See the
+repository's [MIT license](LICENSE).

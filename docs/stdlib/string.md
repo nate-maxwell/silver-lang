@@ -41,13 +41,13 @@ Conversion input is strict: surrounding whitespace is not removed. Use `strip` f
 
 ## Splitting and composition
 
-| Function                  | Description                                                   |
-|---------------------------| ------------------------------------------------------------- |
-| `chars(value)`            | Array of Unicode code-point strings.                          |
-| `fields(value)`           | Split around runs of Unicode whitespace.                      |
-| `split(value, separator)` | Split on a nonempty separator.                                |
-| `splitlines(value)`       | Split `LF`, `CRLF`, or `CR` lines without a final empty line. |
-| `join(values, separator)` | Join an array containing only strings.                        |
+| Function                   | Description                                                   |
+|----------------------------| ------------------------------------------------------------- |
+| `chars(value)`             | Array of Unicode code-point strings.                          |
+| `fields(value)`            | Split around runs of Unicode whitespace.                      |
+| `split(value, separator)`  | Split on a nonempty separator.                                |
+| `splitlines(value)`        | Split `LF`, `CRLF`, or `CR` lines without a final empty line. |
+| `join(array, separator)`   | Join an array containing only strings.                        |
 
 ## Search and comparison
 

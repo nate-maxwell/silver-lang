@@ -80,12 +80,40 @@ maps.get(system.environment(), "` + key + `")`
 	}
 }
 
+func TestSystemSilverPathHelpers(t *testing.T) {
+	const silverPathName = "SILVER_PATH"
+
+	name, ok := testEval(systemImport + `system.ENV_SILVER_PATH`).(*object.String)
+	if !ok || name.Value != silverPathName {
+		t.Fatalf("ENV_SILVER_PATH is %T (%v), want SILVER_PATH", name, name)
+	}
+
+	separator, ok := testEval(systemImport + `system.get_path_sep()`).(*object.String)
+	if !ok || separator.Value != string(os.PathListSeparator) {
+		t.Fatalf("get_path_sep returned %T (%v), want %q", separator, separator, os.PathListSeparator)
+	}
+
+	t.Setenv(silverPathName, "")
+	testNullObject(t, testEval(systemImport+`system.append_path("first")`))
+	if value := os.Getenv(silverPathName); value != "first" {
+		t.Fatalf("append_path on an empty value produced %q, want first", value)
+	}
+
+	separatorText := string(os.PathListSeparator)
+	testNullObject(t, testEval(systemImport+`system.append_path("second")`))
+	if value, want := os.Getenv(silverPathName), "first"+separatorText+"second"; value != want {
+		t.Fatalf("append_path produced %q, want %q", value, want)
+	}
+}
+
 func TestSystemFunctionErrors(t *testing.T) {
 	tests := []struct {
 		input   string
 		message string
 	}{
 		{input: `system.machine(1)`, message: "wrong number of arguments. got=1, want=0"},
+		{input: `system.get_path_sep(1)`, message: "wrong number of arguments. got=1, want=0"},
+		{input: `system.append_path(1)`, message: "argument 1 to `append_path` must be STRING, got INTEGER"},
 		{input: `system.getenv(1)`, message: "argument 1 to `getenv` must be STRING, got INTEGER"},
 		{input: `system.setenv("key", 1)`, message: "argument 2 to `setenv` must be STRING, got INTEGER"},
 	}

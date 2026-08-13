@@ -6,21 +6,61 @@ import (
 	"runtime"
 	"silver/object"
 	"strings"
+	"sync"
 )
+
+const silverPathEnvironmentName = "SILVER_PATH"
+
+var systemEnvironmentMu sync.Mutex
 
 // systemDefinitions contains host and process-environment information exposed
 // by import("system"). Queries return empty strings when the host cannot
 // provide a value.
 func systemDefinitions(null *object.Null) []definition {
 	return []definition{
+		{name: "ENV_SILVER_PATH", value: &object.String{Value: silverPathEnvironmentName}},
 		{name: "machine", fn: systemMachine},
 		{name: "node", fn: systemNode},
 		{name: "processor", fn: systemProcessor},
 		{name: "release", fn: systemRelease},
 		{name: "system", fn: systemName},
+		{name: "get_path_sep", fn: systemGetPathSeparator},
+		{name: "append_path", fn: systemAppendPath(null)},
 		{name: "getenv", fn: systemGetenv},
 		{name: "setenv", fn: systemSetenv(null)},
 		{name: "environment", fn: systemEnvironment},
+	}
+}
+
+func systemGetPathSeparator(args ...object.Object) object.Object {
+	if err := requireArgumentCount(args, 0); err != nil {
+		return err
+	}
+	return &object.String{Value: string(os.PathListSeparator)}
+}
+
+func systemAppendPath(null *object.Null) object.BuiltinFunction {
+	return func(args ...object.Object) object.Object {
+		if err := requireArgumentCount(args, 1); err != nil {
+			return err
+		}
+		entry, err := requireString("append_path", 0, args[0])
+		if err != nil {
+			return err
+		}
+
+		systemEnvironmentMu.Lock()
+		defer systemEnvironmentMu.Unlock()
+		value := os.Getenv(silverPathEnvironmentName)
+		if value == "" {
+			value = entry
+		} else {
+			value += string(os.PathListSeparator) + entry
+		}
+		if goErr := os.Setenv(silverPathEnvironmentName, value); goErr != nil {
+			return newError(object.RuntimeErrorKindValue, "could not append to %s: %s", silverPathEnvironmentName, goErr)
+		}
+		return null
 	}
 }
 
@@ -186,7 +226,10 @@ func systemSetenv(null *object.Null) object.BuiltinFunction {
 		if err != nil {
 			return err
 		}
-		if goErr := os.Setenv(key, value); goErr != nil {
+		systemEnvironmentMu.Lock()
+		goErr := os.Setenv(key, value)
+		systemEnvironmentMu.Unlock()
+		if goErr != nil {
 			return newError(object.RuntimeErrorKindValue, "could not set environment variable %q: %s", key, goErr)
 		}
 		return null

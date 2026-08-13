@@ -4,22 +4,23 @@ Silver evaluates programs dynamically. Type annotations are optional contracts c
 fields, and return values receive values. They document intent and fail close to the boundary without requiring a
 separate compilation phase.
 
-## Primitive values
+## Built-in values
 
-| Type     | Examples                          | Notes                                                        |
-| -------- | --------------------------------- | ------------------------------------------------------------ |
-| `int`    | `0`, `-42`                        | Signed 64-bit integer.                                       |
-| `float`  | `3.14`, `-0.5`                    | IEEE-754 64-bit floating point.                              |
-| `bool`   | `True`, `False`                   | Only `False` and null are falsey.                            |
-| `str`    | `"silver"`, `"line\n"`            | UTF-8 string.                                                |
-| `null`   | produced by value-less operations | No null value literal; `null` is the first-class type value. |
-| `array`  | `[1, 2, 3]`                       | Ordered, mutable, zero-indexed sequence.                     |
-| `map`    | `{"name": "Ada", 1: True}`        | Mutable hash map.                                            |
-| `call`   | `fn(value) { value }`             | Silver function or native callable.                          |
-| `module` | `import("io")`                    | Imported module namespace.                                   |
+| Type             | Examples                              | Notes                                                        |
+| ---------------- | ------------------------------------- | ------------------------------------------------------------ |
+| `int`            | `0`, `-42`                            | Signed 64-bit integer.                                       |
+| `float`          | `3.14`, `-0.5`                        | IEEE-754 64-bit floating point.                              |
+| `bool`           | `True`, `False`                       | Only `False` and null are falsey.                            |
+| `str`            | `"silver"`, `"line\n"`                | UTF-8 string.                                                |
+| `null`           | produced by value-less operations     | No null value literal; `null` is the first-class type value. |
+| `array`          | `[1, 2, 3]`                           | Ordered, mutable, zero-indexed sequence.                     |
+| `map`            | `{"name": "Ada", 1: True}`            | Mutable hash map.                                            |
+| `call`           | `fn(value) { value }`                 | Silver function or native callable.                          |
+| `module`         | `import("io")`                        | Imported module namespace.                                   |
+| `TemplateString` | ```` ```Hello, {name}!``` ````        | Delayed template whose `.eval()` method returns a `str`.     |
 
-Structs and enums introduce nominal types. TemplateString, task handles, built-in errors, and standard-library objects
-add other runtime value kinds.
+Structs and enums introduce nominal types. Task handles, built-in errors, and standard-library objects add other
+runtime value kinds.
 
 Silver currently has no `any` annotation. Leave a binding or parameter unannotated when it should accept any value.
 
@@ -58,6 +59,25 @@ bytes rather than code points.
 
 Triple-backtick [template strings](template_strings.md) are separate `TemplateString` values and become
 ordinary strings only after `.eval()`.
+
+## Template strings
+
+Triple backticks create a value of the built-in nominal type `TemplateString`. A template is not a `str`: it stores
+literal text and delayed Silver expressions, captures the scope where it was created, and renders to a string only
+when its zero-argument `.eval()` method is called.
+
+````silver
+let name = "Silver"
+let greeting: TemplateString = ```Hello, {name}!```
+
+name = "world"
+let rendered: str = greeting.eval() # "Hello, world!"
+````
+
+Template literal text is raw and may span multiple lines. Single braces contain interpolated Silver expressions;
+double braces produce literal braces. Every call to `.eval()` reevaluates the expressions using the current captured
+bindings. See [Template Strings](template_strings.md) for nesting, escaping braces, callable contracts, and delayed
+errors.
 
 ## Arrays
 

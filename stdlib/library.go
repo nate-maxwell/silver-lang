@@ -89,6 +89,7 @@ func NewWithStreams(in io.Reader, out, errOut io.Writer, null *object.Null, true
 		"math":        mathDefinitions(),
 		"_networking": networkingDefinitions(null),
 		"path":        pathDefinitions(null, trueValue, falseValue),
+		"random":      randomDefinitions(null),
 		"regex":       regexDefinitions(null),
 		"string":      stringDefinitions(trueValue, falseValue),
 		"system":      systemDefinitions(null),

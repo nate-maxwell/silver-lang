@@ -20,7 +20,7 @@ Read the [documentation table of contents](docs/table_of_contents.md), start wit
 [Language Guide](docs/language_guide/language_guide.md).
 
 
-## A first taste
+## Basic syntax
 
 Import a module, create values, and use familiar control flow:
 

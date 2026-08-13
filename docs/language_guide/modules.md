@@ -3,6 +3,8 @@
 Every Silver source file is a module. A module is an isolated namespace whose members are the top-level bindings
 created while that file is evaluated.
 
+Although silver does not explicitly check for the `.slv` extension, it is the standard for tooling.
+
 ## Importing modules
 
 `import(expression)` evaluates its argument, requires a string, loads the corresponding module, and returns a value of

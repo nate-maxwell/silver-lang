@@ -6,6 +6,8 @@ separate compilation phase.
 
 ## Built-in values
 
+### Primitive
+
 | Type             | Examples                              | Notes                                                        |
 | ---------------- | ------------------------------------- | ------------------------------------------------------------ |
 | `int`            | `0`, `-42`                            | Signed 64-bit integer.                                       |
@@ -18,6 +20,13 @@ separate compilation phase.
 | `call`           | `fn(value) { value }`                 | Silver function or native callable.                          |
 | `module`         | `import("io")`                        | Imported module namespace.                                   |
 | `TemplateString` | ```` ```Hello, {name}!``` ````        | Delayed template whose `.eval()` method returns a `str`.     |
+
+### Nominal
+
+| Type             | Examples                              | Notes                                                        |
+| ---------------- | ------------------------------------- | ------------------------------------------------------------ |
+| `enum`           | `Direction.North`                     | Nominal singleton value from an enum declaration.            |
+| `struct`         | `User{"Ada"}`                         | Instance of a nominal struct declaration.                    |
 
 Structs and enums introduce nominal types. Task handles, built-in errors, and standard-library objects add other
 runtime value kinds.

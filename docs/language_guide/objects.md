@@ -218,24 +218,6 @@ return-type checks from those functions propagate normally.
 Native arrays and maps implement indexing directly. Array indexes must be in range. Missing map keys raise `KeyError`,
 while [`map.get`](../stdlib/map.md) returns null for absence.
 
-## Enums
-
-Enums define nominal singleton values:
-
-```silver
-enum Direction {
-    North,
-    East,
-    South,
-    West,
-}
-
-let direction: Direction = Direction.North
-```
-
-Members may be separated by commas or newlines, and a trailing comma is accepted. Access members through the enum
-namespace. Values compare by identity, carry the enum's nominal type, and can be used as map keys.
-
 ## Modules
 
 Module namespaces, member access, qualified types, caching, and shared state are covered in

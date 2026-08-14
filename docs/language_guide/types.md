@@ -120,6 +120,34 @@ returns null instead.
 
 Maps are mutable reference values. Iteration order and the order returned by `map.values` are unspecified.
 
+## Enums
+
+An enum declaration creates a nominal type and a singleton value for each member:
+
+```silver
+enum Direction {
+    North,
+    East,
+    South,
+    West,
+}
+
+let heading: Direction = Direction.North
+```
+
+Members are accessed through the enum namespace and compare by identity. A value belongs only to the enum declaration
+that created it, so members of two different enums are never equal even when their names match. Enum values are
+hashable and may be used as map keys:
+
+```silver
+let labels = {
+    Direction.North: "north",
+    Direction.South: "south",
+}
+
+labels[heading] # "north"
+```
+
 ## Bindings and annotations
 
 `let` introduces a lexical binding:

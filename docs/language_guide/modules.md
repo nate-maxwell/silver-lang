@@ -30,34 +30,20 @@ A non-string path raises `TypeError`. A module that cannot be read or resolved r
 
 Silver resolves module names in this order:
 
-| Import form | Resolution |
-| ----------- | ---------- |
-| Bundled standard-library name, such as `"io"` | Load the module embedded in the interpreter. |
-| Absolute filesystem path | Load that exact path. |
-| Relative or bare source path | Check beside the importing file first. |
-| Unresolved source path | Check each directory in `SILVER_PATH` using the platform's path-list separator. |
-
-Relative imports inside an imported module resolve beside that module, not beside the original entry file:
-
-```text
-project/
-    main.slv
-    lib/
-        math.slv
-        constants.slv
-```
-
-```silver
-# lib/math.slv
-let constants = import("./constants.slv")
-```
+| Import form                                   | Resolution                                                                      |
+|-----------------------------------------------|---------------------------------------------------------------------------------|
+| Bundled standard-library name, such as `"io"` | Load the module embedded in the interpreter.                                    |
+| Absolute filesystem path                      | Load that exact path.                                                           |
+| Relative or bare path in a `.slv` file        | Check the directory containing that `.slv` file.                                |
+| Relative or bare path entered in the REPL     | Check the process working directory.                                            |
+| Unresolved source path                        | Check each directory in `SILVER_PATH` using the platform's path-list separator. |
 
 Use an explicit relative path such as `./testing.slv` when a user file has the same name as a bundled module.
 
 ## Module members
 
-Silver has no separate visibility declaration or modifier. Every top-level binding becomes a module member, including
-`let` bindings and struct or enum definitions:
+Silver has no separate visibility declaration or modifier. Every top-level binding becomes a module member,
+including `let` bindings and struct or enum definitions:
 
 ```silver
 # geometry.slv

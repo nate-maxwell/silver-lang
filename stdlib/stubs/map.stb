@@ -1,0 +1,21 @@
+# Editor stub for import("map").
+
+let get = fn(mapping: map, key) {
+    # Return the value associated with key, or null when key is missing.
+}
+
+let set = fn(mapping: map, key, value) map {
+    # Return a copy of mapping with key inserted or replaced.
+}
+
+let delete = fn(mapping: map, key) map {
+    # Return a copy of mapping without key. A missing key is harmless.
+}
+
+let values = fn(mapping: map) array {
+    # Return the values in unspecified iteration order.
+}
+
+let contains = fn(mapping: map, key) bool {
+    # Report whether key is present in mapping.
+}

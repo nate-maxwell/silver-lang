@@ -1,0 +1,36 @@
+# Editor stub for import("array").
+
+let append = fn(values: array, value) array {
+    # Return a copy of values with value added at the end.
+}
+
+let contains = fn(values: array, value) bool {
+    # Report whether values contains value. Numeric comparison accepts mixed
+    # int and float values.
+}
+
+let first = fn(values: array) {
+    # Return the first element, or null when values is empty.
+}
+
+let last = fn(values: array) {
+    # Return the last element, or null when values is empty.
+}
+
+let remove = fn(values: array, index: int) {
+    # Return a copy without the indexed element, or null when index is out of
+    # range.
+}
+
+let rest = fn(values: array) {
+    # Return a copy without the first element, or null when values is empty.
+}
+
+let reverse = fn(values: array) array {
+    # Return a reversed copy of values.
+}
+
+let sort = fn(values: array) array {
+    # Return a stable ascending copy of an all-numeric or all-string array.
+    # Integers and floats may be mixed.
+}

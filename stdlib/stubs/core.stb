@@ -1,0 +1,16 @@
+# Editor stub for import("core").
+
+let len = fn(value) int {
+    # Return the number of array elements, map pairs, or string bytes. Use
+    # string.chars to count Unicode code points.
+}
+
+let range = fn(start: int, end: int) array {
+    # Return integers from inclusive start to exclusive end, or an empty array
+    # when end is not greater than start. At most 1,000,000 values are allowed.
+}
+
+let type = fn(value) {
+    # Return the first-class primitive type or exact nominal struct or enum
+    # definition for value.
+}

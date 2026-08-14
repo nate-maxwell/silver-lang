@@ -43,6 +43,7 @@ venv/
 /examples/
 dev/
 game/
+vscode-silver/
 
 # JetBrains plugin build output
 tools/

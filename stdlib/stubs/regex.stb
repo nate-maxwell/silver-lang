@@ -1,0 +1,69 @@
+# Editor stub for import("regex").
+
+struct MatchObject {
+    group: call
+    groups: call() array
+    groupmap: call() map
+    start: call
+    end: call
+    span: call
+    string: str
+}
+
+struct Expression {
+    match: call(string: str)
+    search: call(string: str)
+    findall: call(string: str) array
+    findlist: call(string: str) array
+    sub: call(replacement: str, string: str) str
+    subn: call(replacement: str, string: str) array
+    split: call(string: str) array
+    fullmatch: call(string: str)
+    escape: call(string: str) str
+}
+
+let match = fn(pattern: str, string: str) {
+    # Match pattern only at the beginning of string and return a MatchObject,
+    # or null when no match exists.
+}
+
+let search = fn(pattern: str, string: str) {
+    # Find the first match for pattern anywhere in string and return a
+    # MatchObject, or null when no match exists.
+}
+
+let fullmatch = fn(pattern: str, string: str) {
+    # Return a MatchObject only when pattern consumes all of string, or null
+    # when no full match exists.
+}
+
+let findall = fn(pattern: str, string: str) array {
+    # Return every non-overlapping complete match as a string.
+}
+
+let findlist = fn(pattern: str, string: str) array {
+    # Return every non-overlapping complete match as a MatchObject.
+}
+
+let sub = fn(pattern: str, replacement: str, string: str) str {
+    # Replace every non-overlapping match using RE2 replacement expansion.
+}
+
+let subn = fn(pattern: str, replacement: str, string: str) array {
+    # Return [replaced_string, replacement_count].
+}
+
+let split = fn(pattern: str, string: str) array {
+    # Split around non-overlapping matches without including captured
+    # separators.
+}
+
+let escape = fn(string: str) str {
+    # Escape regular-expression metacharacters so the result matches string
+    # literally.
+}
+
+let compile = fn(pattern: str) Expression {
+    # Validate and compile an RE2 pattern for reuse. Malformed patterns raise
+    # ValueError.
+}

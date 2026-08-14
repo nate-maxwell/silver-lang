@@ -1,0 +1,71 @@
+# Editor stub for import("path").
+
+struct Path {
+    path: str
+    anchor: str
+    drive: str
+    name: str
+    parts: array
+    root: str
+    stem: str
+    suffix: str
+    suffixes: array
+    parent: call() Path
+    parents: call() array
+    absolute: call() Path
+    as_posix: call() str
+    as_uri: call() str
+    chmod: call(mode: int)
+    exists: call() bool
+    expanduser: call() Path
+    glob: call(pattern: str) array
+    hardlink_to: call(target: Path)
+    is_absolute: call() bool
+    is_block_device: call() bool
+    is_char_device: call() bool
+    is_dir: call() bool
+    is_fifo: call() bool
+    is_file: call() bool
+    is_mount: call() bool
+    is_relative_to: call(other: Path) bool
+    is_socket: call() bool
+    is_symlink: call() bool
+    iterdir: call() array
+    joinpath: call(part: str) Path
+    lstat: call() map
+    match: call(pattern: str) bool
+    mkdir: call()
+    open: call() File | FileNotFound | PermissionDenied
+    read_bytes: call() str
+    read_text: call() str
+    readlink: call() Path
+    relative_to: call(other: Path) Path
+    rename: call(target: Path) Path
+    replace: call(target: Path) Path
+    resolve: call() Path
+    rglob: call(pattern: str) array
+    rmdir: call()
+    samefile: call(other: Path) bool
+    stat: call() map
+    symlink_to: call(target: Path)
+    touch: call()
+    unlink: call()
+    walk: call() array
+    with_name: call(name: str) Path
+    with_stem: call(stem: str) Path
+    with_suffix: call(suffix: str) Path
+    write_bytes: call(contents: str) int
+    write_text: call(contents: str) int
+}
+
+let new = fn(path: str) Path {
+    # Clean and wrap a platform-native path.
+}
+
+let cwd = fn() Path {
+    # Return the current working directory as a Path.
+}
+
+let home = fn() Path {
+    # Return the current user's home directory as a Path.
+}

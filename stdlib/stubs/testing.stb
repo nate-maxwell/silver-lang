@@ -1,0 +1,62 @@
+# Editor stub for import("testing").
+
+struct Result {
+    name: str
+    passed: bool
+    message: str
+}
+
+struct Summary {
+    total: int
+    passed: int
+    failed: int
+}
+
+let fail = fn(message: str) {
+    # Fail unconditionally with AssertionError and message.
+}
+
+let check = fn(condition, message: str) {
+    # Require a truthy condition or raise AssertionError with message.
+}
+
+let is_true = fn(value, message: str) {
+    # Require value to be exactly True or raise AssertionError with message.
+}
+
+let is_false = fn(value, message: str) {
+    # Require value to be exactly False or raise AssertionError with message.
+}
+
+let equal = fn(actual, expected, message: str) {
+    # Require actual == expected or raise AssertionError with message.
+}
+
+let not_equal = fn(actual, expected, message: str) {
+    # Require actual != expected or raise AssertionError with message.
+}
+
+let run = fn(name: str, test: call()) {
+    # Run one zero-argument test, record AssertionError as a failure, and
+    # continue. Unexpected errors propagate.
+}
+
+let suite = fn(name: str, tests: call()) {
+    # Prefix the names of tests run by tests. Suites may be nested.
+}
+
+let results = fn() array {
+    # Return recorded Result values in execution order.
+}
+
+let summary = fn() Summary {
+    # Return the current total, passed, and failed counts.
+}
+
+let report = fn() bool {
+    # Print totals and failure details, then report whether all tests passed.
+}
+
+let reset = fn() {
+    # Clear results, counters, and suite state.
+}

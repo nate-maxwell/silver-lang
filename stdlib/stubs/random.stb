@@ -1,0 +1,28 @@
+# Editor stub for import("random").
+
+let random = fn() float {
+    # Return a pseudo-random float greater than or equal to 0.0 and less than
+    # 1.0.
+}
+
+let seed = fn(value: int) {
+    # Seed the pseudo-random generator for repeatable sequences.
+}
+
+let randint = fn(a: int, b: int) int {
+    # Return a pseudo-random integer in the inclusive range from a through b.
+    # Raises ValueError when a is greater than b.
+}
+
+let randelem = fn(values: array) {
+    # Return a pseudo-random array element. Raises IndexError when values is
+    # empty.
+}
+
+let randkey = fn(mapping: map) {
+    # Return a pseudo-random map key. Raises KeyError when mapping is empty.
+}
+
+let shuffle = fn(values: array) {
+    # Shuffle values in place and return null.
+}

@@ -1,0 +1,77 @@
+# Editor stub for import("args").
+
+enum ArgumentKind {
+    Option,
+    Flag,
+    Count,
+    Positional,
+}
+
+struct Argument {
+    name: str
+    short: str
+    help: str
+    kind: ArgumentKind
+    required: bool
+    default_value: str
+    has_default: bool
+}
+
+struct ArgumentError {
+    message: str
+}
+
+struct ParsedArgs {
+    values: map
+    help_requested: bool
+}
+
+struct Parser {
+    program: str
+    description: str
+    arguments: array
+    add: call(self: Parser, argument: Argument) | ArgumentError
+    parse: call(self: Parser, argv: array) ParsedArgs | ArgumentError
+    help: call(self: Parser) str
+}
+
+let new = fn(program: str, description: str) Parser {
+    # Create an empty command-line argument parser.
+}
+
+let option = fn(name: str, short: str, help: str) Argument {
+    # Declare an optional string-valued option with no default.
+}
+
+let option_with_default = fn(
+    name: str,
+    short: str,
+    help: str,
+    default_value: str
+) Argument {
+    # Declare an optional string-valued option with a default value.
+}
+
+let required_option = fn(name: str, short: str, help: str) Argument {
+    # Declare a required string-valued option.
+}
+
+let flag = fn(name: str, short: str, help: str) Argument {
+    # Declare a boolean flag that defaults to False.
+}
+
+let count = fn(name: str, short: str, help: str) Argument {
+    # Declare an integer occurrence counter that defaults to 0.
+}
+
+let positional = fn(name: str, help: str) Argument {
+    # Declare a required positional argument.
+}
+
+let optional_positional = fn(
+    name: str,
+    help: str,
+    default_value: str
+) Argument {
+    # Declare an optional positional argument with a default value.
+}

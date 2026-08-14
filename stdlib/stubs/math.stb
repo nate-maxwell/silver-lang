@@ -1,0 +1,145 @@
+# Editor stub for import("math").
+
+let pi: float = 0.0
+let e: float = 0.0
+let tau: float = 0.0
+let nan: float = 0.0
+
+let factorial = fn(value: int) int {
+    # Return a nonnegative integer's factorial. Negative input or signed
+    # 64-bit overflow raises ValueError.
+}
+
+let gcd = fn(values: array) int {
+    # Return the greatest common divisor of an integer array; the identity for
+    # an empty array is 0.
+}
+
+let lcm = fn(values: array) int {
+    # Return the least common multiple of an integer array; the identity for an
+    # empty array is 1.
+}
+
+let lcd = fn(values: array) int {
+    # Compatibility alias for lcm.
+}
+
+let isqrt = fn(value: int) int {
+    # Return the floor of the square root of a nonnegative integer.
+}
+
+let abs = fn(value) {
+    # Return the absolute value of an int or float while preserving its numeric
+    # type.
+}
+
+let ceil = fn(value) int {
+    # Round an int or float upward to an integer.
+}
+
+let floor = fn(value) int {
+    # Round an int or float downward to an integer.
+}
+
+let trunc = fn(value) int {
+    # Truncate an int or float toward zero.
+}
+
+let truc = fn(value) int {
+    # Compatibility alias for trunc.
+}
+
+let fmod = fn(left, right) float {
+    # Return the floating-point remainder whose quotient is truncated toward
+    # zero.
+}
+
+let remainder = fn(left, right) float {
+    # Return the IEEE-754 remainder using the nearest integer quotient.
+}
+
+let remainer = fn(left, right) float {
+    # Compatibility alias for remainder.
+}
+
+let modf = fn(value) array {
+    # Return fractional and integer parts as [fractional_part, integer_part].
+}
+
+let acos = fn(value) float {
+    # Return the arc cosine of value in radians.
+}
+
+let asin = fn(value) float {
+    # Return the arc sine of value in radians.
+}
+
+let atan = fn(value) float {
+    # Return the arc tangent of value in radians.
+}
+
+let cos = fn(value) float {
+    # Return the cosine of a radian angle.
+}
+
+let sin = fn(value) float {
+    # Return the sine of a radian angle.
+}
+
+let tan = fn(value) float {
+    # Return the tangent of a radian angle.
+}
+
+let cbrt = fn(value) float {
+    # Return the cube root of value.
+}
+
+let sqrt = fn(value) float {
+    # Return the square root of value.
+}
+
+let exp = fn(value) float {
+    # Return e raised to value.
+}
+
+let exp2 = fn(value) float {
+    # Return 2 raised to value.
+}
+
+let expm1 = fn(value) float {
+    # Return e raised to value, minus 1.
+}
+
+let log = fn(value, base) float {
+    # Return the logarithm of value in the supplied base.
+}
+
+let log1p = fn(value) float {
+    # Return the natural logarithm of 1 + value.
+}
+
+let log2 = fn(value) float {
+    # Return the base-2 logarithm of value.
+}
+
+let log10 = fn(value) float {
+    # Return the base-10 logarithm of value.
+}
+
+let degrees = fn(radians) float {
+    # Convert radians to degrees.
+}
+
+let radians = fn(degrees) float {
+    # Convert degrees to radians.
+}
+
+let min = fn(left, right) {
+    # Return the smaller original numeric operand, preserving its type. Mixed
+    # int and float inputs are accepted.
+}
+
+let max = fn(left, right) {
+    # Return the larger original numeric operand, preserving its type. Mixed
+    # int and float inputs are accepted.
+}

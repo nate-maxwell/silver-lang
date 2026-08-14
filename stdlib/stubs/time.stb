@@ -1,0 +1,64 @@
+# Editor stub for import("time").
+
+struct Time {
+    year: int
+    month: int
+    day: int
+    hour: int
+    minute: int
+    second: int
+    nanosecond: int
+    timezone: str
+}
+
+struct Duration {
+    hours: float
+    minutes: float
+    seconds: float
+    milliseconds: float
+    nanoseconds: int
+}
+
+let now = fn() Time {
+    # Return the current local time.
+}
+
+let unix = fn() int {
+    # Return the current Unix timestamp in whole seconds.
+}
+
+let format = fn(value: Time, format: str) str {
+    # Format value using Silver's time-format tokens.
+}
+
+let parse = fn(value: str, format: str) Time {
+    # Parse value using Silver's time-format tokens.
+}
+
+let duration = fn(value, unit: str) Duration {
+    # Build a duration from an integer or float and a supported unit name.
+}
+
+let add = fn(value: Time, duration: Duration) Time {
+    # Add duration to value.
+}
+
+let diff = fn(from: Time, to: Time) Duration {
+    # Return the duration to - from.
+}
+
+let sleep = fn(duration: Duration) {
+    # Block for duration and return null.
+}
+
+let before = fn(left: Time, right: Time) bool {
+    # Report whether left occurs before right.
+}
+
+let after = fn(left: Time, right: Time) bool {
+    # Report whether left occurs after right.
+}
+
+let equal = fn(left: Time, right: Time) bool {
+    # Report whether left and right represent the same instant.
+}

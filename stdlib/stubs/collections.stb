@@ -1,0 +1,88 @@
+# Editor stub for import("collections").
+
+struct Deque {
+    values: array
+    append: call
+    appendleft: call
+    pop: call()
+    get_item: call
+    set_item: call
+}
+
+struct Stack {
+    values: array
+    push: call
+    peek: call()
+    pop: call()
+    get_item: call
+    set_item: call
+}
+
+struct DefaultMap {
+    values: map
+    factory: call()
+    get_item: call
+    set_item: call
+}
+
+let deque = fn(initial) Deque {
+    # Create an empty deque, or copy the optional initial array into a new
+    # deque.
+}
+
+let stack = fn(initial) Stack {
+    # Create an empty stack, or copy the optional initial array into a new
+    # stack.
+}
+
+let defaultmap = fn(factory: call(), initial: map) DefaultMap {
+    # Create a default map whose zero-argument Silver factory supplies missing
+    # values. The optional initial map is copied.
+}
+
+let clear = fn(sequence) {
+    # Remove every value from a Deque or Stack.
+}
+
+let copy = fn(sequence) {
+    # Return a shallow copy preserving whether sequence is a Deque or Stack.
+}
+
+let count = fn(sequence, value) int {
+    # Return the number of values equal to value in a Deque or Stack.
+}
+
+let extend = fn(sequence, other) {
+    # Append every value from another Deque or Stack in iteration order.
+}
+
+let extendleft = fn(sequence, other) {
+    # Prepend every value from another Deque or Stack in reverse order.
+}
+
+let index = fn(sequence, value) int | ValueError {
+    # Return the first index whose value equals value. Raises ValueError when
+    # value is absent.
+}
+
+let insert = fn(sequence, index: int, value) {
+    # Insert value at index, normalizing negative indexes and clamping at
+    # either end.
+}
+
+let popleft = fn(sequence) | IndexError {
+    # Remove and return the leftmost or bottom value. Raises IndexError when
+    # sequence is empty.
+}
+
+let remove = fn(sequence, value) | ValueError {
+    # Remove the first value equal to value. Raises ValueError when absent.
+}
+
+let reverse = fn(sequence) {
+    # Reverse a Deque or Stack in place.
+}
+
+let rotate = fn(sequence, amount: int) {
+    # Rotate right by amount; a negative amount rotates left.
+}

@@ -1,0 +1,56 @@
+# Editor stub for import("io").
+
+struct IOError {
+    message: str
+}
+
+struct FileNotFound {
+    message: str
+}
+
+struct PermissionDenied {
+    message: str
+}
+
+struct IOStream {
+    name: str
+    read: call() str | IOError
+    read_line: call() str | IOError
+    write: call(data: str) | IOError
+}
+
+struct File {
+    path: str
+    read: call() str | IOError
+    write: call(contents: str) | IOError
+    close: call() | IOError
+}
+
+let print = fn(values) {
+    # Print any number of inspected values separated by spaces and followed by
+    # a newline, then return null.
+}
+
+let open = fn(path: str) File | FileNotFound | PermissionDenied {
+    # Open an existing file for reading and writing. A missing file is not
+    # created.
+}
+
+let stdin: IOStream = IOStream{
+    "stdin",
+    fn() str | IOError {},
+    fn() str | IOError {},
+    fn(data: str) | IOError {}
+}
+let stdout: IOStream = IOStream{
+    "stdout",
+    fn() str | IOError {},
+    fn() str | IOError {},
+    fn(data: str) | IOError {}
+}
+let stderr: IOStream = IOStream{
+    "stderr",
+    fn() str | IOError {},
+    fn() str | IOError {},
+    fn(data: str) | IOError {}
+}

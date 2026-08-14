@@ -1,0 +1,50 @@
+# Editor stub for import("networking").
+
+enum Network {
+    TCP,
+    UDP,
+}
+
+struct ConnectionError {
+    message: str
+}
+
+struct ListenError {
+    message: str
+}
+
+struct ReadError {
+    message: str
+}
+
+struct WriteError {
+    message: str
+}
+
+struct ReadFromResult {
+    data: str
+    address: str
+}
+
+struct Connection {
+    address: str
+    read: call(bytes: int) str | ReadError
+    write: call(data: str) | WriteError
+    write_to: call(data: str, address: str) | WriteError
+    read_from: call(bytes: int) ReadFromResult | ReadError
+    close: call() | ConnectionError
+}
+
+struct Listener {
+    address: str
+    accept: call() Connection | ConnectionError
+    close: call() | ConnectionError
+}
+
+let dial = fn(network: Network, address: str) Connection | ConnectionError {
+    # Connect to address using Network.TCP or Network.UDP.
+}
+
+let listen = fn(address: str) Listener | ListenError {
+    # Create a blocking TCP listener at address.
+}

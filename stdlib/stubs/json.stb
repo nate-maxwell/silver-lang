@@ -1,0 +1,31 @@
+# Editor stub for import("json").
+
+struct JSONDecodeError {
+    message: str
+    msg: str
+    doc: str
+    pos: int
+    lineno: int
+    colno: int
+}
+
+let loads = fn(document: str) | JSONDecodeError {
+    # Decode one complete JSON document into Silver values. Raises
+    # JSONDecodeError for invalid syntax, trailing data, or an out-of-range
+    # integer.
+}
+
+let load = fn(file) | JSONDecodeError {
+    # Read and decode one complete JSON document from a native file-like
+    # object's read method.
+}
+
+let dumps = fn(value, indent) str {
+    # Encode value as JSON. The optional indent may be an integer number of
+    # spaces or a string; omit it for compact output.
+}
+
+let dump = fn(value, file, indent) {
+    # Encode value as JSON and write it through a native file-like object's
+    # write method. The optional indent follows dumps.
+}

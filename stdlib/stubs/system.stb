@@ -1,0 +1,48 @@
+# Editor stub for import("system").
+
+let ENV_SILVER_PATH: str = "SILVER_PATH"
+
+let get_path_sep = fn() str {
+    # Return the platform path-list separator: ";" on Windows and ":" on
+    # other supported platforms.
+}
+
+let append_path = fn(path: str) {
+    # Append path to SILVER_PATH for this process and its future children.
+}
+
+let system = fn() str {
+    # Return a friendly operating-system name such as Windows, Linux, or
+    # Darwin, or an empty string when unavailable.
+}
+
+let release = fn() str {
+    # Return the operating-system or kernel release, or an empty string when
+    # unavailable.
+}
+
+let machine = fn() str {
+    # Return the machine architecture, or an empty string when unavailable.
+}
+
+let processor = fn() str {
+    # Return the processor model or identifier, or an empty string when
+    # unavailable.
+}
+
+let node = fn() str {
+    # Return the host name, or an empty string when unavailable.
+}
+
+let getenv = fn(name: str) str {
+    # Return an environment variable's value, or an empty string when it is
+    # unset.
+}
+
+let setenv = fn(name: str, value: str) {
+    # Set an environment variable for this process and its future children.
+}
+
+let environment = fn() map {
+    # Return a snapshot of all environment variables.
+}

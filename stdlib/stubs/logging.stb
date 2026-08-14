@@ -1,0 +1,97 @@
+# Editor stub for import("logging").
+
+let pathlib = import("path")
+
+enum Level {
+    Debug,
+    Info,
+    Warning,
+    Error,
+    Critical,
+}
+
+struct StreamHandler {
+    stream: IOStream
+    handle: call(self: StreamHandler, record: str) | IOError
+}
+
+struct FileHandler {
+    path: pathlib.Path
+    handle: call(self: FileHandler, record: str)
+}
+
+struct RotatingFileHandler {
+    path: pathlib.Path
+    interval: int
+    last_rotation: int
+    handle: call(self: RotatingFileHandler, record: str)
+}
+
+struct TCPSocketHandler {
+    address: str
+    handle: call(self: TCPSocketHandler, record: str) | ConnectionError | WriteError
+}
+
+struct UDPSocketHandler {
+    address: str
+    handle: call(self: UDPSocketHandler, record: str) | ConnectionError | WriteError
+}
+
+struct NullHandler {
+    handle: call(self: NullHandler, record: str)
+}
+
+struct Logger {
+    level: Level
+    format: TemplateString
+    handle: call(self: Logger, message: str)
+}
+
+struct LogContext {
+    level: Level
+    time: str
+    message: str
+}
+
+let standard_format = fn(context: LogContext) TemplateString {
+    # Return the default lazy format: [{level}] {time} {message}.
+}
+
+let new_logger = fn(
+    level: Level,
+    format: call(context: LogContext) TemplateString,
+    handler
+) Logger {
+    # Create a logger whose handle method renders the lazy format and sends the
+    # record to handler. Logger.level labels records but does not filter them.
+}
+
+let new_stream_handler = fn(stream: IOStream) StreamHandler {
+    # Create a handler that writes each record and a newline to stream.
+}
+
+let new_file_handler = fn(path: pathlib.Path) FileHandler {
+    # Create a handler that appends by reading and rewriting the complete file.
+}
+
+let new_rotating_file_handler = fn(
+    path: pathlib.Path,
+    interval: int
+) RotatingFileHandler {
+    # Create a file handler that rotates after interval Unix seconds and
+    # suffixes the old path with a timestamp.
+}
+
+let new_tcp_socket_handler = fn(address: str) TCPSocketHandler {
+    # Create a handler that opens a TCP connection for each record, writes the
+    # record, and closes the connection.
+}
+
+let new_udp_socket_handler = fn(address: str) UDPSocketHandler {
+    # Create a handler that opens a UDP connection for each record, writes the
+    # record, and closes the connection.
+}
+
+let new_null_handler = fn() NullHandler {
+    # Create a handler that discards every record.
+}

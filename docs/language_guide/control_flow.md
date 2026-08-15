@@ -52,6 +52,59 @@ if ready {
 }
 ```
 
+## Switch expressions
+
+`switch` compares one value against ordered `case` expressions and may produce a value:
+
+```silver
+let label = switch value {
+    case 1:
+        "one"
+    case 2:
+        "two"
+    case 3:
+        "three"
+    default:
+        "something else"
+}
+```
+
+Silver evaluates the switch value once. It then evaluates case expressions in source order as they are reached. Each
+comparison has exactly the semantics of `switchValue == caseValue`: switch does not define another form of equality,
+and a struct switch value therefore uses its existing `eq` operator method. Case expressions are not cached; evaluating
+the same switch again reevaluates every case expression reached during that evaluation.
+
+Only the first matching case body runs. There is no fallthrough and no switch-specific `break`; `break` remains loop
+control and is not needed to leave a switch. Case values are ordinary expressions and cannot have type annotations.
+
+The final `default` clause is optional. If no case matches and there is no default, the switch evaluates to null. As with
+`if`, the selected body's result is the switch expression's result, and a switch can instead be used as a standalone
+expression for side effects:
+
+```silver
+switch command {
+    case "start":
+        start()
+    case "stop":
+        stop()
+    default:
+        io.print("unknown command")
+}
+```
+
+Type definitions are first-class values, so switches can dispatch on [`core.type`](../stdlib/core.md):
+
+```silver
+switch core.type(value) {
+    case int:
+        handle_integer(value)
+    case str:
+        handle_string(value)
+    default:
+        handle_other(value)
+}
+```
+
 ## `for` loops
 
 Iterate an array with one binding:

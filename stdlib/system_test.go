@@ -59,7 +59,7 @@ func TestSystemVersion(t *testing.T) {
 		want int64
 	}{
 		{name: "MAJOR", want: 0},
-		{name: "MINOR", want: 1},
+		{name: "MINOR", want: 2},
 		{name: "PATCH", want: 0},
 	}
 	for _, component := range components {
@@ -70,8 +70,8 @@ func TestSystemVersion(t *testing.T) {
 	}
 
 	version, ok := testEval(systemImport + `system.VERSION`).(*object.String)
-	if !ok || version.Value != "0.1.0" {
-		t.Fatalf("VERSION is %T (%v), want string 0.1.0", version, version)
+	if !ok || version.Value != "0.2.0" {
+		t.Fatalf("VERSION is %T (%v), want string 0.2.0", version, version)
 	}
 }
 

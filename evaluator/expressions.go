@@ -3,6 +3,7 @@ package evaluator
 import (
 	"silver/ast"
 	"silver/object"
+	"silver/token"
 )
 
 // evalExpressions evaluates expressions from left to right. On failure it
@@ -87,6 +88,41 @@ func (e *Evaluator) evalIfExpression(ie *ast.IfExpression, env *object.Environme
 	} else {
 		return NULL
 	}
+}
+
+// evalSwitchExpression evaluates the switch value once and each case value
+// only when reached. Comparisons use the same evaluator path as source-level
+// == expressions, including struct operator methods.
+func (e *Evaluator) evalSwitchExpression(se *ast.SwitchExpression, env *object.Environment) object.Object {
+	value := e.Eval(se.Value, env)
+	if isError(value) {
+		return value
+	}
+
+	for _, switchCase := range se.Cases {
+		caseValue := e.Eval(switchCase.Value, env)
+		if isError(caseValue) {
+			return caseValue
+		}
+		comparison := &ast.InfixExpression{
+			Token:    token.Token{Type: token.EQ, Literal: "==", Position: switchCase.Token.Position},
+			Left:     se.Value,
+			Operator: "==",
+			Right:    switchCase.Value,
+		}
+		matched := e.evalInfixExpression(comparison, value, caseValue)
+		if isError(matched) {
+			return matched
+		}
+		if isTruthy(matched) {
+			return e.Eval(switchCase.Body, env)
+		}
+	}
+
+	if se.Default != nil {
+		return e.Eval(se.Default, env)
+	}
+	return NULL
 }
 
 // evalMinusPrefixOperatorExpression negates an integer or float and reports a

@@ -285,6 +285,81 @@ func (p *Parser) parseIfExpression() ast.Expression {
 	return expression
 }
 
+// parseSwitchExpression parses ordered case clauses and an optional final
+// default clause. Clause bodies end at the next clause or closing brace.
+func (p *Parser) parseSwitchExpression() ast.Expression {
+	expression := &ast.SwitchExpression{Token: p.curToken}
+	previous := p.stopAtBlockBrace
+	defer func() { p.stopAtBlockBrace = previous }()
+
+	if p.peekTokenIs(token.LBRACE) {
+		p.addError(p.peekToken.Position, "expected value before switch body")
+		return nil
+	}
+	p.nextToken()
+	p.stopAtBlockBrace = true
+	expression.Value = p.parseExpression(LOWEST)
+	p.stopAtBlockBrace = false
+	if !p.expectPeek(token.LBRACE) {
+		return nil
+	}
+
+	p.nextToken()
+	seenDefault := false
+	for !p.curTokenIs(token.RBRACE) && !p.curTokenIs(token.EOF) {
+		switch p.curToken.Type {
+		case token.CASE:
+			if seenDefault {
+				p.addError(p.curToken.Position, "case clauses must appear before default")
+			}
+			switchCase := &ast.SwitchCase{Token: p.curToken}
+			if p.peekTokenIs(token.COLON) || p.peekTokenIs(token.RBRACE) || p.peekTokenIs(token.EOF) {
+				p.addError(p.curToken.Position, "case requires a value expression")
+				return expression
+			}
+			p.nextToken()
+			switchCase.Value = p.parseExpression(LOWEST)
+			if !p.expectPeek(token.COLON) {
+				return expression
+			}
+			switchCase.Body = p.parseSwitchClauseBody()
+			expression.Cases = append(expression.Cases, switchCase)
+
+		case token.DEFAULT:
+			if seenDefault {
+				p.addError(p.curToken.Position, "switch may contain only one default clause")
+			}
+			seenDefault = true
+			if !p.expectPeek(token.COLON) {
+				return expression
+			}
+			expression.Default = p.parseSwitchClauseBody()
+
+		default:
+			p.addError(p.curToken.Position, "expected case, default, or } in switch")
+			return expression
+		}
+	}
+
+	if p.curTokenIs(token.EOF) {
+		p.addError(expression.Position(), "unterminated switch body")
+	}
+	return expression
+}
+
+// parseSwitchClauseBody parses statements after a clause's colon without
+// treating case and default as ordinary statement-leading expressions.
+func (p *Parser) parseSwitchClauseBody() *ast.BlockStatement {
+	body := &ast.BlockStatement{Token: p.curToken, Statements: []ast.Statement{}}
+	p.nextToken()
+	for !p.curTokenIs(token.CASE) && !p.curTokenIs(token.DEFAULT) &&
+		!p.curTokenIs(token.RBRACE) && !p.curTokenIs(token.EOF) {
+		body.Statements = append(body.Statements, p.parseStatement())
+		p.nextToken()
+	}
+	return body
+}
+
 // parseImportExpression accepts one path expression inside import(...).
 func (p *Parser) parseImportExpression() ast.Expression {
 	expression := &ast.ImportExpression{Token: p.curToken}

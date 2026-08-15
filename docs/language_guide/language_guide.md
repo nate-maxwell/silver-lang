@@ -7,7 +7,7 @@ annotations are optional runtime contracts, not a separate compile-time phase.
 
 - [Types and values](types.md) - primitives, collections, annotations, nominal types, and first-class types.
 - [Functions](functions.md) - declarations, calls, parameters, returns, closures, and callable annotations.
-- [Control flow](control_flow.md) - truthiness, conditionals, loops, and deferred calls.
+- [Control flow](control_flow.md) - truthiness, conditionals, switches, loops, and deferred calls.
 - [Errors and diagnostics](errors.md) - typed contracts, `try`/`catch`, assertions, built-in errors, and tracebacks.
 - [Objects](objects.md) - structs, destructuring, methods, operator and indexing protocols, and enums.
 - [Modules and imports](modules.md) - resolution, members, caching, shared state, and qualified types.

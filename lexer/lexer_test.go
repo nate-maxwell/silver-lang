@@ -151,6 +151,19 @@ func TestLoopControlKeywords(t *testing.T) {
 	}
 }
 
+func TestSwitchKeywords(t *testing.T) {
+	l := New("switch value { case 1: default: }")
+	want := []token.TokenType{
+		token.SWITCH, token.IDENT, token.LBRACE, token.CASE,
+		token.INT, token.COLON, token.DEFAULT, token.COLON, token.RBRACE,
+	}
+	for index, tokenType := range want {
+		if got := l.NextToken(); got.Type != tokenType {
+			t.Fatalf("token %d is %q, want %q", index, got.Type, tokenType)
+		}
+	}
+}
+
 func TestLineComments(t *testing.T) {
 	input := `
 	# A comment may occupy an entire line.

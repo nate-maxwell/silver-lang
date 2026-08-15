@@ -257,6 +257,9 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 	case *ast.IfExpression:
 		return e.evalIfExpression(node, env)
 
+	case *ast.SwitchExpression:
+		return e.evalSwitchExpression(node, env)
+
 	case *ast.TryExpression:
 		return e.evalTryExpression(node, env)
 

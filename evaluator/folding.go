@@ -89,6 +89,16 @@ func foldExpressionConstants(expression ast.Expression) ast.Expression {
 			foldStatementConstants(node.Alternative)
 		}
 
+	case *ast.SwitchExpression:
+		node.Value = foldExpressionConstants(node.Value)
+		for _, switchCase := range node.Cases {
+			switchCase.Value = foldExpressionConstants(switchCase.Value)
+			foldStatementConstants(switchCase.Body)
+		}
+		if node.Default != nil {
+			foldStatementConstants(node.Default)
+		}
+
 	case *ast.TryExpression:
 		foldStatementConstants(node.Body)
 		for _, clause := range node.Catches {

@@ -8,9 +8,9 @@ let ENV_SILVER_PATH: str = "SILVER_PATH"
 
 # Silver language version components and their combined semantic version.
 let MAJOR: int = 0
-let MINOR: int = 1
+let MINOR: int = 2
 let PATCH: int = 0
-let VERSION: str = "0.1.0"
+let VERSION: str = "0.2.0"
 
 let get_path_sep = fn() str {
     # Return the platform path-list separator: ";" on Windows and ":" on

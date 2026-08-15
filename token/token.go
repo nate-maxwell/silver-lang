@@ -99,6 +99,9 @@ const (
 	COLLECT  = "COLLECT"
 	TRY      = "TRY"
 	CATCH    = "CATCH"
+	SWITCH   = "SWITCH"
+	CASE     = "CASE"
+	DEFAULT  = "DEFAULT"
 )
 
 // keywords maps reserved source words to their specialized token types. Any
@@ -125,6 +128,9 @@ var keywords = map[string]TokenType{
 	"collect":  COLLECT,
 	"try":      TRY,
 	"catch":    CATCH,
+	"switch":   SWITCH,
+	"case":     CASE,
+	"default":  DEFAULT,
 }
 
 // LookupIdent classifies an identifier as a reserved keyword or a normal

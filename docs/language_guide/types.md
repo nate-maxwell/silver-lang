@@ -226,4 +226,35 @@ core.type(User{"Ada"}) == User
 Calling `core.type` on a struct or enum definition returns that same definition. Imported modules report the `module`
 type, and callables report `call`.
 
+## Type strictness
+
+Silver uses opt-in type strictness. Annotating values with a type name or nominal definition enforces that type
+strictness. Without an annotation, values are not type strict.
+
+Consider the following struct:
+```silver
+struct Location {
+    x: float
+    y
+    z: float
+}
+```
+
+Here, `y` is not type strict. The following code is valid:
+```silver
+let loc: Location = Location{1, "hello", 3}
+loc.y = False
+```
+
+But if y is typed as float:
+```silver
+struct Location {
+    x: float
+    y: float
+    z: float
+}
+```
+
+Then an error emerges and we get `TypeError: type mismatch for field "Location.y": expected float, got str`
+
 [Documentation index](../table_of_contents.md)

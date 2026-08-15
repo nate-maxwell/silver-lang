@@ -1,6 +1,7 @@
 package stdlib
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"runtime"
@@ -9,7 +10,14 @@ import (
 	"sync"
 )
 
-const silverPathEnvironmentName = "SILVER_PATH"
+const (
+	silverPathEnvironmentName = "SILVER_PATH"
+	silverVersionMajor        = 0
+	silverVersionMinor        = 1
+	silverVersionPatch        = 0
+)
+
+var silverVersion = fmt.Sprintf("%d.%d.%d", silverVersionMajor, silverVersionMinor, silverVersionPatch)
 
 var systemEnvironmentMu sync.Mutex
 
@@ -19,6 +27,10 @@ var systemEnvironmentMu sync.Mutex
 func systemDefinitions(null *object.Null) []definition {
 	return []definition{
 		{name: "ENV_SILVER_PATH", value: &object.String{Value: silverPathEnvironmentName}},
+		{name: "MAJOR", value: &object.Integer{Value: silverVersionMajor}},
+		{name: "MINOR", value: &object.Integer{Value: silverVersionMinor}},
+		{name: "PATCH", value: &object.Integer{Value: silverVersionPatch}},
+		{name: "VERSION", value: &object.String{Value: silverVersion}},
 		{name: "machine", fn: systemMachine},
 		{name: "node", fn: systemNode},
 		{name: "processor", fn: systemProcessor},

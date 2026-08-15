@@ -1,5 +1,17 @@
 # Editor stub for import("collections").
+#
+# Mutable sequence and map types layered on top of array and map. Unlike
+# array.* and map.*, the functions below mutate their first argument in
+# place and return null; Deque, Stack, and DefaultMap values also support
+# index syntax (sequence[i], sequence[i] = v) through their get_item and
+# set_item fields.
 
+# Deque is a double-ended queue with a required maximum length. Once full,
+# appending at either end silently drops the oldest element at the opposite
+# end instead of growing further or raising, matching Python's
+# collections.deque(maxlen=n). Index sequence[i] and sequence[i] = v work
+# directly; use the module-level functions below (popleft, rotate, and so
+# on) for everything else.
 struct Deque {
     values: array
     append: call
@@ -9,6 +21,9 @@ struct Deque {
     set_item: call
 }
 
+# Stack is an unbounded last-in-first-out sequence. push adds to the top,
+# pop removes and returns the top, and peek reads the top without removing
+# it; pop and peek both raise IndexError on an empty stack.
 struct Stack {
     values: array
     push: call
@@ -18,6 +33,12 @@ struct Stack {
     set_item: call
 }
 
+# DefaultMap wraps an ordinary map so that indexing a missing key computes
+# and stores a value instead of returning null. Reading defaultmap_value[key]
+# calls factory() exactly once for that key, saves the result into values,
+# and returns it; every later read for the same key returns the stored value
+# without calling factory again. Writing defaultmap_value[key] = v stores v
+# directly, bypassing factory.
 struct DefaultMap {
     values: map
     factory: call()
@@ -25,39 +46,52 @@ struct DefaultMap {
     set_item: call
 }
 
-let deque = fn(initial) Deque {
-    # Create an empty deque, or copy the optional initial array into a new
-    # deque.
+let deque = fn(max_len: int) Deque {
+    # Create an empty deque with the required maximum length. max_len must be
+    # nonnegative; a max_len of 0 makes every append a no-op, since there is
+    # no room to keep any element.
 }
 
-let stack = fn(initial) Stack {
-    # Create an empty stack, or copy the optional initial array into a new
-    # stack.
+let stack = fn() Stack {
+    # Create an empty stack with no maximum length.
 }
 
-let defaultmap = fn(factory: call(), initial: map) DefaultMap {
-    # Create a default map whose zero-argument Silver factory supplies missing
-    # values. The optional initial map is copied.
+let defaultmap = fn(factory: call()) DefaultMap {
+    # Create a default map whose zero-argument Silver factory supplies
+    # missing values. factory is called with no arguments each time a key is
+    # read that has never been read or written before, and its return type
+    # becomes the declared return type of DefaultMap indexing for type
+    # checking purposes.
 }
 
 let clear = fn(sequence) {
-    # Remove every value from a Deque or Stack.
+    # Remove every value from a Deque or Stack, leaving it empty in place.
 }
 
 let copy = fn(sequence) {
-    # Return a shallow copy preserving whether sequence is a Deque or Stack.
+    # Return a new Deque or Stack of the same kind (and, for a Deque, the
+    # same maximum length) containing a shallow copy of sequence's current
+    # values. Later mutations to either sequence do not affect the other.
 }
 
 let count = fn(sequence, value) int {
-    # Return the number of values equal to value in a Deque or Stack.
+    # Return the number of values in a Deque or Stack equal to value, using
+    # the same equality rules as array.contains (numeric values compare by
+    # value across int and float).
 }
 
 let extend = fn(sequence, other) {
-    # Append every value from another Deque or Stack in iteration order.
+    # Append every value from another Deque, Stack, or plain array to
+    # sequence, in iteration order. When sequence is a Deque, values that
+    # would overflow its maximum length drop the oldest elements just as a
+    # single append would.
 }
 
 let extendleft = fn(sequence, other) {
-    # Prepend every value from another Deque or Stack in reverse order.
+    # Prepend every value from another Deque, Stack, or plain array to
+    # sequence, in reverse order, so that other's first element ends up
+    # closest to the front. Equivalent to calling appendleft once per value
+    # of other in reverse.
 }
 
 let index = fn(sequence, value) int | ValueError {
@@ -66,13 +100,16 @@ let index = fn(sequence, value) int | ValueError {
 }
 
 let insert = fn(sequence, index: int, value) {
-    # Insert value at index, normalizing negative indexes and clamping at
-    # either end.
+    # Insert value at index, normalizing a negative index relative to the end
+    # and clamping any out-of-range index to the nearest valid position (0 or
+    # the sequence's length). Inserting into a Deque that is already at its
+    # maximum length is a runtime index error rather than dropping an
+    # element, unlike append.
 }
 
 let popleft = fn(sequence) | IndexError {
-    # Remove and return the leftmost or bottom value. Raises IndexError when
-    # sequence is empty.
+    # Remove and return the leftmost value of a Deque, or the bottom value of
+    # a Stack. Raises IndexError when sequence is empty.
 }
 
 let remove = fn(sequence, value) | ValueError {
@@ -84,5 +121,8 @@ let reverse = fn(sequence) {
 }
 
 let rotate = fn(sequence, amount: int) {
-    # Rotate right by amount; a negative amount rotates left.
+    # Rotate right by amount; a negative amount rotates left. amount is
+    # taken modulo the sequence's length, so rotating by its own length (or
+    # 0) leaves an unchanged sequence, and rotating an empty sequence is a
+    # no-op regardless of amount.
 }

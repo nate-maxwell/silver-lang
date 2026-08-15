@@ -1,5 +1,20 @@
 # Editor stub for import("regex").
+#
+# Regular expressions using Go's RE2 syntax (as in Go's regexp package),
+# which guarantees linear-time matching but does not support backreferences
+# or lookaround assertions. Every module-level function that takes a
+# pattern re-compiles it on each call; use compile to reuse a pattern across
+# many calls without recompiling it each time.
 
+# MatchObject is returned by match, search, fullmatch, and findlist, and by
+# the corresponding methods on a compiled Expression. group, start, end, and
+# span each accept an optional single argument: omitted or 0 means the
+# whole match, a positive integer selects that numbered capture group, and a
+# string selects a named group (?P<name>...). Referring to a group that does
+# not exist in the pattern is a runtime index error. A capture group that
+# exists in the pattern but did not participate in this particular match
+# (for example inside an unmatched alternative) makes group return null and
+# makes start/end/span return -1.
 struct MatchObject {
     group: call
     groups: call() array
@@ -10,6 +25,9 @@ struct MatchObject {
     string: str
 }
 
+# Expression is a pre-compiled pattern returned by compile. Its methods
+# mirror the identically named module-level functions but take only string
+# and no longer a pattern argument, avoiding recompilation on repeated use.
 struct Expression {
     match: call(string: str)
     search: call(string: str)
@@ -23,47 +41,60 @@ struct Expression {
 }
 
 let match = fn(pattern: str, string: str) {
-    # Match pattern only at the beginning of string and return a MatchObject,
-    # or null when no match exists.
+    # Match pattern only at the beginning of string (but not necessarily
+    # consuming all of it) and return a MatchObject describing the match, or
+    # null when no match exists at that position. Raises ValueError for a
+    # malformed pattern.
 }
 
 let search = fn(pattern: str, string: str) {
     # Find the first match for pattern anywhere in string and return a
-    # MatchObject, or null when no match exists.
+    # MatchObject, or null when no match exists anywhere in string. Raises
+    # ValueError for a malformed pattern.
 }
 
 let fullmatch = fn(pattern: str, string: str) {
-    # Return a MatchObject only when pattern consumes all of string, or null
-    # when no full match exists.
+    # Return a MatchObject only when pattern matches and consumes the entire
+    # string (as if the pattern were anchored with \A...\z), or null when no
+    # full match exists. Raises ValueError for a malformed pattern.
 }
 
 let findall = fn(pattern: str, string: str) array {
-    # Return every non-overlapping complete match as a string.
+    # Return every non-overlapping match of pattern in string, in order, as
+    # an array of matched substrings (not MatchObject values). Use findlist
+    # to get MatchObject values with capture-group access instead.
 }
 
 let findlist = fn(pattern: str, string: str) array {
-    # Return every non-overlapping complete match as a MatchObject.
+    # Return every non-overlapping match of pattern in string, in order, as
+    # an array of MatchObject values, giving access to captured groups and
+    # positions that findall discards.
 }
 
 let sub = fn(pattern: str, replacement: str, string: str) str {
-    # Replace every non-overlapping match using RE2 replacement expansion.
+    # Replace every non-overlapping match of pattern in string with
+    # replacement, expanded using RE2 syntax: $1, $2, ... or ${name} refer to
+    # captured groups, and $$ is a literal dollar sign.
 }
 
 let subn = fn(pattern: str, replacement: str, string: str) array {
-    # Return [replaced_string, replacement_count].
+    # Behave like sub, but return [replaced_string, replacement_count] so the
+    # number of substitutions made is available alongside the result.
 }
 
 let split = fn(pattern: str, string: str) array {
-    # Split around non-overlapping matches without including captured
-    # separators.
+    # Split string around every non-overlapping match of pattern, returning
+    # the pieces between matches as an array. Unlike Python's re.split,
+    # captured groups from pattern are not interleaved into the result.
 }
 
 let escape = fn(string: str) str {
-    # Escape regular-expression metacharacters so the result matches string
-    # literally.
+    # Escape every regular-expression metacharacter in string so the result,
+    # used as a pattern, matches string literally.
 }
 
 let compile = fn(pattern: str) Expression {
-    # Validate and compile an RE2 pattern for reuse. Malformed patterns raise
-    # ValueError.
+    # Validate and compile an RE2 pattern once into an Expression for
+    # repeated matching without recompiling on every call. Raises
+    # ValueError when pattern is malformed.
 }

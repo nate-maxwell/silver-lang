@@ -1,4 +1,11 @@
 # Editor stub for import("testing").
+#
+# A small stateful test runner implemented entirely in Silver. Assertion
+# helpers (fail, check, is_true, and so on) raise Silver's built-in
+# AssertionError directly, so they work whether called inside run or on
+# their own with a plain try/catch. run and suite accumulate results in
+# shared module state that results, summary, report, and reset all operate
+# on; reset that state between independent test files or runs if needed.
 
 struct Result {
     name: str
@@ -13,50 +20,62 @@ struct Summary {
 }
 
 let fail = fn(message: str) {
-    # Fail unconditionally with AssertionError and message.
+    # Fail unconditionally by raising AssertionError with message.
 }
 
 let check = fn(condition, message: str) {
-    # Require a truthy condition or raise AssertionError with message.
+    # Raise AssertionError with message unless condition is truthy.
 }
 
 let is_true = fn(value, message: str) {
-    # Require value to be exactly True or raise AssertionError with message.
+    # Raise AssertionError with message unless value is exactly True (not
+    # just truthy).
 }
 
 let is_false = fn(value, message: str) {
-    # Require value to be exactly False or raise AssertionError with message.
+    # Raise AssertionError with message unless value is exactly False.
 }
 
 let equal = fn(actual, expected, message: str) {
-    # Require actual == expected or raise AssertionError with message.
+    # Raise AssertionError with message unless actual == expected.
 }
 
 let not_equal = fn(actual, expected, message: str) {
-    # Require actual != expected or raise AssertionError with message.
+    # Raise AssertionError with message unless actual != expected.
 }
 
 let run = fn(name: str, test: call()) {
-    # Run one zero-argument test, record AssertionError as a failure, and
-    # continue. Unexpected errors propagate.
+    # Run one zero-argument test, prefixed by the current suite name (see
+    # suite) if any. An AssertionError raised by test is caught and recorded
+    # as a failure without stopping the rest of the file's tests; any other
+    # error is allowed to propagate, so a broken test harness or an
+    # unrelated crash is not silently reported as an ordinary failed
+    # assertion.
 }
 
 let suite = fn(name: str, tests: call()) {
-    # Prefix the names of tests run by tests. Suites may be nested.
+    # Run tests with every run call inside it reporting names prefixed by
+    # name (joined with " / "); the previous prefix, if any, is restored
+    # automatically even if tests raises, and suites may be nested to build
+    # up multi-level prefixes.
 }
 
 let results = fn() array {
-    # Return recorded Result values in execution order.
+    # Return every recorded Result so far, in the order run completed them.
 }
 
 let summary = fn() Summary {
-    # Return the current total, passed, and failed counts.
+    # Return the current total, passed, and failed counts across every run
+    # call so far.
 }
 
 let report = fn() bool {
-    # Print totals and failure details, then report whether all tests passed.
+    # Print the total/passed/failed counts, followed by the name and
+    # message of every failed test, then return True only if every test
+    # passed. Typically called once at the end of a test file.
 }
 
 let reset = fn() {
-    # Clear results, counters, and suite state.
+    # Clear every recorded result, all counters, and the current suite name,
+    # returning the module to its initial state.
 }

@@ -1,4 +1,14 @@
 # Editor stub for import("time").
+#
+# Time and Duration are nominal struct types with plain numeric fields, so
+# they can be constructed, compared field-by-field, or passed around like
+# any other struct; format/parse and duration are the intended way to build
+# and read them, though. Time-format strings use token substitution rather
+# than Go's or C's strftime-style verbs: YYYY, YY, MM, DD, HH, mm, ss, SSS
+# (milliseconds), SSSSSS (microseconds), SSSSSSSSS (nanoseconds), Z (e.g.
+# +07:00), ZZ (e.g. +0700), and z (zone abbreviation, e.g. UTC). Any other
+# text passes through literally except that it may need to be wrapped in
+# [square brackets] if it happens to contain one of those token substrings.
 
 struct Time {
     year: int
@@ -20,45 +30,60 @@ struct Duration {
 }
 
 let now = fn() Time {
-    # Return the current local time.
+    # Return the current local time, including its local timezone offset.
 }
 
 let unix = fn() int {
-    # Return the current Unix timestamp in whole seconds.
+    # Return the current Unix timestamp: whole seconds elapsed since
+    # 1970-01-01T00:00:00 UTC.
 }
 
 let format = fn(value: Time, format: str) str {
-    # Format value using Silver's time-format tokens.
+    # Format value as a string using Silver's time-format tokens (YYYY, MM,
+    # DD, HH, mm, ss, and so on; see the module doc above for the full
+    # list).
 }
 
 let parse = fn(value: str, format: str) Time {
-    # Parse value using Silver's time-format tokens.
+    # Parse value as a Time using the same time-format tokens accepted by
+    # format. value must match format exactly, including any literal
+    # separators; mismatches are a runtime value error.
 }
 
 let duration = fn(value, unit: str) Duration {
-    # Build a duration from an integer or float and a supported unit name.
+    # Build a Duration equal to value in the given unit. value may be an int
+    # or a float; unit accepts (singular or plural, case-insensitive)
+    # nanosecond/ns, microsecond/us, millisecond/ms, second/s, minute/m,
+    # hour/h, or day/d. Raises ValueError for an unrecognized unit or for a
+    # magnitude that overflows the underlying nanosecond representation.
 }
 
 let add = fn(value: Time, duration: Duration) Time {
-    # Add duration to value.
+    # Return value shifted forward by duration (or backward, if duration was
+    # built from a negative value).
 }
 
 let diff = fn(from: Time, to: Time) Duration {
-    # Return the duration to - from.
+    # Return the Duration equal to to minus from; the result is negative
+    # when to occurs before from.
 }
 
 let sleep = fn(duration: Duration) {
-    # Block for duration and return null.
+    # Block the current task for duration, then return null. duration.
+    # nanoseconds must fit the amount of time actually slept; a negative
+    # duration returns immediately.
 }
 
 let before = fn(left: Time, right: Time) bool {
-    # Report whether left occurs before right.
+    # Report whether left represents an instant strictly before right.
 }
 
 let after = fn(left: Time, right: Time) bool {
-    # Report whether left occurs after right.
+    # Report whether left represents an instant strictly after right.
 }
 
 let equal = fn(left: Time, right: Time) bool {
-    # Report whether left and right represent the same instant.
+    # Report whether left and right represent the same instant, comparing
+    # the actual point in time rather than every field (so equal timezone
+    # offsets are not required).
 }

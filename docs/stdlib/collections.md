@@ -8,13 +8,15 @@ let collections = import("collections")
 
 ## `Deque`
 
-A `Deque` is an ordered sequence designed for adding and removing values at either end. Use it for queues, work lists,
-and other sequences that need efficient access to both the first and last value.
+A `Deque` is a bounded ordered sequence designed for adding and removing values at either end. Use it for queues, work
+lists, and other sequences that need efficient access to both the first and last value.
 
-Create an empty deque with `deque()`, or pass an array to `deque(initial)` to copy its values into a new deque:
+Create an empty deque with `deque(max_len)`. The nonnegative maximum length is required:
 
 ```silver
-let queue = collections.deque(["compile", "test"])
+let queue = collections.deque(4)
+queue.append("compile")
+queue.append("test")
 queue.appendleft("format")
 queue.append("package")
 
@@ -31,6 +33,9 @@ let last = queue.pop()                  # "package"
 | `pop()`                   | Remove and return the value at the right end. Raises `IndexError` when empty.          |
 | `deque[index]`            | Read a value by zero-based index. Raises `IndexError` when out of range.               |
 | `deque[index] = value`    | Replace a value by zero-based index. Raises `IndexError` when out of range.            |
+
+Appending to a full deque discards one value from the opposite end. `extend` and `extendleft` behave the same way for
+each value added. Inserting into a full deque raises `IndexError`.
 
 ### Functions
 
@@ -55,7 +60,7 @@ Functions that mutate the deque return null.
 A `Stack` is a last-in, first-out sequence. Use it when the most recently added value must be read or removed first,
 such as for history, traversal, or nested work.
 
-Create an empty stack with `stack()`, or pass an array to `stack(initial)` to copy its values into a new stack:
+Create an empty stack with `stack()`:
 
 ```silver
 let history = collections.stack()
@@ -99,12 +104,12 @@ Functions that mutate the stack return null. Prefer `push`, `peek`, and `pop` wh
 A `DefaultMap` stores key-value pairs and creates a value when a missing key is first read. Use it for grouping,
 counting, or other cases where every key should start with a predictable value.
 
-Create one with `defaultmap(factory)`. The factory must be a zero-argument Silver function. Pass a map as the optional
-second argument, `defaultmap(factory, initial)`, to copy existing pairs into the new default map:
+Create one with `defaultmap(factory)`. The factory must be a zero-argument Silver function:
 
 ```silver
 let make_count = fn() int { 0 }
-let counts = collections.defaultmap(make_count, {"silver": 1})
+let counts = collections.defaultmap(make_count)
+counts["silver"] = 1
 
 counts["go"] = counts["go"] + 1
 counts["silver"] = counts["silver"] + 1

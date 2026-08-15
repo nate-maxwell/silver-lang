@@ -1,5 +1,17 @@
 # Editor stub for import("json").
+#
+# Encoding and decoding mirror Python's json module: objects become maps,
+# arrays become arrays, and numbers become int or float depending on whether
+# they contain a decimal point or exponent. Encoding is one-shot; there is no
+# streaming encoder/decoder beyond load/dump's use of a file-like read/write
+# method.
 
+# JSONDecodeError reports one JSON syntax problem. message is Silver's usual
+# error text; msg, doc, pos, lineno, and colno mirror Python's
+# json.JSONDecodeError attributes: msg is the underlying message without
+# position info, doc is the original document text, pos is the zero-based
+# byte offset of the failure, and lineno/colno locate it by line and column
+# (both starting at 1).
 struct JSONDecodeError {
     message: str
     msg: str
@@ -10,22 +22,32 @@ struct JSONDecodeError {
 }
 
 let loads = fn(document: str) | JSONDecodeError {
-    # Decode one complete JSON document into Silver values. Raises
-    # JSONDecodeError for invalid syntax, trailing data, or an out-of-range
-    # integer.
+    # Decode one complete JSON document into Silver values: objects become
+    # maps with string keys, arrays become arrays, and numbers become int or
+    # float depending on their literal form. Raises JSONDecodeError for
+    # invalid syntax, trailing data after the first value, or a number
+    # outside the representable range.
 }
 
 let load = fn(file) | JSONDecodeError {
-    # Read and decode one complete JSON document from a native file-like
-    # object's read method.
+    # Read the complete contents of a native file-like object (anything
+    # exposing a zero-argument read method that returns a string, such as
+    # io.File or io.stdin) and decode it as one JSON document, exactly as
+    # loads would. Raises JSONDecodeError under the same conditions as loads.
 }
 
 let dumps = fn(value, indent) str {
-    # Encode value as JSON. The optional indent may be an integer number of
-    # spaces or a string; omit it for compact output.
+    # Encode value as a JSON string. Maps are encoded as objects (so keys
+    # must be representable as JSON strings), arrays as JSON arrays, and int
+    # or float as JSON numbers. The optional indent may be an integer number
+    # of spaces (0 or negative adds line breaks with no leading whitespace,
+    # matching Python) or a literal indent string; omit indent entirely for
+    # the most compact single-line output.
 }
 
 let dump = fn(value, file, indent) {
-    # Encode value as JSON and write it through a native file-like object's
-    # write method. The optional indent follows dumps.
+    # Encode value as JSON exactly as dumps would, then write the result
+    # through a native file-like object's write method (anything exposing a
+    # write(data: str) method, such as io.File or io.stdout). The optional
+    # indent follows dumps.
 }

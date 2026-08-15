@@ -1,48 +1,71 @@
 # Editor stub for import("system").
+#
+# Host, process, and environment-variable information. Every query function
+# is a snapshot taken at call time; none of them watch for later changes
+# made outside the current process.
 
 let ENV_SILVER_PATH: str = "SILVER_PATH"
 
 let get_path_sep = fn() str {
     # Return the platform path-list separator: ";" on Windows and ":" on
-    # other supported platforms.
+    # other supported platforms. This is the separator used between entries
+    # of SILVER_PATH, matching the host OS's PATH-style environment
+    # variables.
 }
 
 let append_path = fn(path: str) {
-    # Append path to SILVER_PATH for this process and its future children.
+    # Append path to the SILVER_PATH environment variable (named by
+    # ENV_SILVER_PATH) for this process, joined with get_path_sep, and
+    # return null. Silver's module resolver consults SILVER_PATH when an
+    # import(...) path does not resolve relative to the importing file, so
+    # this extends where later imports are found. The change is visible to
+    # this process and any processes it spawns afterward, but not to
+    # already-running processes.
 }
 
 let system = fn() str {
-    # Return a friendly operating-system name such as Windows, Linux, or
-    # Darwin, or an empty string when unavailable.
+    # Return a friendly operating-system name such as Windows, Linux, Darwin,
+    # FreeBSD, or Android, or an empty string when the host is not
+    # recognized.
 }
 
 let release = fn() str {
-    # Return the operating-system or kernel release, or an empty string when
-    # unavailable.
+    # Return the operating-system or kernel release string (for example a
+    # Linux kernel version or a Windows release name), or an empty string
+    # when it could not be determined.
 }
 
 let machine = fn() str {
-    # Return the machine architecture, or an empty string when unavailable.
+    # Return the machine's processor architecture (for example AMD64 or
+    # ARM64), or an empty string when unavailable.
 }
 
 let processor = fn() str {
-    # Return the processor model or identifier, or an empty string when
-    # unavailable.
+    # Return a human-readable processor model or identifier string, or an
+    # empty string when the host does not expose one.
 }
 
 let node = fn() str {
-    # Return the host name, or an empty string when unavailable.
+    # Return the host's network name (hostname), or an empty string when it
+    # could not be determined.
 }
 
 let getenv = fn(name: str) str {
-    # Return an environment variable's value, or an empty string when it is
-    # unset.
+    # Return the named environment variable's current value, or an empty
+    # string when it is unset. An empty string is also returned for a
+    # variable that is set but explicitly empty, so getenv cannot by itself
+    # distinguish "unset" from "set to \"\"".
 }
 
 let setenv = fn(name: str, value: str) {
-    # Set an environment variable for this process and its future children.
+    # Set the named environment variable to value for this process and any
+    # processes it spawns afterward, then return null. This does not affect
+    # already-running processes, including the shell that launched this one.
 }
 
 let environment = fn() map {
-    # Return a snapshot of all environment variables.
+    # Return a snapshot of every environment variable visible to this
+    # process as a map from name to value at the moment of the call. Later
+    # setenv or append_path calls do not retroactively change a map already
+    # returned by an earlier call to environment.
 }

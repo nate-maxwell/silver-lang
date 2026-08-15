@@ -1,3 +1,5 @@
+# Classic fibonacci example
+
 let print = import("io").print
 let core = import("core")
 

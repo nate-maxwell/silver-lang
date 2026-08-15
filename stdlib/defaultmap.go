@@ -27,13 +27,13 @@ func newDefaultMapStructDefinition() *object.Struct {
 	return definition
 }
 
-// newDefaultMap accepts a zero-argument Silver factory and an optional
-// initial map. Missing values are created by DefaultMap.get and retained in
-// the ordinary map exposed by DefaultMap.values.
+// newDefaultMap accepts a zero-argument Silver factory. Missing values are
+// created by DefaultMap.get and retained in the ordinary map exposed by
+// DefaultMap.values.
 func newDefaultMap(definition *object.Struct, null *object.Null) object.BuiltinFunction {
 	return func(args ...object.Object) object.Object {
-		if len(args) < 1 || len(args) > 2 {
-			return newError(object.RuntimeErrorKindType, "wrong number of arguments. got=%d, want=1 or 2", len(args))
+		if err := requireArgumentCount(args, 1); err != nil {
+			return err
 		}
 
 		returnType, errorTypes, factoryEnvironment, ok := defaultFactoryResult(args[0])
@@ -41,15 +41,7 @@ func newDefaultMap(definition *object.Struct, null *object.Null) object.BuiltinF
 			return newError(object.RuntimeErrorKindType, "default factory must be a Silver function, got %s", args[0].Type())
 		}
 
-		pairs := make(map[object.HashKey]object.MapPair)
-		if len(args) == 2 {
-			initial, err := requireMap("defaultmap", args[1])
-			if err != nil {
-				return err
-			}
-			pairs = initial.Snapshot()
-		}
-		mapping := &object.Map{Pairs: pairs}
+		mapping := &object.Map{Pairs: make(map[object.HashKey]object.MapPair)}
 
 		values := map[string]object.Object{
 			"values":  mapping,

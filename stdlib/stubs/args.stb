@@ -1,5 +1,17 @@
 # Editor stub for import("args").
+#
+# A command-line argument parser implemented entirely in Silver. Build a
+# Parser with new, register Argument values with Parser.add, then call
+# Parser.parse with the argv array (excluding the program name) to get back a
+# ParsedArgs, an ArgumentError describing the first problem, or a request for
+# help. Every declaration and parse function that can fail returns an
+# ArgumentError instead of raising, so callers can pattern-match on the
+# result and print Parser.help themselves.
 
+# ArgumentKind distinguishes how a declared Argument consumes tokens from
+# argv: Option takes one value token, Flag toggles a boolean with no value,
+# Count increments an integer once per occurrence, and Positional consumes
+# tokens by position instead of by name.
 enum ArgumentKind {
     Option,
     Flag,
@@ -7,6 +19,11 @@ enum ArgumentKind {
     Positional,
 }
 
+# Argument describes one option or positional argument before it is added to
+# a Parser. Construct values with option, option_with_default,
+# required_option, flag, count, positional, or optional_positional rather
+# than building an Argument struct literal directly, since those constructors
+# fill in kind, required, default_value, and has_default consistently.
 struct Argument {
     name: str
     short: str
@@ -17,15 +34,31 @@ struct Argument {
     has_default: bool
 }
 
+# ArgumentError reports a problem either while declaring an Argument (a
+# duplicate or malformed name, a reserved -h/--help, or an invalid ordering
+# of positional arguments) or while parsing argv (an unknown option, a
+# missing value, an unexpected positional, or a missing required argument).
 struct ArgumentError {
     message: str
 }
 
+# ParsedArgs is the result of a successful Parser.parse call. values maps
+# each declared Argument's name to its parsed string, boolean flag, or
+# integer count; an option with no default that was not supplied on the
+# command line is simply absent from values. help_requested is True when
+# argv contained -h or --help, in which case values only holds the defaults
+# collected before the flag was seen and the caller should print
+# Parser.help and stop instead of using values.
 struct ParsedArgs {
     values: map
     help_requested: bool
 }
 
+# Parser accumulates Argument declarations for one program. Create one with
+# new, register arguments with add before parsing, then call parse once per
+# argv to parse and validate that argv. help renders a usage summary listing
+# positionals, options, and defaults, and is also used automatically by
+# ParsedArgs.help_requested consumers.
 struct Parser {
     program: str
     description: str
@@ -36,11 +69,18 @@ struct Parser {
 }
 
 let new = fn(program: str, description: str) Parser {
-    # Create an empty command-line argument parser.
+    # Create an empty command-line argument parser. program names the
+    # executable as shown in the generated usage line; description is an
+    # optional summary printed beneath it. Register arguments with
+    # Parser.add before calling Parser.parse.
 }
 
 let option = fn(name: str, short: str, help: str) Argument {
-    # Declare an optional string-valued option with no default.
+    # Declare an optional string-valued option with no default, read with
+    # --name or -short on the command line. Its parsed value is absent from
+    # ParsedArgs.values when the option was not supplied, so check with
+    # map.contains before indexing. Pass "" for short to omit the
+    # single-character alias.
 }
 
 let option_with_default = fn(
@@ -49,23 +89,35 @@ let option_with_default = fn(
     help: str,
     default_value: str
 ) Argument {
-    # Declare an optional string-valued option with a default value.
+    # Declare an optional string-valued option with a default value. The
+    # default is stored in ParsedArgs.values up front and overwritten if the
+    # option is supplied, so the key is always present after a successful
+    # parse.
 }
 
 let required_option = fn(name: str, short: str, help: str) Argument {
-    # Declare a required string-valued option.
+    # Declare a required string-valued option. Parser.parse returns an
+    # ArgumentError naming the option when argv omits it (unless -h/--help
+    # is also present, which short-circuits validation).
 }
 
 let flag = fn(name: str, short: str, help: str) Argument {
-    # Declare a boolean flag that defaults to False.
+    # Declare a boolean flag that defaults to False and becomes True the
+    # first time --name or -short appears in argv. Flags never consume a
+    # following value token.
 }
 
 let count = fn(name: str, short: str, help: str) Argument {
-    # Declare an integer occurrence counter that defaults to 0.
+    # Declare an integer occurrence counter that defaults to 0 and
+    # increments by one each time --name or -short appears in argv, useful
+    # for repeatable flags such as verbosity (-v, -vv, -vvv).
 }
 
 let positional = fn(name: str, help: str) Argument {
-    # Declare a required positional argument.
+    # Declare a required positional argument. Positionals are matched in the
+    # order they were added to the Parser, not by name. A required
+    # positional must be added before any optional positional; Parser.add
+    # returns an ArgumentError otherwise.
 }
 
 let optional_positional = fn(
@@ -73,5 +125,7 @@ let optional_positional = fn(
     help: str,
     default_value: str
 ) Argument {
-    # Declare an optional positional argument with a default value.
+    # Declare an optional positional argument with a default value, used
+    # when argv supplies fewer positional tokens than were declared. Only
+    # optional positionals may follow other optional positionals.
 }

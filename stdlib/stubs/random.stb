@@ -1,28 +1,40 @@
 # Editor stub for import("random").
+#
+# A pseudo-random number generator shared by every function in this module
+# (they all draw from the same underlying stream). It is seeded from the
+# current time by default, so results differ between runs unless seed is
+# called; it is not cryptographically secure. All operations are safe to
+# call from multiple concurrent tasks.
 
 let random = fn() float {
-    # Return a pseudo-random float greater than or equal to 0.0 and less than
-    # 1.0.
+    # Return a pseudo-random float in the half-open range [0.0, 1.0) —
+    # greater than or equal to 0.0 and strictly less than 1.0.
 }
 
 let seed = fn(value: int) {
-    # Seed the pseudo-random generator for repeatable sequences.
+    # Reseed the shared generator with value so later calls to random,
+    # randint, randelem, randkey, and shuffle produce a repeatable sequence.
+    # Useful for deterministic tests.
 }
 
 let randint = fn(a: int, b: int) int {
-    # Return a pseudo-random integer in the inclusive range from a through b.
-    # Raises ValueError when a is greater than b.
+    # Return a pseudo-random integer in the inclusive range from a through
+    # b (both endpoints possible). Raises ValueError when a is greater than
+    # b. Sampling is unbiased even across the full signed 64-bit range.
 }
 
 let randelem = fn(values: array) {
-    # Return a pseudo-random array element. Raises IndexError when values is
-    # empty.
+    # Return a pseudo-random element chosen uniformly from values, without
+    # removing it. Raises IndexError when values is empty.
 }
 
 let randkey = fn(mapping: map) {
-    # Return a pseudo-random map key. Raises KeyError when mapping is empty.
+    # Return a pseudo-random key chosen uniformly from mapping. Raises
+    # KeyError when mapping is empty.
 }
 
 let shuffle = fn(values: array) {
-    # Shuffle values in place and return null.
+    # Shuffle the elements of values in place, using an unbiased
+    # Fisher-Yates shuffle, and return null. Unlike most array.* functions,
+    # this mutates values directly rather than returning a new array.
 }

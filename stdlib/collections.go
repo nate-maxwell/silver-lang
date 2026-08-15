@@ -15,9 +15,9 @@ func collectionDefinitions(null *object.Null) []definition {
 		{name: "DefaultMap", value: defaultMapType},
 		{name: "Deque", value: dequeType},
 		{name: "Stack", value: stackType},
-		{name: "deque", fn: newSequence("deque", dequeType, null)},
+		{name: "deque", fn: newDeque(dequeType, null)},
 		{name: "defaultmap", fn: newDefaultMap(defaultMapType, null)},
-		{name: "stack", fn: newSequence("stack", stackType, null)},
+		{name: "stack", fn: newStack(stackType, null)},
 		{name: "clear", fn: collectionClear(null)},
 		{name: "copy", fn: collectionCopy(null)},
 		{name: "count", fn: collectionCount},
@@ -44,34 +44,45 @@ func newSequenceStructDefinition(name string) *object.Struct {
 	return definition
 }
 
-// newSequence constructs a struct-backed deque or stack around a private
-// array. Bracket access is supplied by get_item and set_item.
-func newSequence(name string, definition *object.Struct, null *object.Null) object.BuiltinFunction {
+// newDeque constructs an empty bounded deque.
+func newDeque(definition *object.Struct, null *object.Null) object.BuiltinFunction {
 	return func(args ...object.Object) object.Object {
-		if len(args) > 1 {
-			return newError(object.RuntimeErrorKindType, "wrong number of arguments. got=%d, want=0 or 1", len(args))
+		if err := requireArgumentCount(args, 1); err != nil {
+			return err
 		}
-		var values *object.Array
-		if len(args) == 0 {
-			values = &object.Array{Elements: []object.Object{}}
-		} else {
-			initial, err := requireCollectionArray(name, args[0])
-			if err != nil {
-				return err
-			}
-			values = copyArray(initial)
+		maxLength, ok := args[0].(*object.Integer)
+		if !ok {
+			return newError(object.RuntimeErrorKindType, "argument to `deque` must be INTEGER, got %s", args[0].Type())
 		}
-		return newSequenceInstance(definition, values, null)
+		if maxLength.Value < 0 {
+			return newError(object.RuntimeErrorKindValue, "argument to `deque` must be nonnegative")
+		}
+		values := &object.Array{Elements: []object.Object{}}
+		return newSequenceInstance(definition, values, maxLength, null)
 	}
 }
 
-func newSequenceInstance(definition *object.Struct, values *object.Array, null *object.Null) *object.StructInstance {
+// newStack constructs an empty stack.
+func newStack(definition *object.Struct, null *object.Null) object.BuiltinFunction {
+	return func(args ...object.Object) object.Object {
+		if err := requireArgumentCount(args, 0); err != nil {
+			return err
+		}
+		values := &object.Array{Elements: []object.Object{}}
+		return newSequenceInstance(definition, values, nil, null)
+	}
+}
+
+// newSequenceInstance supplies the operations shared by deque and stack
+// instances. A deque always carries its required maximum length.
+func newSequenceInstance(definition *object.Struct, values *object.Array, maxLength *object.Integer, null *object.Null) *object.StructInstance {
 	instance := &object.StructInstance{
 		Struct: definition,
 		Values: map[string]object.Object{"values": values},
 	}
 	if definition.Name == "Deque" {
-		addDequeMethods(instance, values, null)
+		instance.Values[dequeMaxLengthField] = maxLength
+		addDequeMethods(instance, values, maxLength.Value, null)
 	} else {
 		addStackMethods(instance, values, null)
 	}
@@ -80,22 +91,19 @@ func newSequenceInstance(definition *object.Struct, values *object.Array, null *
 }
 
 // addDequeMethods keeps deque mutation attached to the deque instance.
-func addDequeMethods(instance *object.StructInstance, values *object.Array, null *object.Null) {
+func addDequeMethods(instance *object.StructInstance, values *object.Array, maxLength int64, null *object.Null) {
 	instance.Values["append"] = &object.Builtin{Fn: func(args ...object.Object) object.Object {
 		if err := requireArgumentCount(args, 1); err != nil {
 			return err
 		}
-		values.Elements = append(values.Elements, args[0])
+		appendDeque(values, args[0], maxLength)
 		return null
 	}}
 	instance.Values["appendleft"] = &object.Builtin{Fn: func(args ...object.Object) object.Object {
 		if err := requireArgumentCount(args, 1); err != nil {
 			return err
 		}
-		elements := make([]object.Object, len(values.Elements)+1)
-		elements[0] = args[0]
-		copy(elements[1:], values.Elements)
-		values.Elements = elements
+		appendLeftDeque(values, args[0], maxLength)
 		return null
 	}}
 	instance.Values["pop"] = &object.Builtin{Fn: func(args ...object.Object) object.Object {
@@ -189,7 +197,11 @@ func collectionCopy(null *object.Null) object.BuiltinFunction {
 		}
 		result := copyArray(values)
 		if instance, ok := args[0].(*object.StructInstance); ok && (instance.Struct.Name == "Deque" || instance.Struct.Name == "Stack") {
-			return newSequenceInstance(instance.Struct, result, null)
+			var maxLength *object.Integer
+			if instance.Struct.Name == "Deque" {
+				maxLength = instance.Values[dequeMaxLengthField].(*object.Integer)
+			}
+			return newSequenceInstance(instance.Struct, result, maxLength, null)
 		}
 		return result
 	}
@@ -216,7 +228,14 @@ func collectionExtend(null *object.Null) object.BuiltinFunction {
 			return err
 		}
 		// Copy first so extending a collection with itself is well-defined.
-		values.Elements = append(values.Elements, append([]object.Object(nil), other.Elements...)...)
+		added := append([]object.Object(nil), other.Elements...)
+		if maxLength, bounded := dequeMaxLength(args[0]); bounded {
+			for _, value := range added {
+				appendDeque(values, value, maxLength)
+			}
+		} else {
+			values.Elements = append(values.Elements, added...)
+		}
 		return null
 	}
 }
@@ -228,12 +247,18 @@ func collectionExtendLeft(null *object.Null) object.BuiltinFunction {
 			return err
 		}
 		added := append([]object.Object(nil), other.Elements...)
-		elements := make([]object.Object, 0, len(values.Elements)+len(added))
-		for index := len(added) - 1; index >= 0; index-- {
-			elements = append(elements, added[index])
+		if maxLength, bounded := dequeMaxLength(args[0]); bounded {
+			for _, value := range added {
+				appendLeftDeque(values, value, maxLength)
+			}
+		} else {
+			elements := make([]object.Object, 0, len(values.Elements)+len(added))
+			for index := len(added) - 1; index >= 0; index-- {
+				elements = append(elements, added[index])
+			}
+			elements = append(elements, values.Elements...)
+			values.Elements = elements
 		}
-		elements = append(elements, values.Elements...)
-		values.Elements = elements
 		return null
 	}
 }
@@ -260,6 +285,9 @@ func collectionInsert(null *object.Null) object.BuiltinFunction {
 		index, ok := args[1].(*object.Integer)
 		if !ok {
 			return newError(object.RuntimeErrorKindType, "index argument to `insert` must be INTEGER, got %s", args[1].Type())
+		}
+		if maxLength, bounded := dequeMaxLength(args[0]); bounded && int64(len(values.Elements)) >= maxLength {
+			return newError(object.RuntimeErrorKindIndex, "insert into a deque at its maximum length")
 		}
 		position := normalizedInsertIndex(index.Value, len(values.Elements))
 		values.Elements = append(values.Elements, nil)
@@ -405,4 +433,45 @@ func normalizedInsertIndex(index int64, length int) int {
 		return length
 	}
 	return int(index)
+}
+
+func dequeMaxLength(value object.Object) (int64, bool) {
+	instance, ok := value.(*object.StructInstance)
+	if !ok || instance.Struct.Name != "Deque" {
+		return 0, false
+	}
+	maxLength, ok := instance.Values[dequeMaxLengthField].(*object.Integer)
+	if !ok {
+		return 0, false
+	}
+	return maxLength.Value, true
+}
+
+const dequeMaxLengthField = "<max_len>"
+
+func appendDeque(values *object.Array, value object.Object, maxLength int64) {
+	if maxLength == 0 {
+		return
+	}
+	if int64(len(values.Elements)) >= maxLength {
+		copy(values.Elements, values.Elements[1:])
+		values.Elements[len(values.Elements)-1] = value
+		return
+	}
+	values.Elements = append(values.Elements, value)
+}
+
+func appendLeftDeque(values *object.Array, value object.Object, maxLength int64) {
+	if maxLength == 0 {
+		return
+	}
+	if int64(len(values.Elements)) >= maxLength {
+		copy(values.Elements[1:], values.Elements[:len(values.Elements)-1])
+		values.Elements[0] = value
+		return
+	}
+	elements := make([]object.Object, len(values.Elements)+1)
+	elements[0] = value
+	copy(elements[1:], values.Elements)
+	values.Elements = elements
 }

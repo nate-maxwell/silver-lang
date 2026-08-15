@@ -1,21 +1,36 @@
 # Editor stub for import("map").
+#
+# Pure map helpers that complement map-literal syntax and index access
+# (mapping[key]). Every function here returns a new map or value and leaves
+# its input untouched; there is no in-place mutation. key may be any
+# hashable value (int, float, str, or bool); passing an unhashable value
+# such as an array is a runtime type error.
 
 let get = fn(mapping: map, key) {
     # Return the value associated with key, or null when key is missing.
+    # Equivalent to mapping[key] except that it does not raise for a
+    # missing key.
 }
 
 let set = fn(mapping: map, key, value) map {
-    # Return a copy of mapping with key inserted or replaced.
+    # Return a copy of mapping with key inserted, or with its existing value
+    # replaced by value if key was already present. mapping itself is not
+    # mutated.
 }
 
 let delete = fn(mapping: map, key) map {
-    # Return a copy of mapping without key. A missing key is harmless.
+    # Return a copy of mapping without key. A missing key is harmless and
+    # returns an unchanged copy rather than raising.
 }
 
 let values = fn(mapping: map) array {
-    # Return the values in unspecified iteration order.
+    # Return every value in mapping as an array, in unspecified iteration
+    # order. Use it together with array functions such as sort or contains
+    # when only the values matter, not their keys.
 }
 
 let contains = fn(mapping: map, key) bool {
-    # Report whether key is present in mapping.
+    # Report whether key is present in mapping, without needing to compare
+    # the result of get against null (which cannot distinguish a stored null
+    # value from a missing key).
 }

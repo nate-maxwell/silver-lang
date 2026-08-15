@@ -1,31 +1,53 @@
 # Editor stub for import("networking").
+#
+# Blocking TCP and UDP sockets. Connection and Listener are struct values
+# whose call fields close over an underlying OS socket; every read or write
+# blocks the current task until data is available, written, or an error
+# occurs. Reads and writes are not buffered beyond the size requested, so a
+# read(bytes: n) call can return fewer than n bytes for a stream that has
+# not yet delivered that much data.
 
+# Network selects the transport protocol passed to dial.
 enum Network {
     TCP,
     UDP,
 }
 
+# ConnectionError reports a failure to dial, or to close an
+# already-connected socket.
 struct ConnectionError {
     message: str
 }
 
+# ListenError reports a failure to bind and listen at an address.
 struct ListenError {
     message: str
 }
 
+# ReadError reports a failure reading from a Connection, including reading
+# from an already-closed one or calling read_from on a non-UDP connection.
 struct ReadError {
     message: str
 }
 
+# WriteError reports a failure writing to a Connection, including writing
+# fewer bytes than requested, writing to an already-closed connection, or
+# calling write_to on a non-UDP connection.
 struct WriteError {
     message: str
 }
 
+# ReadFromResult pairs the bytes received by Connection.read_from with the
+# address of the peer that sent them.
 struct ReadFromResult {
     data: str
     address: str
 }
 
+# Connection represents one connected TCP stream or UDP socket. write_to and
+# read_from are only valid on UDP connections created with Network.UDP;
+# calling them on a TCP connection returns WriteError/ReadError. address is
+# this connection's own local address as a string.
 struct Connection {
     address: str
     read: call(bytes: int) str | ReadError
@@ -35,6 +57,9 @@ struct Connection {
     close: call() | ConnectionError
 }
 
+# Listener accepts incoming TCP connections at the address it was created
+# with. Only one Listener.accept call is meaningful at a time per accepted
+# connection; call it in a loop to serve multiple clients.
 struct Listener {
     address: str
     accept: call() Connection | ConnectionError
@@ -42,9 +67,16 @@ struct Listener {
 }
 
 let dial = fn(network: Network, address: str) Connection | ConnectionError {
-    # Connect to address using Network.TCP or Network.UDP.
+    # Connect to address using Network.TCP (a stream connection) or
+    # Network.UDP (a connectionless socket bound with address as its default
+    # peer for plain write/read). address is host:port, e.g.
+    # "example.com:80" or "127.0.0.1:9000". Returns ConnectionError if the
+    # connection cannot be established.
 }
 
 let listen = fn(address: str) Listener | ListenError {
-    # Create a blocking TCP listener at address.
+    # Create a blocking TCP listener bound to address (host:port, or
+    # ":port" to listen on all interfaces). Call Listener.accept in a loop
+    # to receive incoming Connection values; each call blocks until a client
+    # connects.
 }

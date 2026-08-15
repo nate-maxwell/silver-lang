@@ -8,7 +8,9 @@ import (
 const collectionsImport = "let collections = import(\"collections\")\n"
 
 func TestDequeOperations(t *testing.T) {
-	result := testEval(collectionsImport + `let values = collections.deque([2, 3])
+	result := testEval(collectionsImport + `let values = collections.deque(8)
+values.append(2)
+values.append(3)
 values.appendleft(1)
 values.append(4)
 let right = values.pop()
@@ -21,7 +23,7 @@ let left = collections.popleft(values)
 }
 
 func TestDequeAppendOperationsAreMethods(t *testing.T) {
-	for _, input := range []string{`collections.append(collections.deque(), 1)`, `collections.appendleft(collections.deque(), 1)`} {
+	for _, input := range []string{`collections.append(collections.deque(1), 1)`, `collections.appendleft(collections.deque(1), 1)`} {
 		if _, ok := testEval(collectionsImport + input).(*object.Error); !ok {
 			t.Fatalf("%s did not require method syntax", input)
 		}
@@ -33,7 +35,10 @@ func TestDequeAppendOperationsAreMethods(t *testing.T) {
 }
 
 func TestDequeEditingOperations(t *testing.T) {
-	result := testEval(collectionsImport + `let values = collections.deque([1, 2, 3])
+	result := testEval(collectionsImport + `let values = collections.deque(16)
+values.append(1)
+values.append(2)
+values.append(3)
 collections.extend(values, [4, 5])
 collections.extendleft(values, [-1, 0])
 collections.insert(values, 2, 9)
@@ -61,7 +66,9 @@ let popped = values.pop()
 }
 
 func TestSequenceIndexMethods(t *testing.T) {
-	result := testEval(collectionsImport + `let values = collections.deque([1, 2])
+	result := testEval(collectionsImport + `let values = collections.deque(2)
+values.append(1)
+values.append(2)
 values[1] = 9
 [values[0], values[1]]`)
 
@@ -92,13 +99,32 @@ let make_list = fn() array {
     calls["count"] = calls["count"] + 1
     return []
 }
-let grouped = collections.defaultmap(make_list, {"known": [1]})
+let grouped = collections.defaultmap(make_list)
+grouped["known"] = [1]
 let first = grouped["missing"]
 let second = grouped["missing"]
 [grouped["known"], first == second, calls["count"], grouped.values]`)
 
 	if got, want := result.Inspect(), `[[1], true, 1, {known: [1], missing: []}]`; got != want && got != `[[1], true, 1, {missing: [], known: [1]}]` {
 		t.Fatalf("result is %q, want map with known and missing entries", got)
+	}
+}
+
+func TestDequeRequiresAndEnforcesMaximumLength(t *testing.T) {
+	result := testEval(collectionsImport + `let values = collections.deque(3)
+values.append(1)
+values.append(2)
+values.append(3)
+values.append(4)
+values.appendleft(2)
+collections.extend(values, [4, 5])
+collections.extendleft(values, [2, 1])
+let copied = collections.copy(values)
+copied.append(4)
+[values.values, copied.values]`)
+
+	if got, want := result.Inspect(), `[[1, 2, 3], [2, 3, 4]]`; got != want {
+		t.Fatalf("result is %q, want %q", got, want)
 	}
 }
 
@@ -122,6 +148,12 @@ func TestCollectionErrors(t *testing.T) {
 		{input: `collections.stack().pop()`, message: "pop from an empty collection"},
 		{input: `collections.stack().peek()`, message: "peek from an empty stack"},
 		{input: `collections.defaultmap(0)`, message: "default factory must be a Silver function, got INTEGER"},
+		{input: `collections.deque()`, message: "wrong number of arguments. got=0, want=1"},
+		{input: `collections.deque([])`, message: "argument to `deque` must be INTEGER, got ARRAY"},
+		{input: `collections.deque(-1)`, message: "argument to `deque` must be nonnegative"},
+		{input: `collections.insert(collections.deque(0), 0, 1)`, message: "insert into a deque at its maximum length"},
+		{input: `collections.stack([])`, message: "wrong number of arguments. got=1, want=0"},
+		{input: `collections.defaultmap(fn() { 0 }, {})`, message: "wrong number of arguments. got=2, want=1"},
 		{input: `collections.rotate([], "one")`, message: "rotation argument to `rotate` must be INTEGER, got STRING"},
 	}
 

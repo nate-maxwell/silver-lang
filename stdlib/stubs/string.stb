@@ -1,138 +1,175 @@
 # Editor stub for import("string").
+#
+# String helpers beyond the built-in + operator and indexing. Positions and
+# counts (find, rfind, count, len from "core") are UTF-8 byte offsets, not
+# Unicode code point counts; use chars to work code-point-by-code-point on
+# non-ASCII text. Every function here returns a new string; none mutate
+# their arguments, since Silver strings are immutable.
 
 let to_int = fn(value: str) int | ValueError {
-    # Parse a signed base-10 integer. Surrounding whitespace, invalid text,
-    # and values outside the signed 64-bit range are rejected.
+    # Parse a signed base-10 integer, e.g. "-42" or "7". Surrounding
+    # whitespace, non-numeric text, and values outside the signed 64-bit
+    # range all raise ValueError; there is no automatic trimming.
 }
 
 let from_int = fn(value: int) str {
-    # Format value in base 10.
+    # Format value in base 10, e.g. 42 becomes "42".
 }
 
 let to_float = fn(value: str) float | ValueError {
-    # Parse a 64-bit floating-point value without trimming whitespace.
+    # Parse value as a 64-bit floating-point number, e.g. "3.14" or "1e10".
+    # Raises ValueError for malformed input; whitespace is not trimmed.
 }
 
 let from_float = fn(value: float) str {
-    # Format value using Silver's compact floating-point display form.
+    # Format value using Silver's compact floating-point display form (the
+    # shortest decimal representation that round-trips back to value).
 }
 
 let to_bool = fn(value: str) bool | ValueError {
-    # Parse true or false case-insensitively without trimming whitespace.
+    # Parse "true" or "false", matched case-insensitively (so "True" and
+    # "FALSE" are also accepted). Raises ValueError for anything else;
+    # whitespace is not trimmed.
 }
 
 let from_bool = fn(value: bool) str {
-    # Format value as "true" or "false".
+    # Format value as the literal string "true" or "false".
 }
 
 let capitalize = fn(value: str) str {
-    # Uppercase the first Unicode code point and lowercase the rest.
+    # Uppercase only the first Unicode code point of value and lowercase
+    # every other code point, e.g. "HELLO world" becomes "Hello world".
 }
 
 let lower = fn(value: str) str {
-    # Convert Unicode letters in value to lowercase.
+    # Convert every cased Unicode letter in value to lowercase.
 }
 
 let upper = fn(value: str) str {
-    # Convert Unicode letters in value to uppercase.
+    # Convert every cased Unicode letter in value to uppercase.
 }
 
 let swapcase = fn(value: str) str {
-    # Swap the case of Unicode letters in value.
+    # Swap the case of every cased Unicode letter in value: uppercase
+    # letters become lowercase and vice versa.
 }
 
 let title = fn(value: str) str {
-    # Return value with words converted to Unicode title case.
+    # Return value with the first letter of each word uppercased and the
+    # rest of each word lowercased, using Unicode word boundaries.
 }
 
 let strip = fn(value: str) str {
-    # Remove leading and trailing Unicode whitespace.
+    # Remove leading and trailing runs of Unicode whitespace from value.
 }
 
 let lstrip = fn(value: str) str {
-    # Remove leading Unicode whitespace.
+    # Remove only leading Unicode whitespace from value.
 }
 
 let rstrip = fn(value: str) str {
-    # Remove trailing Unicode whitespace.
+    # Remove only trailing Unicode whitespace from value.
 }
 
 let removeprefix = fn(value: str, prefix: str) str {
-    # Remove one matching prefix from value.
+    # Return value without a single leading occurrence of prefix. Returns
+    # value unchanged when it does not start with prefix.
 }
 
 let removesuffix = fn(value: str, suffix: str) str {
-    # Remove one matching suffix from value.
+    # Return value without a single trailing occurrence of suffix. Returns
+    # value unchanged when it does not end with suffix.
 }
 
 let replace = fn(value: str, old: str, new: str) str {
-    # Replace every occurrence of old with new.
+    # Replace every non-overlapping occurrence of old in value with new.
+    # Passing an empty old inserts new between every code point (and at
+    # both ends), matching Go's strings.ReplaceAll.
 }
 
 let repeat = fn(value: str, count: int) str {
-    # Repeat value count times. Count must be nonnegative and the result is
-    # limited to 1,000,000 bytes.
+    # Return value repeated count times back to back. count must be
+    # nonnegative; count of 0 or an empty value produces "". Raises
+    # ValueError if the result would exceed 1,000,000 bytes.
 }
 
 let reverse = fn(value: str) str {
-    # Reverse value by Unicode code point.
+    # Reverse value by Unicode code point (not by byte), so multi-byte
+    # characters remain intact rather than being scrambled.
 }
 
 let chars = fn(value: str) array {
-    # Split value into an array of Unicode code-point strings.
+    # Split value into an array of one-code-point strings, decoding UTF-8
+    # correctly. Use len(string.chars(value)) to count code points instead
+    # of core.len's byte count.
 }
 
 let fields = fn(value: str) array {
-    # Split value around runs of Unicode whitespace.
+    # Split value around one or more runs of Unicode whitespace, discarding
+    # empty leading/trailing fields (similar to Python's str.split() with no
+    # arguments).
 }
 
 let split = fn(value: str, separator: str) array {
-    # Split value on a nonempty separator.
+    # Split value on every occurrence of a nonempty separator. Passing an
+    # empty separator raises ValueError; use chars to split into individual
+    # code points instead.
 }
 
 let splitlines = fn(value: str) array {
-    # Split LF, CRLF, or CR lines without producing a final empty line.
+    # Split value into lines, treating LF, CRLF, and lone CR as line
+    # terminators. A trailing terminator does not produce a final empty
+    # string element; an empty value produces an empty array.
 }
 
 let join = fn(values: array, separator: str) str {
-    # Join an array containing only strings with separator between elements.
+    # Join an array containing only strings, with separator inserted
+    # between (but not before or after) each element. Any non-string
+    # element is a runtime type error.
 }
 
 let compare = fn(left: str, right: str) int {
-    # Return -1, 0, or 1 according to lexical ordering.
+    # Return -1 if left sorts before right, 0 if they are equal, or 1 if
+    # left sorts after right, using byte-wise lexical ordering.
 }
 
 let contains = fn(value: str, substring: str) bool {
-    # Report whether substring occurs in value.
+    # Report whether substring occurs anywhere in value. Every string
+    # contains the empty string.
 }
 
 let count = fn(value: str, substring: str) int {
-    # Return the number of non-overlapping occurrences of substring.
+    # Return the number of non-overlapping occurrences of substring in
+    # value.
 }
 
 let find = fn(value: str, substring: str) int {
-    # Return the first UTF-8 byte index of substring, or -1 when absent.
+    # Return the UTF-8 byte index of the first occurrence of substring, or
+    # -1 when it does not occur in value.
 }
 
 let rfind = fn(value: str, substring: str) int {
-    # Return the last UTF-8 byte index of substring, or -1 when absent.
+    # Return the UTF-8 byte index of the last occurrence of substring, or -1
+    # when it does not occur in value.
 }
 
 let startswith = fn(value: str, prefix: str) bool {
-    # Report whether value starts with prefix.
+    # Report whether value begins with prefix exactly (case-sensitive).
 }
 
 let endswith = fn(value: str, suffix: str) bool {
-    # Report whether value ends with suffix.
+    # Report whether value ends with suffix exactly (case-sensitive).
 }
 
 let equal_fold = fn(left: str, right: str) bool {
-    # Compare strings using Unicode simple case folding.
+    # Compare left and right for equality under Unicode simple case
+    # folding, a case-insensitive comparison that is more correct across
+    # scripts than lower(left) == lower(right).
 }
 
 let isalnum = fn(value: str) bool {
-    # Report whether value is nonempty and every code point is a Unicode letter
-    # or number.
+    # Report whether value is nonempty and every code point is a Unicode
+    # letter or number.
 }
 
 let isalpha = fn(value: str) bool {
@@ -141,7 +178,8 @@ let isalpha = fn(value: str) bool {
 }
 
 let isascii = fn(value: str) bool {
-    # Report whether every byte in value is ASCII. Empty input is true.
+    # Report whether every byte in value is in the ASCII range (0-127).
+    # Empty input is true.
 }
 
 let isdecimal = fn(value: str) bool {
@@ -150,21 +188,24 @@ let isdecimal = fn(value: str) bool {
 }
 
 let isdigit = fn(value: str) bool {
-    # Report whether value is nonempty and every code point is a Unicode digit.
+    # Report whether value is nonempty and every code point is a Unicode
+    # digit (a slightly broader category than isdecimal, e.g. superscripts).
 }
 
 let islower = fn(value: str) bool {
-    # Report whether value contains a cased letter and all cased letters are
-    # lowercase.
+    # Report whether value contains at least one cased letter and every
+    # cased letter in it is lowercase.
 }
 
 let isnumeric = fn(value: str) bool {
     # Report whether value is nonempty and every code point is a Unicode
-    # number.
+    # numeric character (a broader category than isdigit, e.g. fractions
+    # and numerals from other scripts).
 }
 
 let isprintable = fn(value: str) bool {
-    # Report whether every code point is printable. Empty input is true.
+    # Report whether every code point in value is printable (not a control
+    # character). Empty input is true.
 }
 
 let isspace = fn(value: str) bool {
@@ -173,11 +214,12 @@ let isspace = fn(value: str) bool {
 }
 
 let istitle = fn(value: str) bool {
-    # Report whether value contains cased letters in Unicode title-case word
-    # form.
+    # Report whether value contains at least one cased letter and its cased
+    # letters follow Unicode title-case word form (first letter of each word
+    # uppercase, the rest lowercase).
 }
 
 let isupper = fn(value: str) bool {
-    # Report whether value contains a cased letter and all cased letters are
-    # uppercase.
+    # Report whether value contains at least one cased letter and every
+    # cased letter in it is uppercase.
 }

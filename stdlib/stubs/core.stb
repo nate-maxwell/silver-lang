@@ -1,16 +1,27 @@
-# Editor stub for import("core").
+# Editor stub for import("core"). These three functions are commonly used
+# enough that many programs alias them locally, e.g. `let len = import("core").len`.
 
 let len = fn(value) int {
-    # Return the number of array elements, map pairs, or string bytes. Use
-    # string.chars to count Unicode code points.
+    # Return the number of array elements, map pairs, or string bytes in
+    # value. String length counts UTF-8 bytes, not Unicode code points, so a
+    # string with multi-byte characters reports a larger length than its
+    # visible character count; use string.chars(value) then len(...) to
+    # count code points instead. Any other argument type is a runtime type
+    # error.
 }
 
 let range = fn(start: int, end: int) array {
-    # Return integers from inclusive start to exclusive end, or an empty array
-    # when end is not greater than start. At most 1,000,000 values are allowed.
+    # Return consecutive integers from inclusive start up to exclusive end,
+    # e.g. range(0, 3) is [0, 1, 2]. An end at or below start produces an
+    # empty array rather than raising. Requesting more than 1,000,000
+    # elements (end - start) is a runtime value error, guarding against
+    # accidentally allocating huge arrays.
 }
 
 let type = fn(value) {
-    # Return the first-class primitive type or exact nominal struct or enum
-    # definition for value.
+    # Return value's type: one of the first-class primitive type names
+    # (int, float, str, bool, array, map, null, call) for built-in values, or
+    # the exact struct or enum definition value was constructed from for a
+    # struct instance or enum member. The result can be compared with ==
+    # against another type or struct/enum name to branch on a value's shape.
 }

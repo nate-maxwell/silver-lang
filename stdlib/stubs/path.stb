@@ -1,5 +1,15 @@
 # Editor stub for import("path").
-
+#
+# A pathlib-style wrapper around a single filesystem path string, modeled on
+# Python's pathlib.Path. Every Path is immutable: methods that describe a
+# different path (parent, joinpath, with_name, resolve, and so on) return a
+# new Path rather than mutating the receiver. Methods that touch the
+# filesystem (exists, stat, read_text, mkdir, unlink, and so on) run
+# eagerly, synchronously, and can fail with the same IOError family as
+# io.open; check exists() first when a missing path should not be an error.
+# path.path is always filepath.Clean-normalized to the host's native
+# separator, so components can differ in exact spelling from what was
+# originally passed to new.
 struct Path {
     path: str
     anchor: str
@@ -59,11 +69,15 @@ struct Path {
 }
 
 let new = fn(path: str) Path {
-    # Clean and wrap a platform-native path.
+    # Clean and wrap a platform-native path string: redundant separators and
+    # "." segments are removed, but the path is not resolved against the
+    # filesystem or made absolute (use resolve or absolute for that). Does
+    # not touch the filesystem, so path need not exist.
 }
 
 let cwd = fn() Path {
-    # Return the current working directory as a Path.
+    # Return the current working directory as a Path, as reported by the
+    # operating system at the moment of the call.
 }
 
 let home = fn() Path {

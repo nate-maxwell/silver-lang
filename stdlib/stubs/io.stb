@@ -1,17 +1,32 @@
 # Editor stub for import("io").
+#
+# print and the stdin/stdout/stderr streams are the only functions that talk
+# to the process's actual console; open and File work with arbitrary paths
+# on disk. Every fallible operation returns one of the error structs below
+# instead of raising, so callers pattern-match the result or catch it as a
+# thrown value.
 
+# IOError is the general-purpose I/O failure, covering closed streams and
+# operating-system errors other than a missing file or denied permission.
 struct IOError {
     message: str
 }
 
+# FileNotFound is returned by open when path does not exist.
 struct FileNotFound {
     message: str
 }
 
+# PermissionDenied is returned by open when the operating system refuses
+# access to path for a reason other than it being missing.
 struct PermissionDenied {
     message: str
 }
 
+# IOStream wraps one of the process's standard streams. stdin only
+# supports read and read_line; stdout and stderr only support write. Calling
+# an unsupported operation returns an IOError rather than raising a type
+# error, since all three streams share this same struct shape.
 struct IOStream {
     name: str
     read: call() str | IOError
@@ -19,6 +34,11 @@ struct IOStream {
     write: call(data: str) | IOError
 }
 
+# File represents one already-open file handle returned by open. read
+# always rewinds to the beginning and returns the file's complete current
+# contents; write rewinds and truncates first, so it replaces the entire
+# file rather than appending. Call close when done; further calls to read,
+# write, or close after that raise/return IOError.
 struct File {
     path: str
     read: call() str | IOError
@@ -27,13 +47,19 @@ struct File {
 }
 
 let print = fn(values) {
-    # Print any number of inspected values separated by spaces and followed by
-    # a newline, then return null.
+    # Print any number of inspected values separated by single spaces,
+    # followed by a newline, to stdout, then return null. Values are
+    # rendered the same way they would appear in an error message or
+    # template-string interpolation, not necessarily as raw strings.
 }
 
 let open = fn(path: str) File | FileNotFound | PermissionDenied {
-    # Open an existing file for reading and writing. A missing file is not
-    # created.
+    # Open an existing file at path for both reading and writing. The file
+    # is not created if missing: open returns FileNotFound instead. Any
+    # other operating-system error opening the file (such as insufficient
+    # permissions) returns PermissionDenied. The returned File must be
+    # closed explicitly with File.close; consider a defer immediately after
+    # a successful open.
 }
 
 let stdin: IOStream = IOStream{

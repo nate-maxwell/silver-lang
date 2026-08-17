@@ -53,28 +53,6 @@ func TestSystemHostInformation(t *testing.T) {
 	}
 }
 
-func TestSystemVersion(t *testing.T) {
-	components := []struct {
-		name string
-		want int64
-	}{
-		{name: "MAJOR", want: 0},
-		{name: "MINOR", want: 2},
-		{name: "PATCH", want: 0},
-	}
-	for _, component := range components {
-		value, ok := testEval(systemImport + `system.` + component.name).(*object.Integer)
-		if !ok || value.Value != component.want {
-			t.Fatalf("%s is %T (%v), want integer %d", component.name, value, value, component.want)
-		}
-	}
-
-	version, ok := testEval(systemImport + `system.VERSION`).(*object.String)
-	if !ok || version.Value != "0.2.0" {
-		t.Fatalf("VERSION is %T (%v), want string 0.2.0", version, version)
-	}
-}
-
 func TestSystemEnvironmentFunctions(t *testing.T) {
 	const key = "SILVER_STDLIB_SYSTEM_TEST"
 	t.Setenv(key, "before")

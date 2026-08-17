@@ -30,13 +30,13 @@ let record_order = fn(message: str) {
 }
 
 let announce_order = fn(message: str) {
-    io.print("order event:", message)
+    io.println("order event:", message)
 }
 
 subscribe("orders.created", record_order)
 subscribe("orders.created", announce_order)
 subscribe("users.created", fn(message: str) {
-    io.print("user event:", message)
+    io.println("user event:", message)
 })
 
 publish("orders.created", "order-1001")

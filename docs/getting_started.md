@@ -35,7 +35,7 @@ Then evaluate expressions and statements one line at a time:
 ```silver
 let io = import("io")
 let square = fn(value: int) int { value * value }
-io.print(square(9))
+io.println(square(9))
 ```
 
 The REPL keeps bindings between entries. Send end-of-file to exit (`Ctrl+D` on macOS/Linux or `Ctrl+Z`, then Enter, on
@@ -58,7 +58,7 @@ let greet = fn(self: Person) str {
 }
 
 let person = Person{"Silver", greet}
-io.print(person.greet())
+io.println(person.greet())
 ```
 
 Run it:
@@ -89,7 +89,7 @@ Import it from a file in the same directory:
 let helpers = import("./math_helpers.slv")
 let io = import("io")
 
-io.print(helpers.double(helpers.answer))
+io.println(helpers.double(helpers.answer))
 ```
 
 Relative imports resolve from the importing file. A non-relative file import first checks the importing file's directory

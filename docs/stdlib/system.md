@@ -6,12 +6,12 @@
 let system = import("system")
 let io = import("io")
 
-io.print(system.system(), system.release(), system.machine())
-io.print("Silver " + system.VERSION)
-io.print(system.getenv("PATH"))
+io.println(system.system(), system.release(), system.machine())
+io.println("Silver " + system.VERSION)
+io.println(system.getenv("PATH"))
 
 system.append_path("./modules")
-io.print(system.getenv(system.ENV_SILVER_PATH))
+io.println(system.getenv(system.ENV_SILVER_PATH))
 ```
 
 | Function or property  | Description                                                              |

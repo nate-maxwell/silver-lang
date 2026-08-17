@@ -1,0 +1,78 @@
+# Editor stub for import("terminal").
+#
+# Terminal coordinates are zero-based (x, y). Output functions write without
+# a trailing newline. ANSI/VT control sequences require a compatible terminal.
+
+enum Style {
+    Normal,
+    Bold,
+    Underline,
+    Italic,
+    Dim,
+}
+
+let width = fn() int {
+    # Return the current terminal width in columns.
+}
+
+let height = fn() int {
+    # Return the current terminal height in rows.
+}
+
+let flush = fn() {
+    # Flush the configured output writer when it exposes a flush operation.
+}
+
+let clear = fn() {
+    # Erase the visible screen and move the cursor to (0, 0).
+}
+
+let colored = fn(text: str, color: str) {
+    # Print text without a newline using a #RRGGBB true-color foreground,
+    # then restore the previous default foreground color.
+}
+
+let style = fn(text: str, value: Style) {
+    # Print text without a newline using value, then reset terminal styling.
+}
+
+let cursor_move = fn(x: int, y: int) {
+    # Move the cursor to the absolute zero-based coordinate (x, y).
+}
+
+let cursor_hide = fn() {
+    # Hide the cursor.
+}
+
+let cursor_show = fn() {
+    # Show the cursor.
+}
+
+let cursor_save = fn() array {
+    # Query and return the current zero-based cursor position as [x, y].
+}
+
+let read_key = fn() str {
+    # Read and return one UTF-8 keypress without waiting for Enter.
+}
+
+let raw_mode = fn() {
+    # Put terminal input into raw mode. Use defer normal_mode after this call.
+}
+
+let normal_mode = fn() {
+    # Restore normal line-buffered terminal input. This is a no-op unless this
+    # module previously enabled raw mode.
+}
+
+let clear_line = fn() {
+    # Erase from the cursor through the end of the current line.
+}
+
+let alternate_screen = fn() {
+    # Switch to the terminal's alternate screen buffer.
+}
+
+let main_screen = fn() {
+    # Return to the terminal's main screen buffer.
+}

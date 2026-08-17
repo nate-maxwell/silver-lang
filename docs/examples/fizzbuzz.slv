@@ -17,9 +17,9 @@ let fizzbuzz = fn(n: int) {
     }
 
     if answer == "" {
-        io.print(n)
+        io.println(n)
     } else {
-        io.print(answer)
+        io.println(answer)
     }
 }
 

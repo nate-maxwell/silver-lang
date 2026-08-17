@@ -65,13 +65,16 @@ func TestBuiltinFunctions(t *testing.T) {
 	}
 }
 
-func TestPrintBuiltinUsesEvaluatorOutput(t *testing.T) {
+func TestPrintBuiltinsUseEvaluatorOutput(t *testing.T) {
 	var out bytes.Buffer
 	result := evalInput(t, NewWithOutput(&out), object.NewEnvironment(), `let io = import("io")
-io.print("hello", 42)`)
+io.print()
+io.print("hello", 42)
+io.println("!")
+io.println()`)
 
 	testNullObject(t, result)
-	if got, want := out.String(), "hello 42\n"; got != want {
+	if got, want := out.String(), "hello 42!\n\n"; got != want {
 		t.Fatalf("print output is %q, want %q", got, want)
 	}
 }

@@ -77,6 +77,9 @@ func TestMathIntegerFunctions(t *testing.T) {
 		{input: `math.isqrt(9223372036854775807)`, want: 3037000499},
 		{input: `math.ceil(-1.25)`, want: -1},
 		{input: `math.floor(-1.25)`, want: -2},
+		{input: `math.round(1.4)`, want: 1},
+		{input: `math.round(1.5)`, want: 2},
+		{input: `math.round(-1.5)`, want: -2},
 		{input: `math.truc(-1.75)`, want: -1},
 		{input: `math.trunc(1.75)`, want: 1},
 	}
@@ -180,6 +183,8 @@ func TestMathFunctionErrors(t *testing.T) {
 		{input: `math.lcd([9223372036854775807, 2])`, message: "result of `lcd` is out of range for INTEGER"},
 		{input: `math.isqrt(-1)`, message: "argument to `isqrt` must be nonnegative"},
 		{input: `math.ceil(math.nan)`, message: "result of `ceil` is out of range for INTEGER"},
+		{input: `math.round(1)`, message: "argument 1 to `round` must be FLOAT, got INTEGER"},
+		{input: `math.round(math.nan)`, message: "result of `round` is out of range for INTEGER"},
 		{input: `math.sin("zero")`, message: "argument 1 to `sin` must be INTEGER or FLOAT, got STRING"},
 		{input: `math.log(8, False)`, message: "argument 2 to `log` must be INTEGER or FLOAT, got BOOLEAN"},
 	}

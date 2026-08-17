@@ -5,7 +5,8 @@
 ```silver
 let io = import("io")
 
-io.print("hello", "Silver") # arguments separated by spaces, then newline
+io.print("hello", "Silver")   # arguments separated by spaces, no newline
+io.println("!")               # same formatting, then one newline
 
 let command = io.stdin.read_line() # waits for one line and removes its newline
 
@@ -19,7 +20,8 @@ file.write(old_contents + "\nupdated")
 
 | Function or property                                      | Description                                                                                 |
 | --------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| `print(...values)`                                        | Print inspected values separated by spaces and followed by a newline; return null.          |
+| `print(...values)`                                        | Print inspected values separated by spaces without a trailing newline; return null.         |
+| `println(...values)`                                      | Print like `print`, append one newline, and return null.                                     |
 | `open(path) File \| FileNotFound \| PermissionDenied`     | Open an existing file for reading and writing. It does not create a missing file.           |
 | `stdin`                                                   | A readable `IOStream`; `read()` consumes all input and `read_line()` consumes one line.     |
 | `stdout`                                                  | An `IOStream` with `write(data: str) \| IOError`.                                           |

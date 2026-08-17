@@ -164,7 +164,7 @@ let slow = task slow_answer
 let quick = task quick_answer
 let answers = collect slow, quick
 
-io.print(answers.slow + answers.quick) # 42
+io.println(answers.slow + answers.quick) # 42
 ```
 
 [Documentation index](../table_of_contents.md)

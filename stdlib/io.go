@@ -20,6 +20,7 @@ func ioDefinitions(in io.Reader, out, errOut io.Writer, null *object.Null) []def
 	return []definition{
 		{name: "open", fn: builtinOpen(null), signature: openSignature()},
 		{name: "print", fn: builtinPrint(out, null)},
+		{name: "println", fn: builtinPrintln(out, null)},
 		{name: "stdin", value: newIOStream("stdin", in, nil, null)},
 		{name: "stdout", value: newIOStream("stdout", nil, out, null)},
 		{name: "stderr", value: newIOStream("stderr", nil, errOut, null)},
@@ -293,15 +294,23 @@ func streamWriteSignature() *ast.TypeAnnotation {
 }
 
 // builtinPrint creates a print function bound to out. Arguments are separated
-// by spaces and followed by one newline. The function returns null because it
-// exists for its side effect rather than for a value.
+// by spaces without a trailing newline.
 func builtinPrint(out io.Writer, null *object.Null) object.BuiltinFunction {
+	return builtinPrintWithEnding(out, null, "")
+}
+
+// builtinPrintln behaves like builtinPrint and appends one newline.
+func builtinPrintln(out io.Writer, null *object.Null) object.BuiltinFunction {
+	return builtinPrintWithEnding(out, null, "\n")
+}
+
+func builtinPrintWithEnding(out io.Writer, null *object.Null, ending string) object.BuiltinFunction {
 	return func(args ...object.Object) object.Object {
 		parts := make([]string, len(args))
 		for i, argument := range args {
 			parts[i] = argument.Inspect()
 		}
-		fmt.Fprintln(out, strings.Join(parts, " "))
+		fmt.Fprint(out, strings.Join(parts, " "), ending)
 		return null
 	}
 }

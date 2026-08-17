@@ -23,6 +23,7 @@
 - [`regex`](stdlib/regex.md) — regular-expression matching, searching, replacement, and splitting.
 - [`string`](stdlib/string.md) — Unicode-aware string operations.
 - [`system`](stdlib/system.md) — host and process-environment information.
+- [`terminal`](stdlib/terminal.md) — terminal sizing, styling, cursor control, screen buffers, and raw input.
 - [`testing`](stdlib/testing.md) — a small stateful test runner.
 - [`time`](stdlib/time.md) — time values, durations, formatting, parsing, and sleeping.
 

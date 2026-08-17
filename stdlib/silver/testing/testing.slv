@@ -5,7 +5,7 @@
 # runner binds its output function.
 let _io = import("io")
 let _arrays = import("array")
-let _print = _io.print
+let _print = _io.println
 let _append = _arrays.append
 
 struct Result {

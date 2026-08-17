@@ -18,6 +18,7 @@ func mathDefinitions() []definition {
 		{name: "ceil", fn: mathCeil},
 		{name: "abs", fn: mathAbs},
 		{name: "floor", fn: mathFloor},
+		{name: "round", fn: mathRound},
 		{name: "fmod", fn: binaryFloatFunction("fmod", math.Mod)},
 		{name: "modf", fn: mathModf},
 		{name: "remainer", fn: binaryFloatFunction("remainer", math.Remainder)},
@@ -229,6 +230,16 @@ func mathCeil(args ...object.Object) object.Object {
 
 func mathFloor(args ...object.Object) object.Object {
 	return roundedInteger("floor", math.Floor, args)
+}
+
+func mathRound(args ...object.Object) object.Object {
+	if err := requireArgumentCount(args, 1); err != nil {
+		return err
+	}
+	if _, ok := args[0].(*object.Float); !ok {
+		return newError(object.RuntimeErrorKindType, "argument 1 to `round` must be FLOAT, got %s", args[0].Type())
+	}
+	return roundedInteger("round", math.Round, args)
 }
 
 func mathTruc(args ...object.Object) object.Object {

@@ -88,7 +88,7 @@ switch command {
     case "stop":
         stop()
     default:
-        io.print("unknown command")
+        io.println("unknown command")
 }
 ```
 
@@ -186,7 +186,7 @@ it reaches `defer`; it does not reevaluate the argument expressions during scope
 let io = import("io")
 
 let show = fn(message: str) {
-    io.print(message)
+    io.println(message)
 }
 
 let example = fn() {

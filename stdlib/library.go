@@ -93,6 +93,7 @@ func NewWithStreams(in io.Reader, out, errOut io.Writer, null *object.Null, true
 		"regex":       regexDefinitions(null),
 		"string":      stringDefinitions(trueValue, falseValue),
 		"system":      systemDefinitions(null),
+		"terminal":    terminalDefinitions(in, out, null),
 		"time":        timeDefinitions(null, trueValue, falseValue),
 	}, []sourceDefinition{
 		{name: "args", path: "silver/args/args.slv"},

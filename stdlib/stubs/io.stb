@@ -1,6 +1,6 @@
 # Editor stub for import("io").
 #
-# print and the stdin/stdout/stderr streams are the only functions that talk
+# print, println, and the stdin/stdout/stderr streams are the only functions that talk
 # to the process's actual console; open and File work with arbitrary paths
 # on disk. Every fallible operation returns one of the error structs below
 # instead of raising, so callers pattern-match the result or catch it as a
@@ -47,10 +47,15 @@ struct File {
 }
 
 let print = fn(values) {
-    # Print any number of inspected values separated by single spaces,
-    # followed by a newline, to stdout, then return null. Values are
-    # rendered the same way they would appear in an error message or
-    # template-string interpolation, not necessarily as raw strings.
+    # Print any number of inspected values separated by single spaces to
+    # stdout without a trailing newline, then return null. Values are rendered
+    # the same way they would appear in an error message or template-string
+    # interpolation, not necessarily as raw strings.
+}
+
+let println = fn(values) {
+    # Print values exactly like print, followed by one newline, then return
+    # null. Calling println with no values prints one newline.
 }
 
 let open = fn(path: str) File | FileNotFound | PermissionDenied {

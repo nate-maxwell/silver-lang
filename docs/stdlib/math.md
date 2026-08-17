@@ -23,6 +23,7 @@ math.sin(math.pi / 2)   # 1.0
 | `abs(value)`               | `int → int`, `float → float`     | Return the absolute value while preserving its numeric type.                                  |
 | `ceil(value)`              | `numeric → int`                  | Round upward to an integer.                                                                   |
 | `floor(value)`             | `numeric → int`                  | Round downward to an integer.                                                                 |
+| `round(value)`             | `float → int`                    | Round to the nearest integer; halfway values round away from zero.                             |
 | `trunc(value)`             | `numeric → int`                  | Truncate toward zero.                                                                         |
 | `truc(value)`              | `numeric → int`                  | Compatibility alias for `trunc`.                                                              |
 | `fmod(left, right)`        | `numeric, numeric → float`       | Return the remainder whose quotient is truncated toward zero.                                 |

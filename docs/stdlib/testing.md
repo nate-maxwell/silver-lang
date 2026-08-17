@@ -1,7 +1,7 @@
 # `testing`
 
 `testing` is a small stateful test runner written in Silver. It records assertion failures, continues with later tests,
-and prints progress through `io.print`.
+and prints progress through `io.println`.
 
 ```silver
 let testing = import("testing")

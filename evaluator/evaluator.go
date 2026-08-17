@@ -42,6 +42,33 @@ func (w *synchronizedWriter) Write(p []byte) (int, error) {
 	return w.w.Write(p)
 }
 
+// Flush forwards an optional flush operation while holding the same lock as
+// writes, allowing stream-aware standard-library modules to flush safely.
+func (w *synchronizedWriter) Flush() error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	switch writer := w.w.(type) {
+	case interface{ Flush() error }:
+		return writer.Flush()
+	case interface{ Flush() }:
+		writer.Flush()
+	}
+	return nil
+}
+
+// TerminalFileDescriptor exposes an underlying terminal handle without
+// pretending that every synchronized writer necessarily has one.
+func (w *synchronizedWriter) TerminalFileDescriptor() (uintptr, bool) {
+	if provider, ok := w.w.(interface{ TerminalFileDescriptor() (uintptr, bool) }); ok {
+		return provider.TerminalFileDescriptor()
+	}
+	provider, ok := w.w.(interface{ Fd() uintptr })
+	if !ok {
+		return 0, false
+	}
+	return provider.Fd(), true
+}
+
 // New constructs an evaluator whose print builtin writes to standard output.
 func New() *Evaluator {
 	return NewWithStreams(os.Stdin, os.Stdout, os.Stderr)

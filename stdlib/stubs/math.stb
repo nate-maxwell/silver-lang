@@ -56,6 +56,12 @@ let floor = fn(value) int {
     # conditions as ceil.
 }
 
+let round = fn(value: float) int {
+    # Round a float to the nearest integer. Values exactly halfway between
+    # integers are rounded away from zero. Raises ValueError if the result
+    # does not fit in a 64-bit int or value is NaN or infinite.
+}
+
 let trunc = fn(value) int {
     # Truncate an int or float toward zero; an int argument is returned
     # unchanged. Raises ValueError under the same out-of-range conditions as

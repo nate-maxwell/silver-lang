@@ -33,7 +33,7 @@ for number in core.range(1, 6) {
     total = total + number
 }
 
-io.print("1 + 2 + 3 + 4 + 5 =", total)
+io.println("1 + 2 + 3 + 4 + 5 =", total)
 ```
 
 Types are optional and checked when the program runs:

@@ -18,6 +18,29 @@ let rendered: str = query.eval()
 Template text is raw and may span physical lines. Newlines and other text between the delimiters are preserved. Unlike
 ordinary quoted strings, backslash escape sequences in literal template text are not decoded.
 
+### Escape sequences in template text
+
+Because the template text is raw, placing `\x1b[?1049h` between triple-backtick delimiters preserves the literal
+characters `\x1b`; it does not produce an ASCII escape byte. Decode the escape in an ordinary quoted string, then
+interpolate that string into the template.
+For example, this builds ANSI terminal control sequences while retaining template interpolation for coordinates:
+
+````silver
+# Silver uses hexadecimal escapes; \033 octal escapes are not supported.
+let ESC = "\x1b"
+
+let enter_alternate_screen = ```{ESC}[?1049h```
+io.print(enter_alternate_screen.eval())
+
+let move = fn(x: int, y: int) {
+    let position = ```{ESC}[{y + 1};{x + 1}H```
+    io.print(position.eval())
+}
+````
+
+The same pattern applies to any decoded byte, Unicode escape, tab, or newline that must become part of rendered
+template output.
+
 Template strings are also Silver's multi-line string type by evaluating them.
 ````silver
 let multi_line: TemplateString = ```
@@ -25,9 +48,9 @@ hello from
 multiple lines
 ```
 
-io.print(multi_line.eval())
+io.println(multi_line.eval())
 
->> helo from
+>> hello from
 >> multiple lines
 ````
 

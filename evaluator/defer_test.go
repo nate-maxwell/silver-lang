@@ -9,7 +9,7 @@ import (
 func TestDeferredCallsRunLIFOOnReturn(t *testing.T) {
 	var out bytes.Buffer
 	input := `let io = import("io")
-let record = fn(value: str) { io.print(value) }
+let record = fn(value: str) { io.println(value) }
 let run = fn() int {
     defer record("first")
     defer record("second")
@@ -28,10 +28,10 @@ func TestDeferCapturesArgumentsAndCallableImmediately(t *testing.T) {
 	var out bytes.Buffer
 	input := `let io = import("io")
 let value = "before"
-let action = fn(text: str) { io.print("old " + text) }
+let action = fn(text: str) { io.println("old " + text) }
 defer action(value)
 value = "after"
-action = fn(text: str) { io.print("new " + text) }`
+action = fn(text: str) { io.println("new " + text) }`
 
 	result := evalInput(t, NewWithOutput(&out), object.NewEnvironment(), input)
 	testNullObject(t, result)
@@ -44,7 +44,7 @@ func TestDeferredCallsRunWhileUnwindingError(t *testing.T) {
 	var out bytes.Buffer
 	input := `let io = import("io")
 let run = fn() {
-    defer io.print("cleanup")
+    defer io.println("cleanup")
     missing_name
 }
 run()`
@@ -62,11 +62,11 @@ func TestAllDeferredCallsRunAndLaterFailureWins(t *testing.T) {
 	var out bytes.Buffer
 	input := `let io = import("io")
 let fail_first = fn() {
-    io.print("first")
+    io.println("first")
     missing_first
 }
 let fail_second = fn() {
-    io.print("second")
+    io.println("second")
     missing_second
 }
 let run = fn() {
@@ -92,8 +92,8 @@ func TestDeferredCallsUseFunctionScope(t *testing.T) {
 	var out bytes.Buffer
 	input := `let io = import("io")
 let run = fn() {
-    if True { defer io.print("cleanup") }
-    io.print("body")
+    if True { defer io.println("cleanup") }
+    io.println("body")
 }
 run()`
 

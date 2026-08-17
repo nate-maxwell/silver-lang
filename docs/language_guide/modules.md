@@ -14,7 +14,7 @@ type `module`:
 let io = import("io")
 let helpers = import("./helpers.slv")
 
-io.print(helpers.answer)
+io.println(helpers.answer)
 ```
 
 The path can be computed at runtime:

@@ -7,7 +7,7 @@ dependency injection, and even standard-library objects all grow from that small
 Silver exists to explore a middle ground between scripting-language immediacy and explicit program contracts:
 
 - write a script and run it immediately;
-- add runtime-checked types only where they clarify intent;
+- add runtime-checked types where explicitness is required;
 - model expected failures in function signatures and catch them by nominal type;
 - compose behavior from ordinary functions stored in ordinary structs;
 - use concurrency without losing track of task results.

@@ -13,42 +13,42 @@ enum Network {
     UDP,
 }
 
-# ConnectionError reports a failure to dial, or to close an
-# already-connected socket.
 struct ConnectionError {
+    # ConnectionError reports a failure to dial, or to close an
+    # already-connected socket.
     message: str
 }
 
-# ListenError reports a failure to bind and listen at an address.
 struct ListenError {
+    # ListenError reports a failure to bind and listen at an address.
     message: str
 }
 
-# ReadError reports a failure reading from a Connection, including reading
-# from an already-closed one or calling read_from on a non-UDP connection.
 struct ReadError {
+    # ReadError reports a failure reading from a Connection, including reading
+    # from an already-closed one or calling read_from on a non-UDP connection.
     message: str
 }
 
-# WriteError reports a failure writing to a Connection, including writing
-# fewer bytes than requested, writing to an already-closed connection, or
-# calling write_to on a non-UDP connection.
 struct WriteError {
+    # WriteError reports a failure writing to a Connection, including writing
+    # fewer bytes than requested, writing to an already-closed connection, or
+    # calling write_to on a non-UDP connection.
     message: str
 }
 
-# ReadFromResult pairs the bytes received by Connection.read_from with the
-# address of the peer that sent them.
 struct ReadFromResult {
+    # ReadFromResult pairs the bytes received by Connection.read_from with the
+    # address of the peer that sent them.
     data: str
     address: str
 }
 
-# Connection represents one connected TCP stream or UDP socket. write_to and
-# read_from are only valid on UDP connections created with Network.UDP;
-# calling them on a TCP connection returns WriteError/ReadError. address is
-# this connection's own local address as a string.
 struct Connection {
+    # Connection represents one connected TCP stream or UDP socket. write_to and
+    # read_from are only valid on UDP connections created with Network.UDP;
+    # calling them on a TCP connection returns WriteError/ReadError. address is
+    # this connection's own local address as a string.
     address: str
     read: call(bytes: int) str | ReadError
     write: call(data: str) | WriteError
@@ -57,10 +57,10 @@ struct Connection {
     close: call() | ConnectionError
 }
 
-# Listener accepts incoming TCP connections at the address it was created
-# with. Only one Listener.accept call is meaningful at a time per accepted
-# connection; call it in a loop to serve multiple clients.
 struct Listener {
+    # Listener accepts incoming TCP connections at the address it was created
+    # with. Only one Listener.accept call is meaningful at a time per accepted
+    # connection; call it in a loop to serve multiple clients.
     address: str
     accept: call() Connection | ConnectionError
     close: call() | ConnectionError

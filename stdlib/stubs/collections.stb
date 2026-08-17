@@ -6,13 +6,13 @@
 # index syntax (sequence[i], sequence[i] = v) through their get_item and
 # set_item fields.
 
-# Deque is a double-ended queue with a required maximum length. Once full,
-# appending at either end silently drops the oldest element at the opposite
-# end instead of growing further or raising, matching Python's
-# collections.deque(maxlen=n). Index sequence[i] and sequence[i] = v work
-# directly; use the module-level functions below (popleft, rotate, and so
-# on) for everything else.
 struct Deque {
+    # Deque is a double-ended queue with a required maximum length. Once full,
+    # appending at either end silently drops the oldest element at the opposite
+    # end instead of growing further or raising, matching Python's
+    # collections.deque(maxlen=n). Index sequence[i] and sequence[i] = v work
+    # directly; use the module-level functions below (popleft, rotate, and so
+    # on) for everything else.
     values: array
     append: call
     appendleft: call
@@ -21,10 +21,10 @@ struct Deque {
     set_item: call
 }
 
-# Stack is an unbounded last-in-first-out sequence. push adds to the top,
-# pop removes and returns the top, and peek reads the top without removing
-# it; pop and peek both raise IndexError on an empty stack.
 struct Stack {
+    # Stack is an unbounded last-in-first-out sequence. push adds to the top,
+    # pop removes and returns the top, and peek reads the top without removing
+    # it; pop and peek both raise IndexError on an empty stack.
     values: array
     push: call
     peek: call()
@@ -33,13 +33,13 @@ struct Stack {
     set_item: call
 }
 
-# DefaultMap wraps an ordinary map so that indexing a missing key computes
-# and stores a value instead of returning null. Reading defaultmap_value[key]
-# calls factory() exactly once for that key, saves the result into values,
-# and returns it; every later read for the same key returns the stored value
-# without calling factory again. Writing defaultmap_value[key] = v stores v
-# directly, bypassing factory.
 struct DefaultMap {
+    # DefaultMap wraps an ordinary map so that indexing a missing key computes
+    # and stores a value instead of returning null. Reading defaultmap_value[key]
+    # calls factory() exactly once for that key, saves the result into values,
+    # and returns it; every later read for the same key returns the stored value
+    # without calling factory again. Writing defaultmap_value[key] = v stores v
+    # directly, bypassing factory.
     values: map
     factory: call()
     get_item: call

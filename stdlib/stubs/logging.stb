@@ -21,69 +21,69 @@ enum Level {
     Critical,
 }
 
-# StreamHandler writes each record and a trailing newline to an io.IOStream
-# (for example io.stdout or io.stderr) via IOStream.write.
 struct StreamHandler {
+    # StreamHandler writes each record and a trailing newline to an io.IOStream
+    # (for example io.stdout or io.stderr) via IOStream.write.
     stream: IOStream
     handle: call(self: StreamHandler, record: str) | IOError
 }
 
-# FileHandler appends each record and a trailing newline to a file at path,
-# creating it if needed. Each call reads the file's full current contents,
-# concatenates the new record, and writes the whole file back, so very large
-# log files make this progressively more expensive.
 struct FileHandler {
+    # FileHandler appends each record and a trailing newline to a file at path,
+    # creating it if needed. Each call reads the file's full current contents,
+    # concatenates the new record, and writes the whole file back, so very large
+    # log files make this progressively more expensive.
     path: pathlib.Path
     handle: call(self: FileHandler, record: str)
 }
 
-# RotatingFileHandler behaves like FileHandler, except that once at least
-# interval seconds have passed since the last rotation (or since creation)
-# and the file exists, it is first renamed to its own path suffixed with a
-# timestamp before the new record is appended to a fresh file.
 struct RotatingFileHandler {
+    # RotatingFileHandler behaves like FileHandler, except that once at least
+    # interval seconds have passed since the last rotation (or since creation)
+    # and the file exists, it is first renamed to its own path suffixed with a
+    # timestamp before the new record is appended to a fresh file.
     path: pathlib.Path
     interval: int
     last_rotation: int
     handle: call(self: RotatingFileHandler, record: str)
 }
 
-# TCPSocketHandler dials a new TCP connection to address for every record,
-# writes the record plus a trailing newline, and closes the connection
-# immediately afterward.
 struct TCPSocketHandler {
+    # TCPSocketHandler dials a new TCP connection to address for every record,
+    # writes the record plus a trailing newline, and closes the connection
+    # immediately afterward.
     address: str
     handle: call(self: TCPSocketHandler, record: str) | ConnectionError | WriteError
 }
 
-# UDPSocketHandler dials a new UDP connection to address for every record,
-# writes the record plus a trailing newline, and closes the connection
-# immediately afterward. Like any UDP send, delivery is not guaranteed.
 struct UDPSocketHandler {
+    # UDPSocketHandler dials a new UDP connection to address for every record,
+    # writes the record plus a trailing newline, and closes the connection
+    # immediately afterward. Like any UDP send, delivery is not guaranteed.
     address: str
     handle: call(self: UDPSocketHandler, record: str) | ConnectionError | WriteError
 }
 
-# NullHandler discards every record; useful as a default handler in tests or
-# libraries that should not produce output on their own.
 struct NullHandler {
+    # NullHandler discards every record; useful as a default handler in tests or
+    # libraries that should not produce output on their own.
     handle: call(self: NullHandler, record: str)
 }
 
-# Logger is the value applications call handle on to emit one record. format
-# is the already-rendered TemplateString captured by new_logger; each call
-# to handle re-evaluates it with the current message and time.
 struct Logger {
+    # Logger is the value applications call handle on to emit one record. format
+    # is the already-rendered TemplateString captured by new_logger; each call
+    # to handle re-evaluates it with the current message and time.
     level: Level
     format: TemplateString
     handle: call(self: Logger, message: str)
 }
 
-# LogContext is passed to a format function each time new_logger builds a
-# logger's TemplateString, and is mutated with the current time and message
-# before every subsequent handle call. time is formatted as "YYYY-MM-DD
-# HH:mm:ss".
 struct LogContext {
+    # LogContext is passed to a format function each time new_logger builds a
+    # logger's TemplateString, and is mutated with the current time and message
+    # before every subsequent handle call. time is formatted as "YYYY-MM-DD
+    # HH:mm:ss".
     level: Level
     time: str
     message: str

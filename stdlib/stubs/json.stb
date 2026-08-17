@@ -6,13 +6,13 @@
 # streaming encoder/decoder beyond load/dump's use of a file-like read/write
 # method.
 
-# JSONDecodeError reports one JSON syntax problem. message is Silver's usual
-# error text; msg, doc, pos, lineno, and colno mirror Python's
-# json.JSONDecodeError attributes: msg is the underlying message without
-# position info, doc is the original document text, pos is the zero-based
-# byte offset of the failure, and lineno/colno locate it by line and column
-# (both starting at 1).
 struct JSONDecodeError {
+    # JSONDecodeError reports one JSON syntax problem. message is Silver's usual
+    # error text; msg, doc, pos, lineno, and colno mirror Python's
+    # json.JSONDecodeError attributes: msg is the underlying message without
+    # position info, doc is the original document text, pos is the zero-based
+    # byte offset of the failure, and lineno/colno locate it by line and column
+    # (both starting at 1).
     message: str
     msg: str
     doc: str

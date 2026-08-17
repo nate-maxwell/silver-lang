@@ -6,40 +6,40 @@
 # instead of raising, so callers pattern-match the result or catch it as a
 # thrown value.
 
-# IOError is the general-purpose I/O failure, covering closed streams and
-# operating-system errors other than a missing file or denied permission.
 struct IOError {
+    # IOError is the general-purpose I/O failure, covering closed streams and
+    # operating-system errors other than a missing file or denied permission.
     message: str
 }
 
-# FileNotFound is returned by open when path does not exist.
 struct FileNotFound {
+    # FileNotFound is returned by open when path does not exist.
     message: str
 }
 
-# PermissionDenied is returned by open when the operating system refuses
-# access to path for a reason other than it being missing.
 struct PermissionDenied {
+    # PermissionDenied is returned by open when the operating system refuses
+    # access to path for a reason other than it being missing.
     message: str
 }
 
-# IOStream wraps one of the process's standard streams. stdin only
-# supports read and read_line; stdout and stderr only support write. Calling
-# an unsupported operation returns an IOError rather than raising a type
-# error, since all three streams share this same struct shape.
 struct IOStream {
+    # IOStream wraps one of the process's standard streams. stdin only
+    # supports read and read_line; stdout and stderr only support write. Calling
+    # an unsupported operation returns an IOError rather than raising a type
+    # error, since all three streams share this same struct shape.
     name: str
     read: call() str | IOError
     read_line: call() str | IOError
     write: call(data: str) | IOError
 }
 
-# File represents one already-open file handle returned by open. read
-# always rewinds to the beginning and returns the file's complete current
-# contents; write rewinds and truncates first, so it replaces the entire
-# file rather than appending. Call close when done; further calls to read,
-# write, or close after that raise/return IOError.
 struct File {
+    # File represents one already-open file handle returned by open. read
+    # always rewinds to the beginning and returns the file's complete current
+    # contents; write rewinds and truncates first, so it replaces the entire
+    # file rather than appending. Call close when done; further calls to read,
+    # write, or close after that raise/return IOError.
     path: str
     read: call() str | IOError
     write: call(contents: str) | IOError

@@ -19,12 +19,12 @@ enum ArgumentKind {
     Positional,
 }
 
-# Argument describes one option or positional argument before it is added to
-# a Parser. Construct values with option, option_with_default,
-# required_option, flag, count, positional, or optional_positional rather
-# than building an Argument struct literal directly, since those constructors
-# fill in kind, required, default_value, and has_default consistently.
 struct Argument {
+    # Argument describes one option or positional argument before it is added to
+    # a Parser. Construct values with option, option_with_default,
+    # required_option, flag, count, positional, or optional_positional rather
+    # than building an Argument struct literal directly, since those constructors
+    # fill in kind, required, default_value, and has_default consistently.
     name: str
     short: str
     help: str
@@ -34,32 +34,32 @@ struct Argument {
     has_default: bool
 }
 
-# ArgumentError reports a problem either while declaring an Argument (a
-# duplicate or malformed name, a reserved -h/--help, or an invalid ordering
-# of positional arguments) or while parsing argv (an unknown option, a
-# missing value, an unexpected positional, or a missing required argument).
 struct ArgumentError {
+    # ArgumentError reports a problem either while declaring an Argument (a
+    # duplicate or malformed name, a reserved -h/--help, or an invalid ordering
+    # of positional arguments) or while parsing argv (an unknown option, a
+    # missing value, an unexpected positional, or a missing required argument).
     message: str
 }
 
-# ParsedArgs is the result of a successful Parser.parse call. values maps
-# each declared Argument's name to its parsed string, boolean flag, or
-# integer count; an option with no default that was not supplied on the
-# command line is simply absent from values. help_requested is True when
-# argv contained -h or --help, in which case values only holds the defaults
-# collected before the flag was seen and the caller should print
-# Parser.help and stop instead of using values.
 struct ParsedArgs {
+    # ParsedArgs is the result of a successful Parser.parse call. values maps
+    # each declared Argument's name to its parsed string, boolean flag, or
+    # integer count; an option with no default that was not supplied on the
+    # command line is simply absent from values. help_requested is True when
+    # argv contained -h or --help, in which case values only holds the defaults
+    # collected before the flag was seen and the caller should print
+    # Parser.help and stop instead of using values.
     values: map
     help_requested: bool
 }
 
-# Parser accumulates Argument declarations for one program. Create one with
-# new, register arguments with add before parsing, then call parse once per
-# argv to parse and validate that argv. help renders a usage summary listing
-# positionals, options, and defaults, and is also used automatically by
-# ParsedArgs.help_requested consumers.
 struct Parser {
+    # Parser accumulates Argument declarations for one program. Create one with
+    # new, register arguments with add before parsing, then call parse once per
+    # argv to parse and validate that argv. help renders a usage summary listing
+    # positionals, options, and defaults, and is also used automatically by
+    # ParsedArgs.help_requested consumers.
     program: str
     description: str
     arguments: array

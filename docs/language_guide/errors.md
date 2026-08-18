@@ -52,7 +52,7 @@ type, and an application error escaping through a function must appear in that f
 
 ```silver
 let load = fn(path: str) str | NotFound | PermissionProblem {
-    read(path)
+    return read(path)
 }
 ```
 

@@ -7,6 +7,7 @@ import (
 	"silver/astgen"
 	"silver/evaluator"
 	"silver/formatter"
+	"silver/internal/version"
 	"silver/object"
 	"silver/repl"
 )
@@ -14,7 +15,8 @@ import (
 const usage = `usage:
   silver [file]
   silver astgen <path>
-  silver frmt <file>`
+  silver frmt <file>
+  silver version`
 
 type command struct {
 	name string
@@ -24,6 +26,7 @@ type command struct {
 var commands = []command{
 	{name: "astgen", run: astgen.RunASTGen},
 	{name: "frmt", run: runFormat},
+	{name: "version", run: runVersion},
 }
 
 // run parses command-line arguments and returns a process-style status code:
@@ -71,7 +74,7 @@ func runFile(path string, in io.Reader, out, errOut io.Writer) int {
 
 func runFormat(args []string, _ io.Reader, out, errOut io.Writer) int {
 	if len(args) != 1 {
-		fmt.Fprintln(errOut, "usage: silver fmt <file>")
+		fmt.Fprintln(errOut, "usage: silver frmt <file>")
 		return 2
 	}
 	changed, err := formatter.File(args[0])
@@ -82,5 +85,14 @@ func runFormat(args []string, _ io.Reader, out, errOut io.Writer) int {
 	if changed {
 		fmt.Fprintln(out, args[0])
 	}
+	return 0
+}
+
+func runVersion(args []string, _ io.Reader, out, errOut io.Writer) int {
+	if len(args) != 0 {
+		fmt.Fprintln(errOut, "usage: silver version")
+		return 2
+	}
+	fmt.Fprintf(out, "silver %s\n", version.String())
 	return 0
 }

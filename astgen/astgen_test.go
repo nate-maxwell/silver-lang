@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
-	"silver"
 	"strings"
 	"testing"
 )
@@ -16,7 +15,7 @@ func TestRunASTGenFile(t *testing.T) {
 	}
 
 	var stdout, stderr bytes.Buffer
-	code := main.run([]string{"astgen", path}, strings.NewReader(""), &stdout, &stderr)
+	code := RunASTGen([]string{path}, strings.NewReader(""), &stdout, &stderr)
 	if code != 0 {
 		t.Fatalf("run returned %d; stderr: %s", code, stderr.String())
 	}
@@ -49,7 +48,7 @@ func TestRunASTGenDirectory(t *testing.T) {
 	}
 
 	var stdout, stderr bytes.Buffer
-	code := main.run([]string{"astgen", root}, strings.NewReader(""), &stdout, &stderr)
+	code := RunASTGen([]string{root}, strings.NewReader(""), &stdout, &stderr)
 	if code != 0 {
 		t.Fatalf("run returned %d; stderr: %s", code, stderr.String())
 	}
@@ -70,7 +69,7 @@ func TestRunASTGenReportsParseErrors(t *testing.T) {
 	}
 
 	var stdout, stderr bytes.Buffer
-	code := main.run([]string{"astgen", path}, strings.NewReader(""), &stdout, &stderr)
+	code := RunASTGen([]string{path}, strings.NewReader(""), &stdout, &stderr)
 	if code != 1 {
 		t.Fatalf("run returned %d, want 1", code)
 	}
@@ -84,7 +83,7 @@ func TestRunASTGenReportsParseErrors(t *testing.T) {
 
 func TestRunASTGenRequiresOnePath(t *testing.T) {
 	var stdout, stderr bytes.Buffer
-	code := main.run([]string{"astgen"}, strings.NewReader(""), &stdout, &stderr)
+	code := RunASTGen(nil, strings.NewReader(""), &stdout, &stderr)
 	if code != 2 {
 		t.Fatalf("run returned %d, want 2", code)
 	}

@@ -116,7 +116,7 @@ func TestRunFormatFormatsOneFile(t *testing.T) {
 	}
 
 	var stdout, stderr bytes.Buffer
-	code := run([]string{"fmt", path}, strings.NewReader(""), &stdout, &stderr)
+	code := run([]string{"frmt", path}, strings.NewReader(""), &stdout, &stderr)
 	if code != 0 {
 		t.Fatalf("run returned %d; stderr: %s", code, stderr.String())
 	}
@@ -133,13 +133,33 @@ func TestRunFormatFormatsOneFile(t *testing.T) {
 }
 
 func TestRunFormatRequiresExactlyOneFile(t *testing.T) {
-	for _, args := range [][]string{{"fmt"}, {"fmt", "one.slv", "two.slv"}} {
+	for _, args := range [][]string{{"frmt"}, {"frmt", "one.slv", "two.slv"}} {
 		var stdout, stderr bytes.Buffer
 		if code := run(args, strings.NewReader(""), &stdout, &stderr); code != 2 {
 			t.Fatalf("run(%q) returned %d, want 2", args, code)
 		}
-		if got, want := stderr.String(), "usage: silver fmt <file>\n"; got != want {
+		if got, want := stderr.String(), "usage: silver frmt <file>\n"; got != want {
 			t.Fatalf("stderr is %q, want %q", got, want)
 		}
+	}
+}
+
+func TestRunVersion(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	if code := run([]string{"version"}, strings.NewReader(""), &stdout, &stderr); code != 0 {
+		t.Fatalf("run returned %d; stderr: %s", code, stderr.String())
+	}
+	if got, want := stdout.String(), "silver 0.4.0\n"; got != want {
+		t.Fatalf("stdout is %q, want %q", got, want)
+	}
+}
+
+func TestRunVersionRejectsArguments(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	if code := run([]string{"version", "extra"}, strings.NewReader(""), &stdout, &stderr); code != 2 {
+		t.Fatalf("run returned %d, want 2", code)
+	}
+	if got, want := stderr.String(), "usage: silver version\n"; got != want {
+		t.Fatalf("stderr is %q, want %q", got, want)
 	}
 }

@@ -13,7 +13,7 @@ import (
 const (
 	silverPathEnvironmentName = "SILVER_PATH"
 	silverVersionMajor        = 0
-	silverVersionMinor        = 3
+	silverVersionMinor        = 4
 	silverVersionPatch        = 0
 )
 

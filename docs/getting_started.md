@@ -22,6 +22,14 @@ The command accepts either no arguments or one source path:
 silver [file]
 ```
 
+To parse source without running it and explicitly generate AST caches, use `astgen` with a source file or directory:
+
+```text
+silver astgen <path>
+```
+
+When given a directory, `astgen` recursively generates a sibling `.astc` file for every `.slv` file below it.
+
 ## Use the REPL
 
 Start Silver without a file:

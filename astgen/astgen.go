@@ -1,4 +1,4 @@
-package main
+package astgen
 
 import (
 	"errors"
@@ -11,7 +11,7 @@ import (
 	"silver/evaluator"
 )
 
-func runASTGen(args []string, _ io.Reader, out, errOut io.Writer) int {
+func RunASTGen(args []string, _ io.Reader, out, errOut io.Writer) int {
 	if len(args) != 1 {
 		fmt.Fprintln(errOut, "usage: silver astgen <path>")
 		return 2

@@ -108,3 +108,38 @@ read()
 		}
 	}
 }
+
+func TestRunFormatFormatsOneFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "main.slv")
+	if err := os.WriteFile(path, []byte("let answer=40+2"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	var stdout, stderr bytes.Buffer
+	code := run([]string{"fmt", path}, strings.NewReader(""), &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("run returned %d; stderr: %s", code, stderr.String())
+	}
+	if got, want := stdout.String(), path+"\n"; got != want {
+		t.Fatalf("stdout is %q, want %q", got, want)
+	}
+	formatted, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := string(formatted), "let answer = 40 + 2\n"; got != want {
+		t.Fatalf("formatted file is %q, want %q", got, want)
+	}
+}
+
+func TestRunFormatRequiresExactlyOneFile(t *testing.T) {
+	for _, args := range [][]string{{"fmt"}, {"fmt", "one.slv", "two.slv"}} {
+		var stdout, stderr bytes.Buffer
+		if code := run(args, strings.NewReader(""), &stdout, &stderr); code != 2 {
+			t.Fatalf("run(%q) returned %d, want 2", args, code)
+		}
+		if got, want := stderr.String(), "usage: silver fmt <file>\n"; got != want {
+			t.Fatalf("stderr is %q, want %q", got, want)
+		}
+	}
+}

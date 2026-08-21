@@ -48,3 +48,14 @@ func testIntegerObject(t *testing.T, obj object.Object, expected int64) {
 		t.Errorf("object has wrong value. got=%d, want=%d", result.Value, expected)
 	}
 }
+
+func testStringObject(t *testing.T, obj object.Object, expected string) {
+	result, ok := obj.(*object.String)
+	if !ok {
+		t.Errorf("object is not String. got=%T (%+v)", obj, obj)
+		return
+	}
+	if result.Value != expected {
+		t.Errorf("object has wrong value. got=%q, want=%q", result.Value, expected)
+	}
+}

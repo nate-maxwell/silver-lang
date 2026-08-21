@@ -356,7 +356,7 @@ func statementKeyword(word string) bool {
 
 func isOperator(value string) bool {
 	switch value {
-	case "=", "+", "-", "*", "**", "/", "//", "%", "==", "!=", "<", ">", "<=", ">=", "&&", "||", "|":
+	case "=", "+", "-", "*", "**", "/", "//", "%", "==", "!=", "<", ">", "<=", ">=", "&&", "||", "|", "::":
 		return true
 	default:
 		return false
@@ -369,7 +369,7 @@ func isClosing(value string) bool {
 
 func isDoubleSymbol(value string) bool {
 	switch value {
-	case "==", "!=", "&&", "||", "**", "//", "<=", ">=":
+	case "==", "!=", "&&", "||", "**", "//", "<=", ">=", "::":
 		return true
 	default:
 		return false

@@ -8,10 +8,11 @@ import (
 
 // Struct is the constructor and field layout bound by a struct declaration.
 type Struct struct {
-	Name       string
-	Fields     []string
-	FieldTypes []*ast.TypeAnnotation
-	Env        *Environment
+	Name           string
+	Fields         []string
+	FieldTypes     []*ast.TypeAnnotation
+	EmbeddedFields []bool
+	Env            *Environment
 }
 
 // Type returns the struct-constructor runtime tag.
@@ -58,10 +59,50 @@ func (s *StructInstance) Inspect() string {
 
 // Get returns one field using synchronization suitable for task sharing.
 func (s *StructInstance) Get(name string) (Object, bool) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	value, ok := s.Values[name]
+	value, _, _, ok := s.ResolveField(name)
 	return value, ok
+}
+
+// ResolveField returns a direct field or a field promoted recursively through
+// embedded struct values. Direct fields take precedence over promoted fields.
+// Owner and index identify the instance and declaration that actually contain
+// the value, which lets callers apply method binding and assignment correctly.
+func (s *StructInstance) ResolveField(name string) (value Object, owner *StructInstance, index int, ok bool) {
+	s.mu.RLock()
+	value, exists := s.Values[name]
+	if exists {
+		fieldIndex := -1
+		for index, fieldName := range s.Struct.Fields {
+			if fieldName == name {
+				fieldIndex = index
+				break
+			}
+		}
+		s.mu.RUnlock()
+		return value, s, fieldIndex, true
+	}
+	for fieldIndex, fieldName := range s.Struct.Fields {
+		if fieldName == name {
+			s.mu.RUnlock()
+			return nil, s, fieldIndex, false
+		}
+	}
+	embedded := make([]Object, 0, len(s.Struct.EmbeddedFields))
+	for fieldIndex, isEmbedded := range s.Struct.EmbeddedFields {
+		if isEmbedded && fieldIndex < len(s.Struct.Fields) {
+			embedded = append(embedded, s.Values[s.Struct.Fields[fieldIndex]])
+		}
+	}
+	s.mu.RUnlock()
+
+	for _, candidate := range embedded {
+		if instance, isStruct := candidate.(*StructInstance); isStruct {
+			if value, owner, index, ok = instance.ResolveField(name); ok {
+				return value, owner, index, true
+			}
+		}
+	}
+	return nil, nil, -1, false
 }
 
 // Set replaces one field using synchronization suitable for task sharing.

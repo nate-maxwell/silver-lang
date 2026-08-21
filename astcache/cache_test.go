@@ -13,9 +13,10 @@ import (
 func TestRoundTrip(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "all.slv")
 	source := []byte(`
-export { State, Person, values, choose, module }
+export { State, Person, Details, values, choose, module }
 enum State { Ready, Waiting }
 struct Person { name: string, age: int }
+struct Details { person :: Person }
 struct Handler { callback: call(value: int) }
 let values = [1, 2.5, True, "four", {"five": 5}]
 assert values[0] == 1, "cached assertion"

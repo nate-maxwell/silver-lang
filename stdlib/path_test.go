@@ -172,7 +172,7 @@ func TestPathErrorsAndNoChildPathTypes(t *testing.T) {
 
 	for _, child := range []string{"PosixPath", "WindowsPath", "PurePath"} {
 		result, ok := testEval(pathImport + "paths." + child).(*object.Error)
-		if !ok || !strings.Contains(result.MessageText(), "has no member") {
+		if !ok || !strings.Contains(result.MessageText(), `has no exported member "`+child+`"`) {
 			t.Fatalf("paths.%s returned %T (%v), want missing-member error", child, result, result)
 		}
 	}

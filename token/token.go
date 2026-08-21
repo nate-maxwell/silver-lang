@@ -68,6 +68,7 @@ const (
 	// Delimiters
 	COMMA = ","
 	COLON = ":"
+	EMBED = "::"
 	DOT   = "."
 
 	LPAREN   = "("

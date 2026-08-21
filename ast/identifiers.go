@@ -4,9 +4,10 @@ import "silver/token"
 
 // Identifier names a variable, parameter, builtin, or module binding.
 type Identifier struct {
-	Token token.Token // the token.IDENT token
-	Value string
-	Type  *TypeAnnotation // optional declaration annotation
+	Token    token.Token // the token.IDENT token
+	Value    string
+	Type     *TypeAnnotation // optional declaration annotation
+	Embedded bool            // struct field declared with :: instead of :
 }
 
 // expressionNode marks Identifier as an Expression.
@@ -29,6 +30,9 @@ func (i *Identifier) String() string { return i.Value }
 func (i *Identifier) DeclarationString() string {
 	if i.Type == nil {
 		return i.Value
+	}
+	if i.Embedded {
+		return i.Value + " :: " + i.Type.String()
 	}
 	return i.Value + ": " + i.Type.String()
 }

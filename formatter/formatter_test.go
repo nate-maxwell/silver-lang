@@ -78,6 +78,16 @@ func TestSourceFormatsExportDeclaration(t *testing.T) {
 	}
 }
 
+func TestSourceFormatsEmbeddedStructField(t *testing.T) {
+	formatted, err := Source("embedding.slv", []byte("struct Outer{\ninner::Inner\n}\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := string(formatted), "struct Outer {\n    inner :: Inner\n}\n"; got != want {
+		t.Fatalf("formatted source is %q, want %q", got, want)
+	}
+}
+
 func TestSourceRejectsInvalidCode(t *testing.T) {
 	if _, err := Source("broken.slv", []byte("let value =\n")); err == nil {
 		t.Fatal("Source accepted invalid code")

@@ -462,6 +462,17 @@ func TestStructKeyword(t *testing.T) {
 	}
 }
 
+func TestStructEmbeddingOperator(t *testing.T) {
+	tok := New(`value :: Inner`).NextToken()
+	if tok.Type != token.IDENT {
+		t.Fatalf("first token is %q, want IDENT", tok.Type)
+	}
+	tok = New(`::`).NextToken()
+	if tok.Type != token.EMBED || tok.Literal != "::" {
+		t.Fatalf("token is (%q, %q), want (::, ::)", tok.Type, tok.Literal)
+	}
+}
+
 func TestDeferKeyword(t *testing.T) {
 	tok := New("defer close()").NextToken()
 	if tok.Type != token.DEFER || tok.Literal != "defer" {

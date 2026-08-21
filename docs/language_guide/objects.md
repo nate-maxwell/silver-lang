@@ -78,6 +78,37 @@ let declare = fn(name: str) {
 declare(profile) # binds name from profile.details.person.name
 ```
 
+Methods are promoted through embedded fields in the same way. A method declared on the innermost struct can be called
+through the outermost struct, and it remains bound to the inner instance that owns the callable field:
+
+```silver
+struct Person {
+    name: str
+    shout: call(str)
+}
+
+struct Details {
+    person :: Person
+}
+
+struct Profile {
+    details :: Details
+}
+
+let shout = fn(name: str) {
+    import("io").println(import("string").upper(name))
+}
+
+let profile = Profile{Details{Person{"Ada", shout}}}
+profile.shout() # ADA
+```
+
+Here `profile.shout` resolves to `profile.details.person.shout` and binds `profile.details.person` as the method's
+implicit argument. Argument binding then follows the usual destructuring rules: the bound `Person` does not directly
+satisfy `name: str`, so its `name` field is extracted for that parameter. Consequently, the method needs no explicit
+argument in this example. Recursive promotion changes neither the method's owning receiver nor how that receiver is
+destructured.
+
 ## Object destructuring
 
 Functions bind ordinary positional arguments first. When an argument does not satisfy the parameter at its position and

@@ -3,6 +3,7 @@ package stdlib_test
 import (
 	"os"
 	"runtime"
+	"silver/internal/version"
 	"silver/object"
 	"strings"
 	"testing"
@@ -10,6 +11,28 @@ import (
 
 const systemImport = `let system = import("system")
 `
+
+func TestSystemVersion(t *testing.T) {
+	components := []struct {
+		name string
+		want int64
+	}{
+		{name: "MAJOR", want: version.Major},
+		{name: "MINOR", want: version.Minor},
+		{name: "PATCH", want: version.Patch},
+	}
+	for _, component := range components {
+		value, ok := testEval(systemImport + "system." + component.name).(*object.Integer)
+		if !ok || value.Value != component.want {
+			t.Fatalf("system.%s is %T (%v), want %d", component.name, value, value, component.want)
+		}
+	}
+
+	value, ok := testEval(systemImport + `system.VERSION`).(*object.String)
+	if !ok || value.Value != version.String() {
+		t.Fatalf("system.VERSION is %T (%v), want %q", value, value, version.String())
+	}
+}
 
 func TestSystemHostInformation(t *testing.T) {
 	tests := []string{

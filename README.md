@@ -167,7 +167,8 @@ go build -o silver .
 ```
 
 Run a source file with `./silver program.slv` (or `silver.exe program.slv` on Windows). During development,
-`go run . program.slv` works too.
+`go run . program.slv` works too. Format one source file in place with `./silver frmt program.slv`; like `go fmt`,
+the command prints the filepath when it changes the file.
 
 ## Project status and contributing
 

@@ -164,6 +164,16 @@ func TestSwitchKeywords(t *testing.T) {
 	}
 }
 
+func TestExportKeyword(t *testing.T) {
+	l := New("export { public_name }")
+	want := []token.TokenType{token.EXPORT, token.LBRACE, token.IDENT, token.RBRACE, token.EOF}
+	for index, tokenType := range want {
+		if got := l.NextToken(); got.Type != tokenType {
+			t.Fatalf("token %d is %q, want %q", index, got.Type, tokenType)
+		}
+	}
+}
+
 func TestLineComments(t *testing.T) {
 	input := `
 	# A comment may occupy an entire line.

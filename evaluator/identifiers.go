@@ -122,7 +122,7 @@ func (e *Evaluator) evalMember(value object.Object, member string) object.Object
 	case *object.Module:
 		export, ok := value.Get(member)
 		if !ok {
-			return newError(object.RuntimeErrorKindAttribute, "module %q has no member %q", value.Path, member)
+			return newError(object.RuntimeErrorKindAttribute, "module %q has no exported member %q", value.Path, member)
 		}
 		return export
 	case *object.Enum:

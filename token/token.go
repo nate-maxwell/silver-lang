@@ -88,6 +88,7 @@ const (
 	ASSERT   = "ASSERT"
 	DEFER    = "DEFER"
 	IMPORT   = "IMPORT"
+	EXPORT   = "EXPORT"
 	ENUM     = "ENUM"
 	STRUCT   = "STRUCT"
 	FOR      = "FOR"
@@ -117,6 +118,7 @@ var keywords = map[string]TokenType{
 	"assert":   ASSERT,
 	"defer":    DEFER,
 	"import":   IMPORT,
+	"export":   EXPORT,
 	"enum":     ENUM,
 	"struct":   STRUCT,
 	"for":      FOR,

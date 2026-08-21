@@ -66,6 +66,18 @@ func TestSourceIndentsMultilineCollections(t *testing.T) {
 	}
 }
 
+func TestSourceFormatsExportDeclaration(t *testing.T) {
+	source := []byte("export{\npublic_value,\nPublicType,\n}\n")
+	want := "export {\n    public_value,\n    PublicType,\n}\n"
+	formatted, err := Source("test.slv", source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(formatted) != want {
+		t.Fatalf("formatted export is %q, want %q", formatted, want)
+	}
+}
+
 func TestSourceRejectsInvalidCode(t *testing.T) {
 	if _, err := Source("broken.slv", []byte("let value =\n")); err == nil {
 		t.Fatal("Source accepted invalid code")

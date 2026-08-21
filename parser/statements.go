@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"fmt"
 	"silver/ast"
 	"silver/token"
 )
@@ -28,8 +29,70 @@ func (p *Parser) parseStatement() ast.Statement {
 		return p.parseAssertStatement()
 	case token.DEFER:
 		return p.parseDeferStatement()
+	case token.EXPORT:
+		return p.parseExportStatement()
 	default:
 		return p.parseExpressionStatement()
+	}
+}
+
+// parseExportStatement parses the module-level public binding list. Newlines
+// and commas separate names, matching other brace-delimited declarations.
+func (p *Parser) parseExportStatement() *ast.ExportStatement {
+	stmt := &ast.ExportStatement{Token: p.curToken}
+	if p.blockDepth != 0 {
+		p.addError(p.curToken.Position, "export is only valid at the top level")
+	}
+	if p.exportSeen {
+		p.addError(p.curToken.Position, "only one export declaration is allowed")
+	}
+	p.exportSeen = true
+
+	if !p.expectPeek(token.LBRACE) {
+		return stmt
+	}
+	stmt.Names = p.parseExportNames()
+	p.consumeStatementEnd()
+	return stmt
+}
+
+// parseExportNames parses a possibly empty, unique identifier list. A
+// trailing comma before the closing brace is accepted.
+func (p *Parser) parseExportNames() []*ast.Identifier {
+	var names []*ast.Identifier
+	seen := make(map[string]bool)
+
+	if p.peekTokenIs(token.RBRACE) {
+		p.nextToken()
+		return names
+	}
+
+	for {
+		if !p.expectPeek(token.IDENT) {
+			return nil
+		}
+		name := &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
+		if seen[name.Value] {
+			p.addError(name.Position(), fmt.Sprintf("duplicate exported symbol %q", name.Value))
+		} else {
+			seen[name.Value] = true
+			names = append(names, name)
+		}
+
+		if p.peekTokenIs(token.RBRACE) {
+			p.nextToken()
+			return names
+		}
+		if p.peekTokenIs(token.COMMA) {
+			p.nextToken()
+		} else if !p.lineBreakBeforePeek() {
+			p.peekError(token.COMMA)
+			return nil
+		}
+		if p.peekTokenIs(token.RBRACE) {
+			p.nextToken()
+			return names
+		}
 	}
 }
 
@@ -166,6 +229,8 @@ func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
 func (p *Parser) parseBlockStatement() *ast.BlockStatement {
 	block := &ast.BlockStatement{Token: p.curToken}
 	block.Statements = []ast.Statement{}
+	p.blockDepth++
+	defer func() { p.blockDepth-- }()
 
 	p.nextToken()
 

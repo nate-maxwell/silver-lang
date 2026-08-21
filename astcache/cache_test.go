@@ -13,6 +13,7 @@ import (
 func TestRoundTrip(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "all.slv")
 	source := []byte(`
+export { State, Person, values, choose, module }
 enum State { Ready, Waiting }
 struct Person { name: string, age: int }
 struct Handler { callback: call(value: int) }

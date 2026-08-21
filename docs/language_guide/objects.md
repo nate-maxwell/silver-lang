@@ -61,6 +61,23 @@ too. Reads, assignments, methods, and function destructuring all follow embedded
 struct takes precedence over a promoted field; otherwise embedded fields are searched in declaration order. Only
 struct-typed fields may use `::`, and embedding does not change constructor order or arity.
 
+Promoted fields are offered to function parameters during object destructuring just like direct fields. For example,
+given a `Profile` that embeds `Details`, a parameter named `name` can bind to the `Person.name` promoted through both
+layers:
+
+```silver
+struct Profile {
+    details :: Details
+}
+
+let profile = Profile{details}
+let declare = fn(name: str) {
+    import("io").println(name)
+}
+
+declare(profile) # binds name from profile.details.person.name
+```
+
 ## Object destructuring
 
 Functions bind ordinary positional arguments first. When an argument does not satisfy the parameter at its position and

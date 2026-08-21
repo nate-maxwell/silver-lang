@@ -323,3 +323,33 @@ func (ds *DeferStatement) String() string {
 	}
 	return ds.TokenLiteral() + " " + ds.Call.String()
 }
+
+/* ----------------------------------------------------------------------------------------------------------
+Export statements
+---------------------------------------------------------------------------------------------------------- */
+
+// ExportStatement selects the top-level bindings exposed by an imported
+// module. A source file without one exports every top-level binding.
+type ExportStatement struct {
+	Token token.Token // the 'export' token
+	Names []*Identifier
+}
+
+func (es *ExportStatement) statementNode()           {}
+func (es *ExportStatement) TokenLiteral() string     { return es.Token.Literal }
+func (es *ExportStatement) Position() token.Position { return es.Token.Position }
+
+// String renders the exported names as a brace-delimited list.
+func (es *ExportStatement) String() string {
+	var out bytes.Buffer
+	out.WriteString(es.TokenLiteral())
+	out.WriteString(" {")
+	for index, name := range es.Names {
+		if index > 0 {
+			out.WriteString(", ")
+		}
+		out.WriteString(name.String())
+	}
+	out.WriteString("}")
+	return out.String()
+}

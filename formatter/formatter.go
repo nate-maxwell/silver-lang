@@ -294,7 +294,7 @@ func findBlockBraces(line []element) map[int]bool {
 			switch item.value {
 			case "fn", "if", "else", "for", "while", "try", "catch", "switch":
 				controlSeen = true
-			case "struct", "enum":
+			case "struct", "enum", "export":
 				declaration = firstWord(line) == item.value
 			}
 		}
@@ -347,7 +347,7 @@ func spacedBeforeParen(word string) bool {
 
 func statementKeyword(word string) bool {
 	switch word {
-	case "let", "return", "assert", "defer", "if", "else", "for", "in", "while", "task", "collect", "switch", "case", "catch":
+	case "let", "return", "assert", "defer", "export", "if", "else", "for", "in", "while", "task", "collect", "switch", "case", "catch":
 		return true
 	default:
 		return false
@@ -356,7 +356,7 @@ func statementKeyword(word string) bool {
 
 func isOperator(value string) bool {
 	switch value {
-	case "=", "+", "-", "*", "**", "/", "//", "%", "==", "!=", "<", ">", "<=", ">=", "&&", "||", "|":
+	case "=", "+", "-", "*", "**", "/", "//", "%", "==", "!=", "<", ">", "<=", ">=", "&&", "||", "|", "::":
 		return true
 	default:
 		return false
@@ -369,7 +369,7 @@ func isClosing(value string) bool {
 
 func isDoubleSymbol(value string) bool {
 	switch value {
-	case "==", "!=", "&&", "||", "**", "//", "<=", ">=":
+	case "==", "!=", "&&", "||", "**", "//", "<=", ">=", "::":
 		return true
 	default:
 		return false

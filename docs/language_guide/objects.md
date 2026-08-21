@@ -36,6 +36,31 @@ origin.y # 2.0
 
 Struct types are nominal. Two declarations with identical field names are still different types.
 
+### Embedded struct fields
+
+Use `::` in place of `:` when a field's type is another struct and its fields should also be accessible through the
+outer value:
+
+```silver
+struct Person {
+    name: str
+}
+
+struct Details {
+    person :: Person
+    age: int
+}
+
+let details = Details{Person{"Ada"}, 44}
+details.name # Ada
+details.person.name # Ada; the stored field remains accessible by its own name
+```
+
+Promotion is recursive: if `Details` is itself embedded in another struct, `name` is accessible from that outer value
+too. Reads, assignments, methods, and function destructuring all follow embedded fields. A direct field on the outer
+struct takes precedence over a promoted field; otherwise embedded fields are searched in declaration order. Only
+struct-typed fields may use `::`, and embedding does not change constructor order or arity.
+
 ## Object destructuring
 
 Functions bind ordinary positional arguments first. When an argument does not satisfy the parameter at its position and

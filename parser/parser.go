@@ -39,6 +39,8 @@ type Parser struct {
 	errors           []string     // accumulated diagnostics; parsing attempts to continue
 	stopAtBlockBrace bool         // top-level { terminates an unparenthesized if condition
 	loopDepth        int          // lexical loop nesting for break/continue validation
+	blockDepth       int          // lexical block nesting for top-level-only declarations
+	exportSeen       bool         // only one export declaration is permitted per source file
 
 	curToken  token.Token // token currently being parsed
 	peekToken token.Token // one-token lookahead

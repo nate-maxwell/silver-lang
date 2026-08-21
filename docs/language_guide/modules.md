@@ -40,10 +40,10 @@ Silver resolves module names in this order:
 
 Use an explicit relative path such as `./testing.slv` when a user file has the same name as a bundled module.
 
-## Module members
+## Module members and exports
 
-Silver has no separate visibility declaration or modifier. Every top-level binding becomes a module member,
-including `let` bindings and struct or enum definitions:
+By default, every top-level binding becomes a public module member, including `let` bindings and struct or enum
+definitions. Files without an export declaration therefore retain the original export-all behavior:
 
 ```silver
 # geometry.slv
@@ -55,6 +55,26 @@ let translate = fn(point: Point, amount: int) Point {
 }
 ```
 
+Add one top-level `export` block to make only its listed bindings public:
+
+```silver
+# geometry.slv
+export {
+    Point,
+    translate,
+}
+
+struct Point { x: int, y: int }
+let origin = Point{0, 0} # Private to this module.
+let translate = fn(point: Point, amount: int) Point {
+    return Point{point.x + amount, point.y + amount}
+}
+```
+
+The declaration may appear before or after the bindings it names. `export {}` creates a module with no public
+members. Listing a name that is not defined as a top-level binding raises `NameError` when the module is imported.
+Only one export block is allowed, and it is not valid inside a function or another block.
+
 Importers access those bindings through member syntax:
 
 ```silver
@@ -63,7 +83,7 @@ let point: geometry.Point = geometry.translate(geometry.origin, 5)
 ```
 
 Top-level bindings stay isolated from the importing scope. Importing `geometry.slv` does not introduce `Point`,
-`origin`, or `translate` as unqualified names. Accessing an absent member raises `AttributeError`.
+`origin`, or `translate` as unqualified names. Accessing an absent or private member raises `AttributeError`.
 
 Module members cannot be replaced through member assignment. Member assignment is reserved for mutable struct fields:
 

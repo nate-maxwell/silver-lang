@@ -38,14 +38,8 @@ func (e *Evaluator) evalMemberAssignment(node *ast.MemberAssignmentStatement, en
 	}
 
 	member := node.Target.Member.Value
-	fieldIndex := -1
-	for index, field := range instance.Struct.Fields {
-		if field == member {
-			fieldIndex = index
-			break
-		}
-	}
-	if fieldIndex < 0 {
+	_, owner, fieldIndex, found := instance.ResolveField(member)
+	if !found || fieldIndex < 0 {
 		return newError(object.RuntimeErrorKindAttribute, "struct %q has no field %q", instance.Struct.Name, member)
 	}
 
@@ -53,10 +47,10 @@ func (e *Evaluator) evalMemberAssignment(node *ast.MemberAssignmentStatement, en
 	if isError(value) {
 		return value
 	}
-	if err := e.requireType(instance.Struct.FieldTypes[fieldIndex], value, instance.Struct.Env, fmt.Sprintf("field %q", instance.Struct.Name+"."+member)); err != nil {
+	if err := e.requireType(owner.Struct.FieldTypes[fieldIndex], value, owner.Struct.Env, fmt.Sprintf("field %q", owner.Struct.Name+"."+member)); err != nil {
 		return err
 	}
-	instance.Set(member, value)
+	owner.Set(member, value)
 	return NULL
 }
 
@@ -122,7 +116,7 @@ func (e *Evaluator) evalMember(value object.Object, member string) object.Object
 	case *object.Module:
 		export, ok := value.Get(member)
 		if !ok {
-			return newError(object.RuntimeErrorKindAttribute, "module %q has no member %q", value.Path, member)
+			return newError(object.RuntimeErrorKindAttribute, "module %q has no exported member %q", value.Path, member)
 		}
 		return export
 	case *object.Enum:
@@ -132,20 +126,20 @@ func (e *Evaluator) evalMember(value object.Object, member string) object.Object
 		}
 		return enumValue
 	case *object.StructInstance:
-		field, ok := value.Get(member)
+		field, owner, fieldIndex, ok := value.ResolveField(member)
 		if !ok {
 			return newError(object.RuntimeErrorKindAttribute, "struct %q has no field %q", value.Struct.Name, member)
 		}
-		for index, fieldName := range value.Struct.Fields {
-			fieldType := value.Struct.FieldTypes[index]
-			if fieldName != member || fieldType == nil || !fieldType.IsCallSignature() {
-				continue
+		if fieldIndex >= 0 {
+			fieldType := owner.Struct.FieldTypes[fieldIndex]
+			if fieldType == nil || !fieldType.IsCallSignature() {
+				return field
 			}
 			function, ok := field.(*object.Function)
 			if !ok {
 				return field
 			}
-			return &object.BoundMethod{Method: function, Receiver: value, Name: member}
+			return &object.BoundMethod{Method: function, Receiver: owner, Name: member}
 		}
 		return field
 	default:

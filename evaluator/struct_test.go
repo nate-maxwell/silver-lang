@@ -18,6 +18,78 @@ point.x + point.y
 	testIntegerObject(t, evaluated, 7)
 }
 
+func TestEmbeddedStructPromotesFieldsRecursively(t *testing.T) {
+	evaluated := testEval(`
+struct Person {
+	name: str
+}
+struct Details {
+	person :: Person
+	age: int
+}
+struct Record {
+	details :: Details
+}
+let person = Person{"Ada"}
+let record = Record{Details{person, 44}}
+record.name = "Grace"
+record.name + ":" + record.details.person.name
+`)
+	testStringObject(t, evaluated, "Grace:Grace")
+}
+
+func TestDirectFieldTakesPrecedenceOverPromotedField(t *testing.T) {
+	evaluated := testEval(`
+struct Inner { value: int }
+struct Outer {
+	inner :: Inner
+	value: int
+}
+Outer{Inner{1}, 2}.value
+`)
+	testIntegerObject(t, evaluated, 2)
+}
+
+func TestEmbeddedStructPromotesMethodsWithInnerReceiver(t *testing.T) {
+	evaluated := testEval(`
+struct Counter {
+	value: int
+	increment: call(self: Counter) int
+}
+let increment = fn(self: Counter) int {
+	self.value = self.value + 1
+	return self.value
+}
+struct Wrapper {
+	counter :: Counter
+}
+let wrapper = Wrapper{Counter{4, increment}}
+wrapper.increment()
+`)
+	testIntegerObject(t, evaluated, 5)
+}
+
+func TestEmbeddedStructFieldsParticipateInDestructuring(t *testing.T) {
+	evaluated := testEval(`
+struct Person { name: str }
+struct Details { person :: Person }
+let greet = fn(name: str) str { return name }
+greet(Details{Person{"Ada"}})
+`)
+	testStringObject(t, evaluated, "Ada")
+}
+
+func TestEmbeddedFieldRequiresStructType(t *testing.T) {
+	evaluated := testEval(`struct Invalid { value :: str }`)
+	err, ok := evaluated.(*object.Error)
+	if !ok {
+		t.Fatalf("result is %T, want *object.Error", evaluated)
+	}
+	if got, want := err.MessageText(), `embedded field "Invalid.value" must have a struct type`; got != want {
+		t.Fatalf("error message is %q, want %q", got, want)
+	}
+}
+
 func TestStructValueInspection(t *testing.T) {
 	evaluated := testEval(`
 struct Person {

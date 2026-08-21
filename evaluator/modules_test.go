@@ -198,6 +198,76 @@ import(module_path).value
 	assertInteger(t, result, 42)
 }
 
+func TestModuleExportDeclarationLimitsPublicBindings(t *testing.T) {
+	dir := t.TempDir()
+	writeSilverFile(t, filepath.Join(dir, "library.slv"), `
+export { public_value }
+let public_value = 42
+let private_value = 99
+`)
+	env := object.NewEnvironment()
+	env.SetSourceDir(dir)
+	engine := New()
+
+	assertInteger(t, evalInput(t, engine, env, `import("./library.slv").public_value`), 42)
+	result := evalInput(t, engine, env, `import("./library.slv").private_value`)
+	if err, ok := result.(*object.Error); !ok || !strings.Contains(err.MessageText(), `has no exported member "private_value"`) {
+		t.Fatalf("private member result is %T (%v), want AttributeError", result, result)
+	}
+}
+
+func TestModuleWithoutExportDeclarationExportsEveryBinding(t *testing.T) {
+	dir := t.TempDir()
+	writeSilverFile(t, filepath.Join(dir, "library.slv"), `let first = 1
+let second = 2`)
+	env := object.NewEnvironment()
+	env.SetSourceDir(dir)
+
+	result := evalInput(t, New(), env, `let library = import("./library.slv")
+library.first + library.second`)
+	assertInteger(t, result, 3)
+}
+
+func TestEmptyModuleExportDeclarationExportsNothing(t *testing.T) {
+	dir := t.TempDir()
+	writeSilverFile(t, filepath.Join(dir, "library.slv"), "export {}\nlet hidden = 42")
+	env := object.NewEnvironment()
+	env.SetSourceDir(dir)
+
+	result := evalInput(t, New(), env, `import("./library.slv").hidden`)
+	if _, ok := result.(*object.Error); !ok {
+		t.Fatalf("result is %T (%v), want *object.Error", result, result)
+	}
+}
+
+func TestModuleCanExportImportedBinding(t *testing.T) {
+	dir := t.TempDir()
+	writeSilverFile(t, filepath.Join(dir, "dependency.slv"), "let value = 42")
+	writeSilverFile(t, filepath.Join(dir, "library.slv"), `export { dependency }
+let dependency = import("./dependency.slv")`)
+	env := object.NewEnvironment()
+	env.SetSourceDir(dir)
+
+	result := evalInput(t, New(), env, `import("./library.slv").dependency.value`)
+	assertInteger(t, result, 42)
+}
+
+func TestUndefinedModuleExportFailsImport(t *testing.T) {
+	dir := t.TempDir()
+	writeSilverFile(t, filepath.Join(dir, "library.slv"), "export { missing }\nlet present = 42")
+	env := object.NewEnvironment()
+	env.SetSourceDir(dir)
+
+	result := evalInput(t, New(), env, `import("./library.slv")`)
+	err, ok := result.(*object.Error)
+	if !ok {
+		t.Fatalf("result is %T (%v), want *object.Error", result, result)
+	}
+	if got, want := err.MessageText(), `exported symbol "missing" is not defined`; got != want {
+		t.Fatalf("error is %q, want %q", got, want)
+	}
+}
+
 func TestImportRejectsNonStringPath(t *testing.T) {
 	result := evalInput(t, New(), object.NewEnvironment(), `import(42)`)
 	err, ok := result.(*object.Error)
@@ -273,7 +343,7 @@ func TestMissingModuleMember(t *testing.T) {
 	if !ok {
 		t.Fatalf("result is %T, want *object.Error", result)
 	}
-	if !strings.Contains(err.MessageText(), `has no member "missing"`) {
+	if !strings.Contains(err.MessageText(), `has no exported member "missing"`) {
 		t.Fatalf("unexpected error: %s", err.MessageText())
 	}
 }

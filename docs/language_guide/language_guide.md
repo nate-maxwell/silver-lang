@@ -10,7 +10,7 @@ annotations are optional runtime contracts, not a separate compile-time phase.
 - [Control flow](control_flow.md) - truthiness, conditionals, switches, loops, and deferred calls.
 - [Errors and diagnostics](errors.md) - typed contracts, `try`/`catch`, assertions, built-in errors, and tracebacks.
 - [Objects](objects.md) - structs, destructuring, methods, operator and indexing protocols, and enums.
-- [Modules and imports](modules.md) - resolution, members, caching, shared state, and qualified types.
+- [Modules and imports](modules.md) - resolution, exports, caching, shared state, and qualified types.
 - [Concurrency](concurrency.md) - starting tasks, collecting results, error propagation, handle ownership, and scope
   exit.
 - [Template strings](template_strings.md) - delayed interpolation, captured scope, rendering, and literal braces.

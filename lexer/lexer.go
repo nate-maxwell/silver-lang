@@ -177,7 +177,11 @@ func (l *Lexer) NextToken() token.Token {
 	case ']':
 		tok = newToken(token.RBRACKET, l.ch, position)
 	case ':':
-		tok = newToken(token.COLON, l.ch, position)
+		if l.peekChar() == ':' {
+			tok = l.makeTwoCharToken(token.EMBED)
+		} else {
+			tok = newToken(token.COLON, l.ch, position)
+		}
 	case '.':
 		tok = newToken(token.DOT, l.ch, position)
 	case 0:

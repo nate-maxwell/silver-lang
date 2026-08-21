@@ -42,6 +42,11 @@ func (p *Parser) parseStructFields() []*ast.Identifier {
 		}
 
 		field := p.parseDeclarationIdentifier()
+		if p.peekTokenIs(token.EMBED) {
+			p.nextToken()
+			field.Type = p.parseTypeAnnotation()
+			field.Embedded = true
+		}
 		if seen[field.Value] {
 			p.addError(field.Position(), fmt.Sprintf("duplicate struct field %q", field.Value))
 		} else {

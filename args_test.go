@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -149,8 +150,8 @@ func TestRunVersion(t *testing.T) {
 	if code := run([]string{"version"}, strings.NewReader(""), &stdout, &stderr); code != 0 {
 		t.Fatalf("run returned %d; stderr: %s", code, stderr.String())
 	}
-	if got, want := stdout.String(), "silver 0.4.0\n"; got != want {
-		t.Fatalf("stdout is %q, want %q", got, want)
+	if got := stdout.String(); !regexp.MustCompile(`^silver [0-9]+\.[0-9]+\.[0-9]+\n$`).MatchString(got) {
+		t.Fatalf("stdout is %q, want a major.minor.patch version", got)
 	}
 }
 

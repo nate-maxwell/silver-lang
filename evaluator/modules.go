@@ -76,7 +76,11 @@ func (e *Evaluator) importModule(path string, env *object.Environment) object.Ob
 		return result
 	}
 
-	module := &object.Module{Path: absolutePath, Exports: moduleEnv.Bindings()}
+	exports, exportError := e.moduleExports(program, moduleEnv)
+	if exportError != nil {
+		return exportError
+	}
+	module := &object.Module{Path: absolutePath, Exports: exports}
 	e.modules[absolutePath] = module
 	return module
 }
@@ -114,9 +118,41 @@ func (e *Evaluator) importSourceModule(name, sourceName, source string, cache []
 		return result
 	}
 
-	module := &object.Module{Path: name, Exports: moduleEnv.Bindings()}
+	exports, exportError := e.moduleExports(program, moduleEnv)
+	if exportError != nil {
+		return exportError
+	}
+	module := &object.Module{Path: name, Exports: exports}
 	e.modules[name] = module
 	return module
+}
+
+// moduleExports returns every top-level binding unless the program contains
+// an export declaration, in which case only its listed names are exposed.
+func (e *Evaluator) moduleExports(program *ast.Program, env *object.Environment) (map[string]object.Object, *object.Error) {
+	bindings := env.Bindings()
+	var declaration *ast.ExportStatement
+	for _, statement := range program.Statements {
+		if export, ok := statement.(*ast.ExportStatement); ok {
+			declaration = export
+			break
+		}
+	}
+	if declaration == nil {
+		return bindings, nil
+	}
+
+	exports := make(map[string]object.Object, len(declaration.Names))
+	for _, name := range declaration.Names {
+		value, ok := bindings[name.Value]
+		if !ok {
+			failure := newError(object.RuntimeErrorKindName, "exported symbol %q is not defined", name.Value)
+			failure.SetOrigin(e.traceFrame(name))
+			return nil, failure
+		}
+		exports[name.Value] = value
+	}
+	return exports, nil
 }
 
 // resolveImportPath first resolves path relative to sourceDir, falling back to

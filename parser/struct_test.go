@@ -58,6 +58,21 @@ func TestStructRejectsDuplicateFields(t *testing.T) {
 	}
 }
 
+func TestStructEmbeddedField(t *testing.T) {
+	p := New(lexer.New(`struct Outer { inner :: Inner }`))
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	statement := program.Statements[0].(*ast.StructStatement)
+	field := statement.Fields[0]
+	if !field.Embedded || field.Type == nil || field.Type.String() != "Inner" {
+		t.Fatalf("embedded field is %#v, want inner :: Inner", field)
+	}
+	if got, want := statement.String(), "struct Outer { inner :: Inner }"; got != want {
+		t.Fatalf("struct string is %q, want %q", got, want)
+	}
+}
+
 func TestStructLiteral(t *testing.T) {
 	p := New(lexer.New(`Location{0.0, 1.0, 2.0}`))
 	program := p.ParseProgram()

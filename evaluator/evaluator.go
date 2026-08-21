@@ -215,6 +215,11 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 		env.RegisterDefer(object.DeferredCall{Function: function, Arguments: arguments, Call: node.Call})
 		return NULL
 
+	case *ast.ExportStatement:
+		// Export declarations affect the module object assembled after the
+		// source finishes evaluating; they do not alter lexical bindings.
+		return NULL
+
 	case *ast.LetStatement:
 		if err := e.validateTypeAnnotation(node.Name.Type, env); err != nil {
 			return err

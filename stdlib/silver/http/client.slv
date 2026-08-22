@@ -1,0 +1,217 @@
+# A blocking HTTP/1.1 client implemented over the networking standard library.
+# Requests use plain HTTP URLs; TLS/HTTPS and redirects are intentionally left
+# to callers.
+
+let _arrays = import("array")
+let _core = import("core")
+let _maps = import("map")
+let _net = import("networking")
+let _strings = import("string")
+let _http = import("http")
+
+struct Request {
+    method: str
+    url: str
+    headers: map
+    body: str
+}
+
+struct Response {
+    status: str
+    status_code: int
+    reason: str
+    headers: map
+    body: str
+}
+
+struct ClientError {
+    message: str
+}
+
+struct _Target {
+    address: str
+    host: str
+    path: str
+}
+
+let new_request = fn(method: str, url: str, headers: map, body: str) Request {
+    Request{method, url, headers, body}
+}
+
+let _target_from_url = fn(url: str) _Target | ClientError {
+    if !_strings.startswith(url, "http://") {
+        return ClientError{"only http:// URLs are supported"}
+    }
+
+    let remainder = _strings.removeprefix(url, "http://")
+    let parts = _strings.split(remainder, "/")
+    let host = parts[0]
+    if host == "" {
+        return ClientError{"URL host must not be empty"}
+    }
+
+    let path_parts = []
+    let index = 1
+    while index < _core.len(parts) {
+        path_parts = _arrays.append(path_parts, parts[index])
+        index = index + 1
+    }
+    let request_path = "/"
+    if _core.len(path_parts) > 0 {
+        request_path = "/" + _strings.join(path_parts, "/")
+    }
+
+    let address = host
+    if !_strings.contains(host, ":") || _strings.endswith(host, "]") {
+        address = host + ":80"
+    }
+    return _Target{address, host, request_path}
+}
+
+let _normalized_headers = fn(headers: map) map {
+    let normalized = {}
+    for name, value in headers {
+        normalized[_strings.lower(_strings.strip(name))] = _strings.strip(value)
+    }
+    return normalized
+}
+
+let _header_lines = fn(headers: map) str {
+    let rendered = ""
+    for name, value in headers {
+        rendered = rendered + name + ": " + value + "\r\n"
+    }
+    return rendered
+}
+
+let _parse_headers = fn(lines: array, start: int) map | ClientError {
+    let headers = {}
+    let index = start
+    while index < _core.len(lines) {
+        let line = lines[index]
+        let separator = _strings.find(line, ":")
+        if separator <= 0 {
+            return ClientError{"malformed HTTP header: " + line}
+        }
+        let pieces = _strings.split(line, ":")
+        let value_pieces = []
+        let piece_index = 1
+        while piece_index < _core.len(pieces) {
+            value_pieces = _arrays.append(value_pieces, pieces[piece_index])
+            piece_index = piece_index + 1
+        }
+        let name = _strings.lower(_strings.strip(pieces[0]))
+        headers[name] = _strings.strip(_strings.join(value_pieces, ":"))
+        index = index + 1
+    }
+    return headers
+}
+
+let _body_length = fn(raw: str) int | ClientError {
+    let sections = _strings.split(raw, "\r\n\r\n")
+    let lines = _strings.split(sections[0], "\r\n")
+    let headers = _parse_headers(lines, 1)
+    if !_maps.contains(headers, "content-length") {
+        return 0
+    }
+    try {
+        let length = _strings.to_int(headers["content-length"])
+        if length < 0 {
+            return ClientError{"negative Content-Length"}
+        }
+        return length
+    } catch ValueError err {
+        return ClientError{"invalid Content-Length: " + headers["content-length"]}
+    }
+}
+
+let _read_response = fn(connection: Connection) Response | ClientError | ReadError {
+    let raw = ""
+    let header_end = -1
+    while header_end < 0 {
+        raw = raw + connection.read(4096)
+        header_end = _strings.find(raw, "\r\n\r\n")
+    }
+
+    let body_length = _body_length(raw)
+    while _core.len(raw) < header_end + 4 + body_length {
+        raw = raw + connection.read(4096)
+    }
+
+    let sections = _strings.split(raw, "\r\n\r\n")
+    let lines = _strings.split(sections[0], "\r\n")
+    let status_parts = _strings.fields(lines[0])
+    if _core.len(status_parts) < 2 || !_strings.startswith(status_parts[0], "HTTP/") {
+        return ClientError{"malformed HTTP status line: " + lines[0]}
+    }
+
+    let status_code = 0
+    try {
+        status_code = _strings.to_int(status_parts[1])
+    } catch ValueError err {
+        return ClientError{"invalid HTTP status code: " + status_parts[1]}
+    }
+    let reason_parts = []
+    let index = 2
+    while index < _core.len(status_parts) {
+        reason_parts = _arrays.append(reason_parts, status_parts[index])
+        index = index + 1
+    }
+    let reason = _strings.join(reason_parts, " ")
+    let headers = _parse_headers(lines, 1)
+
+    let body_parts = []
+    index = 1
+    while index < _core.len(sections) {
+        body_parts = _arrays.append(body_parts, sections[index])
+        index = index + 1
+    }
+    let body = _strings.join(body_parts, "\r\n\r\n")
+    return Response{status_parts[1] + " " + reason, status_code, reason, headers, body}
+}
+
+let _close_quietly = fn(connection: Connection) {
+    try {
+        connection.close()
+    } catch ConnectionError err {}
+}
+
+let send = fn(request: Request) Response | ClientError {
+    try {
+        let target = _target_from_url(request.url)
+        let headers = _normalized_headers(request.headers)
+        if !_maps.contains(headers, "host") {
+            headers["host"] = target.host
+        }
+        headers["content-length"] = _strings.from_int(_core.len(request.body))
+        headers["connection"] = "close"
+
+        let connection = _net.dial(_net.Network.TCP, target.address)
+        defer _close_quietly(connection)
+        connection.write(
+            request.method + " " + target.path + " HTTP/1.1\r\n" +
+            _header_lines(headers) + "\r\n" + request.body
+        )
+        return _read_response(connection)
+    } catch ClientError err {
+        return ClientError{err.message}
+    } catch ConnectionError err {
+        return ClientError{err.message}
+    } catch ReadError err {
+        return ClientError{err.message}
+    } catch WriteError err {
+        return ClientError{err.message}
+    }
+}
+
+let request = fn(method: str, url: str, headers: map, body: str) Response | ClientError {
+    send(new_request(method, url, headers, body))
+}
+
+let get = fn(url: str) Response | ClientError {
+    request(_http.MethodGet, url, {}, "")
+}
+
+let post = fn(url: str, body: str) Response | ClientError {
+    request(_http.MethodPost, url, {}, body)
+}

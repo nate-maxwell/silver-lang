@@ -130,6 +130,39 @@ core.type(opener) == call`
 	testBooleanObject(t, testEval(ioImport+coreImport+input), true)
 }
 
+func TestPrintHasVariadicCallSignature(t *testing.T) {
+	var output bytes.Buffer
+	input := `let printer: call(str...) = io.print
+printer("one", "two")`
+	result := testEvalWithStreams(ioImport+input, nil, &output, nil)
+	testNullObject(t, result)
+	if got, want := output.String(), "one two"; got != want {
+		t.Fatalf("output is %q, want %q", got, want)
+	}
+}
+
+func TestVariadicWrapperForwardsArgumentsToPrint(t *testing.T) {
+	var output bytes.Buffer
+	input := `let myprint = fn(parts: str...) {
+    io.print(parts)
+}
+myprint("one", "two", "three")`
+	result := testEvalWithStreams(ioImport+input, nil, &output, nil)
+	testNullObject(t, result)
+	if got, want := output.String(), "one two three"; got != want {
+		t.Fatalf("output is %q, want %q", got, want)
+	}
+}
+
+func TestPrintStillTreatsAnArrayAsOneArgument(t *testing.T) {
+	var output bytes.Buffer
+	result := testEvalWithStreams(ioImport+`io.print(["one", "two", "three"])`, nil, &output, nil)
+	testNullObject(t, result)
+	if got, want := output.String(), "[one, two, three]"; got != want {
+		t.Fatalf("output is %q, want %q", got, want)
+	}
+}
+
 func TestOpenRejectsInvalidArguments(t *testing.T) {
 	tests := []struct {
 		input   string

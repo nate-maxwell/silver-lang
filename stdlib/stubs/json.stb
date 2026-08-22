@@ -21,7 +21,7 @@ struct JSONDecodeError {
     colno: int
 }
 
-let loads = fn(document: str) | JSONDecodeError {
+let loads = fn(arguments: any...) any | JSONDecodeError | TypeError | ValueError {
     # Decode one complete JSON document into Silver values: objects become
     # maps with string keys, arrays become arrays, and numbers become int or
     # float depending on their literal form. Raises JSONDecodeError for
@@ -29,14 +29,14 @@ let loads = fn(document: str) | JSONDecodeError {
     # outside the representable range.
 }
 
-let load = fn(file) | JSONDecodeError {
+let load = fn(arguments: any...) any | JSONDecodeError | TypeError | ValueError | IOError {
     # Read the complete contents of a native file-like object (anything
     # exposing a zero-argument read method that returns a string, such as
     # io.File or io.stdin) and decode it as one JSON document, exactly as
     # loads would. Raises JSONDecodeError under the same conditions as loads.
 }
 
-let dumps = fn(value, indent) str {
+let dumps = fn(arguments: any...) str | TypeError | ValueError {
     # Encode value as a JSON string. Maps are encoded as objects (so keys
     # must be representable as JSON strings), arrays as JSON arrays, and int
     # or float as JSON numbers. The optional indent may be an integer number
@@ -45,7 +45,7 @@ let dumps = fn(value, indent) str {
     # the most compact single-line output.
 }
 
-let dump = fn(value, file, indent) {
+let dump = fn(arguments: any...) | TypeError | ValueError | IOError {
     # Encode value as JSON exactly as dumps would, then write the result
     # through a native file-like object's write method (anything exposing a
     # write(data: str) method, such as io.File or io.stdout). The optional

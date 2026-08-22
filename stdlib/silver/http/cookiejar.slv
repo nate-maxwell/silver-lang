@@ -1,0 +1,174 @@
+# In-memory cookie storage and URL matching for HTTP clients.
+
+let _arrays = import("array")
+let _cookies = import("http/cookies")
+let _core = import("core")
+let _strings = import("string")
+let _time = import("time")
+
+struct JarError {
+    message: str
+}
+
+struct _Target {
+    host: str
+    path: str
+    secure: bool
+}
+
+struct _StoredCookie {
+    cookie: _cookies.Cookie
+    domain: str
+    path: str
+    host_only: bool
+    expires_at: int
+}
+
+struct Jar {
+    cookies: array
+    set: call(self: Jar, url: str, cookie: _cookies.Cookie) | JarError
+    set_from_header: call(self: Jar, url: str, header: str) | JarError
+    header: call(self: Jar, url: str) str | JarError
+    clear: call(self: Jar)
+}
+
+let _target = fn(url: str) _Target | JarError {
+    let secure = False
+    let remainder = ""
+    if _strings.startswith(url, "http://") {
+        remainder = _strings.removeprefix(url, "http://")
+    } else if _strings.startswith(url, "https://") {
+        secure = True
+        remainder = _strings.removeprefix(url, "https://")
+    } else {
+        return JarError{"cookie URL must use http:// or https://"}
+    }
+
+    let pieces = _strings.split(remainder, "/")
+    let authority = pieces[0]
+    if authority == "" {
+        return JarError{"cookie URL host must not be empty"}
+    }
+    let host = _strings.lower(_strings.split(authority, ":")[0])
+    let path_parts = []
+    let index = 1
+    while index < _core.len(pieces) {
+        path_parts = _arrays.append(path_parts, pieces[index])
+        index = index + 1
+    }
+    let path = "/"
+    if _core.len(path_parts) > 0 {
+        path = "/" + _strings.join(path_parts, "/")
+    }
+    return _Target{host, path, secure}
+}
+
+let _domain_matches = fn(host: str, domain: str) bool {
+    return host == domain || _strings.endswith(host, "." + domain)
+}
+
+let _path_matches = fn(request_path: str, cookie_path: str) bool {
+    return request_path == cookie_path ||
+        _strings.startswith(request_path, cookie_path + "/") ||
+        (_strings.endswith(cookie_path, "/") && _strings.startswith(request_path, cookie_path))
+}
+
+let _default_path = fn(path: str) str {
+    let pieces = _strings.split(path, "/")
+    if _core.len(pieces) <= 2 {
+        return "/"
+    }
+    let parents = []
+    let index = 1
+    while index < _core.len(pieces) - 1 {
+        parents = _arrays.append(parents, pieces[index])
+        index = index + 1
+    }
+    return "/" + _strings.join(parents, "/")
+}
+
+let _same_cookie = fn(stored: _StoredCookie, name: str, domain: str, path: str) bool {
+    return stored.cookie.name == name && stored.domain == domain && stored.path == path
+}
+
+let _set = fn(self: Jar, url: str, cookie: _cookies.Cookie) | JarError {
+    let target = _target(url)
+    let host_only = cookie.domain == ""
+    let domain = target.host
+    if !host_only {
+        domain = _strings.removeprefix(_strings.lower(cookie.domain), ".")
+        if !_domain_matches(target.host, domain) {
+            return JarError{"cookie domain does not match URL host: " + cookie.domain}
+        }
+    }
+    let path = cookie.path
+    if path == "" || !_strings.startswith(path, "/") {
+        path = _default_path(target.path)
+    }
+
+    let retained = []
+    for stored in self.cookies {
+        if !_same_cookie(stored, cookie.name, domain, path) {
+            retained = _arrays.append(retained, stored)
+        }
+    }
+    self.cookies = retained
+
+    # A nonpositive Max-Age received from Set-Cookie removes the matching
+    # cookie. Zero means the attribute was absent on a programmatically built
+    # Cookie, while parse_set_cookie converts Max-Age=0 to -1.
+    if cookie.max_age < 0 {
+        return
+    }
+    let expires_at = 0
+    if cookie.max_age > 0 {
+        expires_at = _time.unix() + cookie.max_age
+    }
+    self.cookies = _arrays.append(
+        self.cookies,
+        _StoredCookie{cookie, domain, path, host_only, expires_at}
+    )
+}
+
+let _set_from_header = fn(self: Jar, url: str, header: str) | JarError {
+    try {
+        self.set(url, _cookies.parse_set_cookie(header))
+    } catch _cookies.CookieError err {
+        return JarError{err.message}
+    }
+}
+
+let _header = fn(self: Jar, url: str) str | JarError {
+    let target = _target(url)
+    let now = _time.unix()
+    let active = []
+    let selected = []
+    for stored in self.cookies {
+        if stored.expires_at == 0 || stored.expires_at > now {
+            active = _arrays.append(active, stored)
+            let domain_matches = _domain_matches(target.host, stored.domain)
+            if stored.host_only {
+                domain_matches = target.host == stored.domain
+            }
+            if domain_matches && _path_matches(target.path, stored.path) {
+                if !stored.cookie.secure || target.secure {
+                    selected = _arrays.append(selected, stored.cookie)
+                }
+            }
+        }
+    }
+    self.cookies = active
+    try {
+        return _cookies.to_cookie_header(selected)
+    } catch _cookies.CookieError err {
+        return JarError{err.message}
+    }
+}
+
+let _clear = fn(self: Jar) {
+    self.cookies = []
+}
+
+let new = fn() Jar {
+    Jar{[], _set, _set_from_header, _header, _clear}
+}

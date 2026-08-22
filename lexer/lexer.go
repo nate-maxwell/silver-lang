@@ -183,7 +183,13 @@ func (l *Lexer) NextToken() token.Token {
 			tok = newToken(token.COLON, l.ch, position)
 		}
 	case '.':
-		tok = newToken(token.DOT, l.ch, position)
+		if l.peekChar() == '.' && l.peekSecondChar() == '.' {
+			l.readChar()
+			l.readChar()
+			tok = token.Token{Type: token.ELLIPSIS, Literal: "...", Position: position}
+		} else {
+			tok = newToken(token.DOT, l.ch, position)
+		}
 	case 0:
 		tok.Literal = ""
 		tok.Type = token.EOF

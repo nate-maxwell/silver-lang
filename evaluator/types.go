@@ -187,6 +187,9 @@ func typeMatches(annotation *ast.TypeAnnotation, value object.Object, env *objec
 	name := annotation.String()
 	if len(annotation.Parts) == 1 {
 		if definition, ok := object.TypeDefinitionByName(name); ok {
+			if name == "any" {
+				return value != nil, ""
+			}
 			expected := definition.RuntimeType
 			if expected == object.FUNCTION_OBJ && value != nil && value.Type() == object.BUILTIN_OBJ {
 				return true, ""
@@ -218,6 +221,10 @@ func runtimeFunctionMatches(expected *ast.TypeAnnotation, actual *object.Functio
 	if len(expected.ParameterTypes) != len(actual.Parameters) {
 		return false, ""
 	}
+	actualVariadic := len(actual.Parameters) > 0 && actual.Parameters[len(actual.Parameters)-1].Variadic
+	if expected.Variadic != actualVariadic {
+		return false, ""
+	}
 	for index, expectedParameter := range expected.ParameterTypes {
 		if index < len(expected.ParameterNames) && expected.ParameterNames[index] != "" && expected.ParameterNames[index] != actual.Parameters[index].Value {
 			return false, ""
@@ -237,13 +244,20 @@ func runtimeFunctionMatches(expected *ast.TypeAnnotation, actual *object.Functio
 
 // annotationAssignable reports whether every value described by source is
 // accepted by target. Function parameters are contravariant and returns are
-// covariant; all other Silver types currently require nominal equality.
+// covariant; any accepts every source type and other Silver types require
+// nominal equality.
 func annotationAssignable(target, source *ast.TypeAnnotation, targetEnv, sourceEnv *object.Environment) (bool, string) {
 	if target == nil || source == nil {
 		return false, ""
 	}
+	if isPrimitiveAnnotation(target, "any") {
+		return true, ""
+	}
+	if isPrimitiveAnnotation(source, "any") {
+		return false, ""
+	}
 	if target.IsCallSignature() {
-		if !source.IsCallSignature() || len(target.ParameterTypes) != len(source.ParameterTypes) {
+		if !source.IsCallSignature() || target.Variadic != source.Variadic || len(target.ParameterTypes) != len(source.ParameterTypes) {
 			return false, ""
 		}
 		for index := range target.ParameterTypes {
@@ -252,9 +266,15 @@ func annotationAssignable(target, source *ast.TypeAnnotation, targetEnv, sourceE
 					return false, ""
 				}
 			}
-			matches, resolutionError := annotationAssignable(
-				source.ParameterTypes[index], target.ParameterTypes[index], sourceEnv, targetEnv,
-			)
+			// A nil source parameter is an internal signature for an untyped
+			// native parameter, which accepts every value allowed by target.
+			if source.ParameterTypes[index] == nil {
+				continue
+			}
+			if target.ParameterTypes[index] == nil {
+				return false, ""
+			}
+			matches, resolutionError := annotationAssignable(source.ParameterTypes[index], target.ParameterTypes[index], sourceEnv, targetEnv)
 			if resolutionError != "" || !matches {
 				return matches, resolutionError
 			}

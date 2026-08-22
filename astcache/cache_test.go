@@ -23,6 +23,7 @@ assert values[0] == 1, "cached assertion"
 let person = Person{"Ada", 36}
 person.age = 37
 let choose = fn(value: int) int { if (value > 0) { return -value } else { return 0 } }
+let variadic = fn(prefix: str, parts: str...) { parts }
 let label = switch values[0] {
 case 1:
     "one"

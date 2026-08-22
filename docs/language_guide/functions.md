@@ -30,6 +30,20 @@ Arguments are evaluated from left to right and normally bind by position. Every 
 arguments are rejected. Structs and modules can also fill several parameters through
 [object destructuring](objects.md#object-destructuring).
 
+The final parameter may be variadic. Write `...` after its type; the annotation is checked against every remaining
+argument. A variadic parameter also accepts zero values:
+
+```silver
+let print_all = fn(parts: str...) {
+    import("io").println(parts)
+}
+
+print_all("one", "two", "three") # prints: one two three
+```
+
+Using it as an argument contributes its individual values automatically, with no spread syntax. Only the final
+parameter may be variadic. An untyped form such as `fn(values...)` accepts remaining values of any type.
+
 ## Parameters and runtime contracts
 
 Parameter annotations are optional and checked when arguments bind:
@@ -40,8 +54,8 @@ let choose = fn(value: int, enabled) int {
 }
 ```
 
-Here `value` must be an integer while `enabled` accepts any value. Silver has no `any` annotation; leave a parameter
-unannotated when it should accept every value.
+Here `value` must be an integer while `enabled` accepts any value. Use `any` for an explicit unrestricted contract, or
+leave a parameter unannotated when it should accept every value.
 
 An annotation can name a primitive type, struct, enum, built-in nominal type, or a qualified type from a
 [module](modules.md#module-values-and-qualified-types):
@@ -53,6 +67,9 @@ let describe = fn(value: paths.Path) str {
     return value.path
 }
 ```
+
+The `any` annotation is especially useful as the return type of a function that intentionally returns heterogeneous
+data.
 
 ## Return behavior
 
@@ -133,6 +150,7 @@ A detailed callable annotation constrains parameter types, its result, and any d
 ```text
 call(int, str) bool
 call(path: str) str | NotFound
+call(parts: str...) str
 ```
 
 Parameter names are optional. When a callable annotation includes names, both the names and types must match the

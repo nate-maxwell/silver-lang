@@ -16,15 +16,16 @@ import (
 // ioDefinitions builds I/O values around the evaluator's configured process
 // streams. Keeping the streams injected makes CLI and test redirection work
 // without binding the standard library directly to os.Stdin/out/err.
-func ioDefinitions(in io.Reader, out, errOut io.Writer, null *object.Null) []definition {
-	return []definition{
+func ioDefinitions(in io.Reader, out, errOut io.Writer, null *object.Null, trueValue, falseValue *object.Boolean) []definition {
+	definitions := []definition{
 		{name: "open", fn: builtinOpen(null), signature: openSignature()},
-		{name: "print", fn: builtinPrint(out, null)},
-		{name: "println", fn: builtinPrintln(out, null)},
+		{name: "print", fn: builtinPrint(out, null), signature: printSignature()},
+		{name: "println", fn: builtinPrintln(out, null), signature: printSignature()},
 		{name: "stdin", value: newIOStream("stdin", in, nil, null)},
 		{name: "stdout", value: newIOStream("stdout", nil, out, null)},
 		{name: "stderr", value: newIOStream("stderr", nil, errOut, null)},
 	}
+	return append(definitions, filesystemDefinitions(null, trueValue, falseValue)...)
 }
 
 // nativeIOStream owns one injected standard stream. Standard streams are not
@@ -267,6 +268,15 @@ func callSignature(parameterNames []string, parameterTypes []*ast.TypeAnnotation
 
 func openSignature() *ast.TypeAnnotation {
 	return callSignature([]string{"path"}, []*ast.TypeAnnotation{namedType("str")}, namedType("File"), "FileNotFound", "PermissionDenied")
+}
+
+func printSignature() *ast.TypeAnnotation {
+	return &ast.TypeAnnotation{
+		Parts:          []string{"call"},
+		ParameterNames: []string{"values"},
+		ParameterTypes: []*ast.TypeAnnotation{nil},
+		Variadic:       true,
+	}
 }
 
 func fileReadSignature() *ast.TypeAnnotation {

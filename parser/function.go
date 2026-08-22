@@ -50,14 +50,26 @@ func (p *Parser) parseFunctionParameters() []*ast.Identifier {
 	}
 
 	ident := p.parseDeclarationIdentifier()
+	if p.peekTokenIs(token.ELLIPSIS) {
+		p.nextToken()
+		ident.Variadic = true
+	}
 	identifiers = append(identifiers, ident)
 
 	for p.peekTokenIs(token.COMMA) {
+		if identifiers[len(identifiers)-1].Variadic {
+			p.addError(p.peekToken.Position, "variadic parameter must be last")
+			return nil
+		}
 		p.nextToken()
 		if !p.expectPeek(token.IDENT) {
 			return nil
 		}
 		ident := p.parseDeclarationIdentifier()
+		if p.peekTokenIs(token.ELLIPSIS) {
+			p.nextToken()
+			ident.Variadic = true
+		}
 		identifiers = append(identifiers, ident)
 	}
 

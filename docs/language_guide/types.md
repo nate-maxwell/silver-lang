@@ -10,6 +10,7 @@ separate compilation phase.
 
 | Type             | Examples                              | Notes                                                        |
 | ---------------- | ------------------------------------- | ------------------------------------------------------------ |
+| `any`            | annotation only                       | Accepts every runtime value; useful for heterogeneous returns. |
 | `int`            | `0`, `-42`                            | Signed 64-bit integer.                                       |
 | `float`          | `3.14`, `-0.5`                        | IEEE-754 64-bit floating point.                              |
 | `bool`           | `True`, `False`                       | Only `False` and null are falsey.                            |
@@ -31,7 +32,8 @@ separate compilation phase.
 Structs and enums introduce nominal types. Task handles, built-in errors, and standard-library objects add other
 runtime value kinds.
 
-Silver currently has no `any` annotation. Leave a binding or parameter unannotated when it should accept any value.
+Use `any` when an explicitly typed binding or return may contain heterogeneous values. Parameters that accept every
+value may use `any` or omit their annotation.
 
 ## Numbers
 

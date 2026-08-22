@@ -1,6 +1,7 @@
 package stdlib
 
 import (
+	"silver/ast"
 	"silver/object"
 	"sort"
 )
@@ -10,6 +11,7 @@ import (
 func arrayDefinitions(null *object.Null, trueValue, falseValue *object.Boolean) []definition {
 	return []definition{
 		{name: "append", fn: builtinAppend},
+		{name: "of", fn: builtinArrayOf, signature: &ast.TypeAnnotation{Parts: []string{"call"}, ParameterNames: []string{"values"}, ParameterTypes: []*ast.TypeAnnotation{nil}, Variadic: true, ReturnType: namedType("array")}},
 		{name: "contains", fn: builtinArrayContains(trueValue, falseValue)},
 		{name: "first", fn: builtinFirst(null)},
 		{name: "last", fn: builtinLast(null)},
@@ -18,6 +20,13 @@ func arrayDefinitions(null *object.Null, trueValue, falseValue *object.Boolean) 
 		{name: "reverse", fn: builtinReverse},
 		{name: "sort", fn: builtinSort},
 	}
+}
+
+// builtinArrayOf collects variadic call arguments into an ordinary array.
+// It gives Silver code a way to inspect an optional argument pack.
+func builtinArrayOf(args ...object.Object) object.Object {
+	elements := append([]object.Object(nil), args...)
+	return &object.Array{Elements: elements}
 }
 
 func builtinArrayContains(trueValue, falseValue *object.Boolean) object.BuiltinFunction {

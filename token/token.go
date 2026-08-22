@@ -66,10 +66,11 @@ const (
 	NOT_EQ = "!="
 
 	// Delimiters
-	COMMA = ","
-	COLON = ":"
-	EMBED = "::"
-	DOT   = "."
+	COMMA    = ","
+	COLON    = ":"
+	EMBED    = "::"
+	DOT      = "."
+	ELLIPSIS = "..."
 
 	LPAREN   = "("
 	RPAREN   = ")"

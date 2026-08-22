@@ -15,3 +15,25 @@ func TestEmbeddedSilverModuleCacheIsCurrent(t *testing.T) {
 		}
 	}
 }
+
+func TestJSONIsSilverAuthoredModule(t *testing.T) {
+	library := New(io.Discard, &object.Null{}, &object.Boolean{Value: true}, &object.Boolean{Value: false})
+	if _, native := library.modules["json"]; native {
+		t.Fatal("json is registered as a native Go module")
+	}
+	module, silver := library.sourceModules["json"]
+	if !silver || module.sourceName != "stdlib/silver/json/json.slv" {
+		t.Fatalf("json Silver source module is %#v, present=%t", module, silver)
+	}
+}
+
+func TestPathIsSilverAuthoredModule(t *testing.T) {
+	library := New(io.Discard, &object.Null{}, &object.Boolean{Value: true}, &object.Boolean{Value: false})
+	if _, native := library.modules["path"]; native {
+		t.Fatal("path is registered as a native Go module")
+	}
+	module, silver := library.sourceModules["path"]
+	if !silver || module.sourceName != "stdlib/silver/path/path.slv" {
+		t.Fatalf("path Silver source module is %#v, present=%t", module, silver)
+	}
+}

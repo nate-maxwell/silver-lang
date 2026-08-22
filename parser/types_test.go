@@ -38,6 +38,39 @@ func TestTypedFunctionLiteral(t *testing.T) {
 	}
 }
 
+func TestVariadicFunctionParameter(t *testing.T) {
+	p := New(lexer.New(`fn(prefix: str, parts: str...) {}`))
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	function := program.Statements[0].(*ast.ExpressionStatement).Expression.(*ast.FunctionLiteral)
+	if len(function.Parameters) != 2 || !function.Parameters[1].Variadic {
+		t.Fatalf("parameters are %#v, want a variadic final parameter", function.Parameters)
+	}
+	if got, want := function.String(), "fn(prefix: str, parts: str...) "; got != want {
+		t.Fatalf("function is %q, want %q", got, want)
+	}
+}
+
+func TestUntypedVariadicFunctionParameter(t *testing.T) {
+	p := New(lexer.New(`fn(values...) {}`))
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	parameter := program.Statements[0].(*ast.ExpressionStatement).Expression.(*ast.FunctionLiteral).Parameters[0]
+	if !parameter.Variadic || parameter.Type != nil {
+		t.Fatalf("parameter is %#v, want untyped variadic", parameter)
+	}
+}
+
+func TestVariadicFunctionParameterMustBeLast(t *testing.T) {
+	p := New(lexer.New(`fn(parts: str..., suffix: str) {}`))
+	p.ParseProgram()
+	if len(p.Errors()) == 0 {
+		t.Fatal("parser accepted a non-final variadic parameter")
+	}
+}
+
 func TestCallSignatureTypeAnnotation(t *testing.T) {
 	p := New(lexer.New(`fn(transform: call(int, models.Person) str) call(str) bool {}`))
 	program := p.ParseProgram()
@@ -54,6 +87,28 @@ func TestCallSignatureTypeAnnotation(t *testing.T) {
 	}
 	if got, want := function.ReturnType.String(), "call(str) bool"; got != want {
 		t.Fatalf("return type is %q, want %q", got, want)
+	}
+}
+
+func TestVariadicCallSignatureTypeAnnotation(t *testing.T) {
+	p := New(lexer.New(`let callback: call(prefix: str, parts: str...) = fn(prefix: str, parts: str...) {}`))
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	signature := program.Statements[0].(*ast.LetStatement).Name.Type
+	if !signature.Variadic {
+		t.Fatal("call signature is not variadic")
+	}
+	if got, want := signature.String(), "call(prefix: str, parts: str...)"; got != want {
+		t.Fatalf("signature is %q, want %q", got, want)
+	}
+}
+
+func TestVariadicCallSignatureParameterMustBeLast(t *testing.T) {
+	p := New(lexer.New(`let callback: call(parts: str..., suffix: str) = fn() {}`))
+	p.ParseProgram()
+	if len(p.Errors()) == 0 {
+		t.Fatal("parser accepted a non-final variadic call parameter")
 	}
 }
 

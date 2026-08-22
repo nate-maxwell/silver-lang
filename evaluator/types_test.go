@@ -43,6 +43,19 @@ func TestTypedFunctionReturnValue(t *testing.T) {
 	}
 }
 
+func TestAnyAnnotationAcceptsHeterogeneousReturns(t *testing.T) {
+	evaluated := testEval(`
+let choose = fn(text: bool) any {
+	if text { return "silver" }
+	return 42
+}
+[choose(True), choose(False)]
+`)
+	if got, want := evaluated.Inspect(), `[silver, 42]`; got != want {
+		t.Fatalf("result is %q, want %q", got, want)
+	}
+}
+
 func TestUnknownType(t *testing.T) {
 	evaluated := testEval(`let value: Missing = 1`)
 	err, ok := evaluated.(*object.Error)

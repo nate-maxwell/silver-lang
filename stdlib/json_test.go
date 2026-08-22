@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"silver/object"
+	"strconv"
 	"testing"
 )
 
@@ -106,6 +107,49 @@ maps.get(maps.get(decoded, "nested"), "values")[1]`
 		t.Fatal(err.Inspect())
 	}
 	testBooleanObject(t, result, true)
+}
+
+func TestJSONUnicodeEscapesAndRawUnicodeRoundTrip(t *testing.T) {
+	document := `{"escaped":"\u0041\u00df\u6771\uD834\uDD1E","raw":"雪","controls":"\b\f\n\r\t"}`
+	result, ok := testEval(jsonImport + `json.dumps(json.loads(` + strconv.Quote(document) + `))`).(*object.String)
+	if !ok {
+		t.Fatalf("result is %T, want *object.String", result)
+	}
+	want := "{\"controls\":\"\\b\\f\\n\\r\\t\",\"escaped\":\"Aß東𝄞\",\"raw\":\"雪\"}"
+	if result.Value != want {
+		t.Fatalf("result is %q, want %q", result.Value, want)
+	}
+}
+
+func TestJSONDumpsEscapesUnsafeAndControlCharacters(t *testing.T) {
+	result, ok := testEval(jsonImport + `json.dumps("<>&\u0001\u2028")`).(*object.String)
+	if !ok {
+		t.Fatalf("result is %T, want *object.String", result)
+	}
+	if got, want := result.Value, `"\u003c\u003e\u0026\u0001\u2028"`; got != want {
+		t.Fatalf("result is %q, want %q", got, want)
+	}
+}
+
+func TestJSONDumpsRejectsCircularValuesAndNonFiniteFloats(t *testing.T) {
+	tests := []struct {
+		input   string
+		message string
+	}{
+		{input: `let value = [0]
+value[0] = value
+json.dumps(value)`, message: "circular reference detected while encoding JSON"},
+		{input: `json.dumps(import("math").nan)`, message: "out of range float values are not JSON compliant"},
+	}
+	for _, tt := range tests {
+		result, ok := testEval(jsonImport + tt.input).(*object.Error)
+		if !ok {
+			t.Fatalf("%s returned %T, want *object.Error", tt.input, result)
+		}
+		if got := result.MessageText(); got != tt.message {
+			t.Fatalf("error is %q, want %q", got, tt.message)
+		}
+	}
 }
 
 func TestJSONDumpsSupportsIntegerAndStringIndent(t *testing.T) {

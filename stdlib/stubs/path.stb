@@ -23,14 +23,14 @@ struct Path {
     suffixes: array
     parent: call() Path
     parents: call() array
-    absolute: call() Path
+    absolute: call() Path | ValueError
     as_posix: call() str
-    as_uri: call() str
-    chmod: call(mode: int)
+    as_uri: call() str | ValueError
+    chmod: call(mode: int) | ValueError
     exists: call() bool
-    expanduser: call() Path
-    glob: call(pattern: str) array
-    hardlink_to: call(target: Path)
+    expanduser: call() Path | ValueError
+    glob: call(pattern: str) array | ValueError
+    hardlink_to: call(target: any) | TypeError | ValueError
     is_absolute: call() bool
     is_block_device: call() bool
     is_char_device: call() bool
@@ -38,49 +38,49 @@ struct Path {
     is_fifo: call() bool
     is_file: call() bool
     is_mount: call() bool
-    is_relative_to: call(other: Path) bool
+    is_relative_to: call(other: any) bool | TypeError
     is_socket: call() bool
     is_symlink: call() bool
-    iterdir: call() array
-    joinpath: call(part: str) Path
-    lstat: call() map
-    match: call(pattern: str) bool
-    mkdir: call()
+    iterdir: call() array | ValueError
+    joinpath: call(parts: any...) Path | TypeError
+    lstat: call() map | ValueError
+    match: call(pattern: str) bool | ValueError
+    mkdir: call(options: any...) | TypeError | ValueError
     open: call() File | FileNotFound | PermissionDenied
-    read_bytes: call() str
-    read_text: call() str
-    readlink: call() Path
-    relative_to: call(other: Path) Path
-    rename: call(target: Path) Path
-    replace: call(target: Path) Path
-    resolve: call() Path
-    rglob: call(pattern: str) array
-    rmdir: call()
-    samefile: call(other: Path) bool
-    stat: call() map
-    symlink_to: call(target: Path)
-    touch: call()
-    unlink: call()
-    walk: call() array
-    with_name: call(name: str) Path
-    with_stem: call(stem: str) Path
-    with_suffix: call(suffix: str) Path
-    write_bytes: call(contents: str) int
-    write_text: call(contents: str) int
+    read_bytes: call() str | ValueError
+    read_text: call() str | ValueError
+    readlink: call() Path | ValueError
+    relative_to: call(other: any) Path | TypeError | ValueError
+    rename: call(target: any) Path | TypeError | ValueError
+    replace: call(target: any) Path | TypeError | ValueError
+    resolve: call() Path | ValueError
+    rglob: call(pattern: str) array | ValueError
+    rmdir: call() | ValueError
+    samefile: call(other: any) bool | TypeError | ValueError
+    stat: call() map | ValueError
+    symlink_to: call(target: any) | TypeError | ValueError
+    touch: call(options: any...) | TypeError | ValueError
+    unlink: call(options: any...) | TypeError | ValueError
+    walk: call() array | ValueError
+    with_name: call(name: str) Path | ValueError
+    with_stem: call(stem: str) Path | ValueError
+    with_suffix: call(suffix: str) Path | ValueError
+    write_bytes: call(contents: str) int | ValueError
+    write_text: call(contents: str) int | ValueError
 }
 
-let new = fn(path: str) Path {
+let new = fn(path: any) Path | TypeError {
     # Clean and wrap a platform-native path string: redundant separators and
     # "." segments are removed, but the path is not resolved against the
     # filesystem or made absolute (use resolve or absolute for that). Does
     # not touch the filesystem, so path need not exist.
 }
 
-let cwd = fn() Path {
+let cwd = fn() Path | ValueError {
     # Return the current working directory as a Path, as reported by the
     # operating system at the moment of the call.
 }
 
-let home = fn() Path {
+let home = fn() Path | ValueError {
     # Return the current user's home directory as a Path.
 }

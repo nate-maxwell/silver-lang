@@ -1,0 +1,103 @@
+# Editor stub for import("http").
+#
+# Common HTTP methods, status constants, descriptions, and status classes.
+# Import the implementations separately with import("http/client") or
+# import("http/server").
+
+let StatusContinue: int = 100 # Continue (RFC 9110)
+let StatusSwitchingProtocols: int = 101 # Switching Protocols (RFC 9110)
+let StatusProcessing: int = 102 # Processing (RFC 2518)
+let StatusEarlyHints: int = 103 # Early Hints (RFC 8297)
+
+let StatusOK: int = 200 # OK (RFC 9110)
+let StatusCreated: int = 201 # Created (RFC 9110)
+let StatusAccepted: int = 202 # Accepted (RFC 9110)
+let StatusNonAuthoritativeInfo: int = 203 # Non-Authoritative Information (RFC 9110)
+let StatusNoContent: int = 204 # No Content (RFC 9110)
+let StatusResetContent: int = 205 # Reset Content (RFC 9110)
+let StatusPartialContent: int = 206 # Partial Content (RFC 9110)
+let StatusMultiStatus: int = 207 # Multi-Status (RFC 4918)
+let StatusAlreadyReported: int = 208 # Already Reported (RFC 5842)
+let StatusIMUsed: int = 226 # IM Used (RFC 3229)
+
+let StatusMultipleChoices: int = 300 # Multiple Choices (RFC 9110)
+let StatusMovedPermanently: int = 301 # Moved Permanently (RFC 9110)
+let StatusFound: int = 302 # Found (RFC 9110)
+let StatusSeeOther: int = 303 # See Other (RFC 9110)
+let StatusNotModified: int = 304 # Not Modified (RFC 9110)
+let StatusUseProxy: int = 305 # Use Proxy (RFC 9110)
+let StatusTemporaryRedirect: int = 307 # Temporary Redirect (RFC 9110)
+let StatusPermanentRedirect: int = 308 # Permanent Redirect (RFC 9110)
+
+let StatusBadRequest: int = 400 # Bad Request (RFC 9110)
+let StatusUnauthorized: int = 401 # Unauthorized (RFC 9110)
+let StatusPaymentRequired: int = 402 # Payment Required (RFC 9110)
+let StatusForbidden: int = 403 # Forbidden (RFC 9110)
+let StatusNotFound: int = 404 # Not Found (RFC 9110)
+let StatusMethodNotAllowed: int = 405 # Method Not Allowed (RFC 9110)
+let StatusNotAcceptable: int = 406 # Not Acceptable (RFC 9110)
+let StatusProxyAuthRequired: int = 407 # Proxy Authentication Required (RFC 9110)
+let StatusRequestTimeout: int = 408 # Request Timeout (RFC 9110)
+let StatusConflict: int = 409 # Conflict (RFC 9110)
+let StatusGone: int = 410 # Gone (RFC 9110)
+let StatusLengthRequired: int = 411 # Length Required (RFC 9110)
+let StatusPreconditionFailed: int = 412 # Precondition Failed (RFC 9110)
+let StatusRequestEntityTooLarge: int = 413 # Request Entity Too Large (RFC 9110)
+let StatusRequestURITooLong: int = 414 # Request URI Too Long (RFC 9110)
+let StatusUnsupportedMediaType: int = 415 # Unsupported Media Type (RFC 9110)
+let StatusRequestedRangeNotSatisfiable: int = 416 # Requested Range Not Satisfiable (RFC 9110)
+let StatusExpectationFailed: int = 417 # Expectation Failed (RFC 9110)
+let StatusTeapot: int = 418 # I'm a teapot (RFC 9110)
+let StatusMisdirectedRequest: int = 421 # Misdirected Request (RFC 9110)
+let StatusUnprocessableEntity: int = 422 # Unprocessable Entity (RFC 9110)
+let StatusLocked: int = 423 # Locked (RFC 4918)
+let StatusFailedDependency: int = 424 # Failed Dependency (RFC 4918)
+let StatusTooEarly: int = 425 # Too Early (RFC 8470)
+let StatusUpgradeRequired: int = 426 # Upgrade Required (RFC 9110)
+let StatusPreconditionRequired: int = 428 # Precondition Required (RFC 6585)
+let StatusTooManyRequests: int = 429 # Too Many Requests (RFC 6585)
+let StatusRequestHeaderFieldsTooLarge: int = 431 # Request Header Fields Too Large (RFC 6585)
+let StatusUnavailableForLegalReasons: int = 451 # Unavailable For Legal Reasons (RFC 7725)
+
+let StatusInternalServerError: int = 500 # Internal Server Error (RFC 9110)
+let StatusNotImplemented: int = 501 # Not Implemented (RFC 9110)
+let StatusBadGateway: int = 502 # Bad Gateway (RFC 9110)
+let StatusServiceUnavailable: int = 503 # Service Unavailable (RFC 9110)
+let StatusGatewayTimeout: int = 504 # Gateway Timeout (RFC 9110)
+let StatusHTTPVersionNotSupported: int = 505 # HTTP Version Not Supported (RFC 9110)
+let StatusVariantAlsoNegotiates: int = 506 # Variant Also Negotiates (RFC 2295)
+let StatusInsufficientStorage: int = 507 # Insufficient Storage (RFC 4918)
+let StatusLoopDetected: int = 508 # Loop Detected (RFC 5842)
+let StatusNotExtended: int = 510 # Not Extended (RFC 2774)
+let StatusNetworkAuthenticationRequired: int = 511 # Network Authentication Required (RFC 6585)
+
+let is_informational = fn(code: int) bool {
+    # Report whether code is in the 100-199 informational class.
+}
+let is_success = fn(code: int) bool {
+    # Report whether code is in the 200-299 successful class.
+}
+let is_redirection = fn(code: int) bool {
+    # Report whether code is in the 300-399 redirection class.
+}
+let is_client_error = fn(code: int) bool {
+    # Report whether code is in the 400-499 client-error class.
+}
+let is_server_error = fn(code: int) bool {
+    # Report whether code is in the 500-599 server-error class.
+}
+
+let status_description = fn(code: int) str {
+    # Return the standard reason phrase for code, or "Status" when code is
+    # not one of the status constants declared above.
+}
+
+let MethodGet: str = "GET"
+let MethodHead: str = "HEAD"
+let MethodPost: str = "POST"
+let MethodPut: str = "PUT"
+let MethodPatch: str = "PATCH"
+let MethodDelete: str = "DELETE"
+let MethodConnect: str = "CONNECT"
+let MethodOptions: str = "OPTIONS"
+let MethodTrace: str = "TRACE"

@@ -60,6 +60,11 @@ Because `read` can also produce `PermissionProblem`, `load` must catch it or inc
 raises `RuntimeError` at the function boundary. Built-in runtime failures such as `TypeError` may propagate without
 being listed in a return union.
 
+## No `raise` or `throw`
+
+Unlike other `try`/`catch` languages, Silver does not implement a `raise` or `throw` keyword.
+Errors are instead returned as values and will be displayed as errors if not handled by a `try/catch` block.
+
 ## Handling errors with `try` and `catch`
 
 `try` is an expression followed by one or more typed handlers:

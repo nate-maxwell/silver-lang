@@ -15,6 +15,7 @@ values                   # still [3, 1, 2]
 | Function                  | Description                                                                                           |
 |---------------------------| ----------------------------------------------------------------------------------------------------- |
 | `append(array, value)`    | Return a copy with `value` added at the end.                                                          |
+| `of(...values)`           | Collect variadic values into a new array.                                                             |
 | `contains(array, value)` | Test value equality. Numeric comparison accepts mixed `int`/`float` values.                           |
 | `first(array)`           | Return the first element, or null when empty.                                                         |
 | `last(array)`            | Return the last element, or null when empty.                                                          |

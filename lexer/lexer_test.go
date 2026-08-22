@@ -131,6 +131,30 @@ func TestNextToken(t *testing.T) {
 	}
 }
 
+func TestEllipsisToken(t *testing.T) {
+	l := New(`fn(parts: str...) {}`)
+	for _, want := range []struct {
+		type_   token.TokenType
+		literal string
+	}{
+		{token.FUNCTION, "fn"},
+		{token.LPAREN, "("},
+		{token.IDENT, "parts"},
+		{token.COLON, ":"},
+		{token.IDENT, "str"},
+		{token.ELLIPSIS, "..."},
+		{token.RPAREN, ")"},
+		{token.LBRACE, "{"},
+		{token.RBRACE, "}"},
+		{token.EOF, ""},
+	} {
+		got := l.NextToken()
+		if got.Type != want.type_ || got.Literal != want.literal {
+			t.Fatalf("token is (%s, %q), want (%s, %q)", got.Type, got.Literal, want.type_, want.literal)
+		}
+	}
+}
+
 func TestLoopControlKeywords(t *testing.T) {
 	l := New("break continue")
 	want := []struct {

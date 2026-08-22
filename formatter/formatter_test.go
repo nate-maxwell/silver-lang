@@ -30,6 +30,16 @@ let result = add(20, 22)
 	}
 }
 
+func TestSourceFormatsVariadicParameter(t *testing.T) {
+	formatted, err := Source("variadic.slv", []byte("let join=fn(prefix:str,parts:str...){\n}\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := string(formatted), "let join = fn(prefix: str, parts: str...) {\n}\n"; got != want {
+		t.Fatalf("formatted source is %q, want %q", got, want)
+	}
+}
+
 func TestSourcePreservesLiteralContents(t *testing.T) {
 	source := []byte("let text=\"# not a comment\"\nlet template=```keep  spacing {text}```\n")
 	formatted, err := Source("test.slv", source)

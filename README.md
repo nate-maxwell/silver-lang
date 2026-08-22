@@ -1,4 +1,4 @@
-"I hate all languages equally" - Nate Maxwell
+<p align="center">"I hate all languages equally" - Nate Maxwell</p>
 
 # Silver
 

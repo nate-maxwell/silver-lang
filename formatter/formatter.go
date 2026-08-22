@@ -239,7 +239,7 @@ func needsSpace(line []element, index int, blockBraces map[int]bool) bool {
 	}
 	if current.kind == symbolElement {
 		switch current.value {
-		case ",", ")", "]", ".", ":":
+		case ",", ")", "]", ".", ":", "::":
 			return false
 		case "}":
 			return blockBraces[index] && previous.value != "{"
@@ -275,7 +275,7 @@ func needsSpace(line []element, index int, blockBraces map[int]bool) bool {
 			return false
 		case "-":
 			return !unaryAt(line, index-1)
-		case ",", ":":
+		case ",", ":", "::":
 			return true
 		default:
 			return isOperator(previous.value)

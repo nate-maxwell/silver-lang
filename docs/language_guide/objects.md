@@ -47,7 +47,7 @@ struct Person {
 }
 
 struct Details {
-    person :: Person
+    person:: Person
     age: int
 }
 
@@ -67,7 +67,7 @@ layers:
 
 ```silver
 struct Profile {
-    details :: Details
+    details:: Details
 }
 
 let profile = Profile{details}
@@ -88,11 +88,11 @@ struct Person {
 }
 
 struct Details {
-    person :: Person
+    person:: Person
 }
 
 struct Profile {
-    details :: Details
+    details:: Details
 }
 
 let shout = fn(name: str) {

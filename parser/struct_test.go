@@ -68,7 +68,7 @@ func TestStructEmbeddedField(t *testing.T) {
 	if !field.Embedded || field.Type == nil || field.Type.String() != "Inner" {
 		t.Fatalf("embedded field is %#v, want inner :: Inner", field)
 	}
-	if got, want := statement.String(), "struct Outer { inner :: Inner }"; got != want {
+	if got, want := statement.String(), "struct Outer { inner:: Inner }"; got != want {
 		t.Fatalf("struct string is %q, want %q", got, want)
 	}
 }

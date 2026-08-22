@@ -1,3 +1,5 @@
+"I hate all languages equally" - Nate Maxwell
+
 # Silver
 
 Silver is an interpreted, struct-centric programming language where behavior is data. A struct describes both

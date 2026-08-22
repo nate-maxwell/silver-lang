@@ -122,6 +122,13 @@ func TestStringCodepointConversions(t *testing.T) {
 	}
 }
 
+func TestStringUTF8Bytes(t *testing.T) {
+	result := testEval(stringImport + `strings.utf8_bytes("A雪")`)
+	if got, want := result.Inspect(), `[65, 233, 155, 170]`; got != want {
+		t.Fatalf("UTF-8 bytes are %q, want %q", got, want)
+	}
+}
+
 func TestStringConversionSignatures(t *testing.T) {
 	input := stringImport + coreImport + `let to_int: call(value: str) int | ValueError = strings.to_int
 let from_int: call(value: int) str = strings.from_int

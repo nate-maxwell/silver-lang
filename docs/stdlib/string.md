@@ -25,6 +25,7 @@ strings.to_int("42")                       # 42
 | `from_bool(value) str`                   | Format a boolean as `"true"` or `"false"`.                                |
 | `codepoint(value) int \| ValueError`     | Return the Unicode code point of a one-character string.                    |
 | `from_codepoint(value) str \| ValueError` | Create one character from a Unicode scalar value.                           |
+| `utf8_bytes(value) array`                | Return the UTF-8 bytes as integer values.                                  |
 
 Conversion input is strict: surrounding whitespace is not removed. Use `strip` first when accepting padded input.
 

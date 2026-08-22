@@ -26,3 +26,14 @@ func TestJSONIsSilverAuthoredModule(t *testing.T) {
 		t.Fatalf("json Silver source module is %#v, present=%t", module, silver)
 	}
 }
+
+func TestPathIsSilverAuthoredModule(t *testing.T) {
+	library := New(io.Discard, &object.Null{}, &object.Boolean{Value: true}, &object.Boolean{Value: false})
+	if _, native := library.modules["path"]; native {
+		t.Fatal("path is registered as a native Go module")
+	}
+	module, silver := library.sourceModules["path"]
+	if !silver || module.sourceName != "stdlib/silver/path/path.slv" {
+		t.Fatalf("path Silver source module is %#v, present=%t", module, silver)
+	}
+}

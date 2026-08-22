@@ -1,0 +1,952 @@
+# Platform-native paths implemented in Silver. Only host filesystem access is
+# delegated to low-level operations in io.
+
+let _arrays = import("array")
+let _core = import("core")
+let _io = import("io")
+let _maps = import("map")
+let _strings = import("string")
+
+let _append = _arrays.append
+let _len = _core.len
+let _type = _core.type
+let _separator = _io._path_separator
+let _windows = _io._is_windows
+
+struct Path {
+    path: str
+    anchor: str
+    drive: str
+    name: str
+    parts: array
+    root: str
+    stem: str
+    suffix: str
+    suffixes: array
+    parent: call(self: Path) Path
+    parents: call(self: Path) array
+    absolute: call(self: Path) Path | ValueError
+    as_posix: call(self: Path) str
+    as_uri: call(self: Path) str | ValueError
+    chmod: call(self: Path, mode: int) | ValueError
+    exists: call(self: Path) bool
+    expanduser: call(self: Path) Path | ValueError
+    glob: call(self: Path, pattern: str) array | ValueError
+    hardlink_to: call(self: Path, target: any) | TypeError | ValueError
+    is_absolute: call(self: Path) bool
+    is_block_device: call(self: Path) bool
+    is_char_device: call(self: Path) bool
+    is_dir: call(self: Path) bool
+    is_fifo: call(self: Path) bool
+    is_file: call(self: Path) bool
+    is_mount: call(self: Path) bool
+    is_relative_to: call(self: Path, other: any) bool | TypeError
+    is_socket: call(self: Path) bool
+    is_symlink: call(self: Path) bool
+    iterdir: call(self: Path) array | ValueError
+    joinpath: call(self: Path, parts: any...) Path | TypeError
+    lstat: call(self: Path) map | ValueError
+    match: call(self: Path, pattern: str) bool | ValueError
+    mkdir: call(self: Path, options: any...) | TypeError | ValueError
+    open: call(self: Path) File | FileNotFound | PermissionDenied
+    read_bytes: call(self: Path) str | ValueError
+    read_text: call(self: Path) str | ValueError
+    readlink: call(self: Path) Path | ValueError
+    relative_to: call(self: Path, other: any) Path | TypeError | ValueError
+    rename: call(self: Path, target: any) Path | TypeError | ValueError
+    replace: call(self: Path, target: any) Path | TypeError | ValueError
+    resolve: call(self: Path) Path | ValueError
+    rglob: call(self: Path, pattern: str) array | ValueError
+    rmdir: call(self: Path) | ValueError
+    samefile: call(self: Path, other: any) bool | TypeError | ValueError
+    stat: call(self: Path) map | ValueError
+    symlink_to: call(self: Path, target: any) | TypeError | ValueError
+    touch: call(self: Path, options: any...) | TypeError | ValueError
+    unlink: call(self: Path, options: any...) | TypeError | ValueError
+    walk: call(self: Path) array | ValueError
+    with_name: call(self: Path, name: str) Path | ValueError
+    with_stem: call(self: Path, stem: str) Path | ValueError
+    with_suffix: call(self: Path, suffix: str) Path | ValueError
+    write_bytes: call(self: Path, contents: str) int | ValueError
+    write_text: call(self: Path, contents: str) int | ValueError
+}
+
+struct _ClassResult {
+    matched: bool
+    next: int
+}
+
+let _type_name = fn(value) str {
+    switch _type(value) {
+        case int: "INTEGER"
+        case float: "FLOAT"
+        case bool: "BOOLEAN"
+        case str: "STRING"
+        case array: "ARRAY"
+        case map: "MAP"
+        case module: "MODULE"
+        case call: "FUNCTION"
+        default: "STRUCT_VALUE"
+    }
+}
+
+let _slice = fn(characters: array, start: int, end: int) str {
+    let result = []
+    let index = start
+    while index < end && index < _len(characters) {
+        result = _append(result, characters[index])
+        index = index + 1
+    }
+    return _strings.join(result, "")
+}
+
+let _normalize_separators = fn(value: str) str {
+    if _windows {
+        return _strings.replace(value, "/", _separator)
+    }
+    return value
+}
+
+let _volume_name = fn(value: str) str {
+    if !_windows {
+        return ""
+    }
+    let normalized = _normalize_separators(value)
+    let characters = _strings.chars(normalized)
+    if _len(characters) >= 2 && characters[1] == ":" {
+        return characters[0] + ":"
+    }
+    if _strings.startswith(normalized, _separator + _separator) {
+        let pieces = _strings.split(normalized, _separator)
+        let names = []
+        for piece in pieces {
+            if piece != "" {
+                names = _append(names, piece)
+            }
+        }
+        if _len(names) >= 2 {
+            return _separator + _separator + names[0] + _separator + names[1]
+        }
+    }
+    return ""
+}
+
+let _rooted = fn(value: str) bool {
+    let remainder = _strings.removeprefix(_normalize_separators(value), _volume_name(value))
+    _strings.startswith(remainder, _separator)
+}
+
+let _is_absolute_text = fn(value: str) bool {
+    if _windows {
+        return _volume_name(value) != "" && _rooted(value)
+    }
+    return _rooted(value)
+}
+
+let _components = fn(value: str) array {
+    let normalized = _normalize_separators(value)
+    let remainder = _strings.removeprefix(normalized, _volume_name(normalized))
+    let result = []
+    for piece in _strings.split(remainder, _separator) {
+        if piece != "" {
+            result = _append(result, piece)
+        }
+    }
+    return result
+}
+
+let _build = fn(volume: str, rooted: bool, components: array) str {
+    let body = _strings.join(components, _separator)
+    if rooted {
+        if body == "" {
+            return volume + _separator
+        }
+        return volume + _separator + body
+    }
+    if volume != "" {
+        if body == "" { return volume + "." }
+        return volume + body
+    }
+    if body == "" { return "." }
+    return body
+}
+
+let _clean = fn(value: str) str {
+    if value == "" { return "." }
+    let normalized = _normalize_separators(value)
+    let volume = _volume_name(normalized)
+    let rooted = _rooted(normalized)
+    let stack = []
+    for piece in _components(normalized) {
+        if piece == "." || piece == "" {
+            continue
+        }
+        if piece == ".." {
+            if _len(stack) > 0 && stack[_len(stack) - 1] != ".." {
+                stack = _arrays.remove(stack, _len(stack) - 1)
+            } else if !rooted {
+                stack = _append(stack, piece)
+            }
+        } else {
+            stack = _append(stack, piece)
+        }
+    }
+    return _build(volume, rooted, stack)
+}
+
+let _parent_text = fn(value: str) str {
+    let cleaned = _clean(value)
+    let components = _components(cleaned)
+    if _len(components) == 0 {
+        return cleaned
+    }
+    components = _arrays.remove(components, _len(components) - 1)
+    return _build(_volume_name(cleaned), _rooted(cleaned), components)
+}
+
+let _name = fn(value: str) str {
+    let components = _components(_clean(value))
+    if _len(components) == 0 {
+        if _rooted(value) { return _separator }
+        return "."
+    }
+    return components[_len(components) - 1]
+}
+
+let _parts = fn(value: str) array {
+    let cleaned = _clean(value)
+    let result = []
+    if _is_absolute_text(cleaned) {
+        result = _append(result, _volume_name(cleaned) + _separator)
+    } else if _volume_name(cleaned) != "" {
+        result = _append(result, _volume_name(cleaned))
+    }
+    for piece in _components(cleaned) {
+        result = _append(result, piece)
+    }
+    if _len(result) == 0 && cleaned == "." {
+        result = _append(result, ".")
+    }
+    return result
+}
+
+let _suffix = fn(value: str) str {
+    let characters = _strings.chars(_name(value))
+    let dot =-1
+    let index = 0
+    while index < _len(characters) {
+        if characters[index] == "." { dot = index }
+        index = index + 1
+    }
+    if dot <= 0 { return "" }
+    return _slice(characters, dot, _len(characters))
+}
+
+let _stem = fn(value: str) str {
+    _strings.removesuffix(_name(value), _suffix(value))
+}
+
+let _suffixes = fn(value: str) array {
+    let characters = _strings.chars(_name(value))
+    let result = []
+    let start = 0
+    if _len(characters) > 0 && characters[0] == "." { start = 1 }
+    let index = start
+    let suffix_start =-1
+    while index < _len(characters) {
+        if characters[index] == "." {
+            if suffix_start >= 0 {
+                result = _append(result, _slice(characters, suffix_start, index))
+            }
+            suffix_start = index
+        }
+        index = index + 1
+    }
+    if suffix_start >= 0 {
+        result = _append(result, _slice(characters, suffix_start, _len(characters)))
+    }
+    return result
+}
+
+let _join_texts = fn(base: str, pieces: array) str {
+    let result = base
+    for piece in pieces {
+        if result == "" || _strings.endswith(result, _separator) {
+            result = result + piece
+        } else {
+            result = result + _separator + piece
+        }
+    }
+    return _clean(result)
+}
+
+let _path_text = fn(value, function: str, argument: int) str | TypeError {
+    if _type(value) == str { return value }
+    if _type(value) == Path { return value.path }
+    return TypeError{
+        "argument " + _strings.from_int(argument) + " to `" + function +
+        "` must be STRING, got " + _type_name(value)
+    }
+}
+
+let _operation_error = fn(operation: str, value: str, message: str) ValueError {
+    if value == "" {
+        return ValueError{operation + " failed: " + message}
+    }
+    return ValueError{operation + " failed for \"" + value + "\": " + message}
+}
+
+let _parent = fn(self: Path) Path { new(_parent_text(self.path)) }
+
+let _parents = fn(self: Path) array {
+    let result = []
+    let current = self.path
+    while True {
+        let parent = _parent_text(current)
+        if parent == current { break }
+        result = _append(result, new(parent))
+        current = parent
+        if current == "." { break }
+    }
+    return result
+}
+
+let _absolute = fn(self: Path) Path | ValueError {
+    if _is_absolute_text(self.path) { return self }
+    let current = ""
+    try {
+        current = _io._cwd()
+    } catch IOError err {
+        return _operation_error("absolute", self.path, err.message)
+    }
+    return new(_join_texts(current,[self.path]))
+}
+
+let _as_posix = fn(self: Path) str {
+    if _separator == "/" { return self.path }
+    return _strings.replace(self.path, _separator, "/")
+}
+
+let _hex_digit = fn(value: int) str {
+    if value < 10 { return _strings.from_int(value) }
+    switch value {
+        case 10: "A"
+        case 11: "B"
+        case 12: "C"
+        case 13: "D"
+        case 14: "E"
+        default: "F"
+    }
+}
+
+let _uri_escape = fn(value: str) str {
+    let result = ""
+    for character in _strings.chars(value) {
+        let codepoint = _strings.codepoint(character)
+        let safe = codepoint >= 48 && codepoint <= 57 || codepoint >= 65 && codepoint <= 90 ||
+        codepoint >= 97 && codepoint <= 122 || _strings.contains("-._~/:", character)
+        if safe {
+            result = result + character
+        } else {
+            for value in _strings.utf8_bytes(character) {
+                result = result + "%" + _hex_digit(value // 16) + _hex_digit(value % 16)
+            }
+        }
+    }
+    return result
+}
+
+let _as_uri = fn(self: Path) str | ValueError {
+    if !_is_absolute_text(self.path) {
+        return ValueError{"argument to `as_uri` must be an absolute path"}
+    }
+    let value = _as_posix(self)
+    if _windows &&!_strings.startswith(value, "/") { value = "/" + value }
+    return "file://" + _uri_escape(value)
+}
+
+let _chmod = fn(self: Path, mode: int) | ValueError {
+    if mode < 0{return ValueError { "argument 2 to `chmod` must be nonnegative" } }
+    try {
+        _io._chmod(self.path, mode)
+    } catch IOError err {
+        return _operation_error("chmod", self.path, err.message)
+    }
+}
+
+let _exists = fn(self: Path) bool {
+    try {
+        _io._stat(self.path)
+        return True
+    } catch IOError err {
+        return False
+    }
+}
+
+let _expanduser = fn(self: Path) Path | ValueError {
+    if self.path != "~" &&!_strings.startswith(self.path, "~" + _separator) {
+        return self
+    }
+    let home_path = ""
+    try {
+        home_path = _io._home()
+    } catch IOError err {
+        return _operation_error("expanduser", self.path, err.message)
+    }
+    if self.path == "~" { return new(home_path) }
+    let pieces = _components(self.path)
+    pieces = _arrays.remove(pieces, 0)
+    return new(_join_texts(home_path, pieces))
+}
+
+let _info_predicate = fn(self: Path, property: str, symlink: bool) bool {
+    try {
+        let info = if symlink{_io._lstat(self.path)} else { _io._stat(self.path) }
+        return _maps.get(info, property)
+    } catch IOError err {
+        return False
+    }
+}
+
+let _is_absolute = fn(self: Path) bool { _is_absolute_text(self.path) }
+let _is_block_device = fn(self: Path) bool { _info_predicate(self, "is_block_device", False) }
+let _is_char_device = fn(self: Path) bool { _info_predicate(self, "is_char_device", False) }
+let _is_dir = fn(self: Path) bool { _info_predicate(self, "is_dir", False) }
+let _is_fifo = fn(self: Path) bool { _info_predicate(self, "is_fifo", False) }
+let _is_file = fn(self: Path) bool { _info_predicate(self, "is_file", False) }
+let _is_socket = fn(self: Path) bool { _info_predicate(self, "is_socket", False) }
+let _is_symlink = fn(self: Path) bool { _info_predicate(self, "is_symlink", True) }
+
+let _is_mount = fn(self: Path) bool {
+    let absolute = self
+    try {
+        absolute = _absolute(self)
+    } catch ValueError err {
+        return False
+    }
+    return absolute.path == _parent_text(absolute.path)
+}
+
+let _relative_components = fn(value: str, base: str) array | ValueError {
+    let value_clean = _clean(value)
+    let base_clean = _clean(base)
+    if _volume_name(value_clean) != _volume_name(base_clean) ||
+    _rooted(value_clean) != _rooted(base_clean){
+        return ValueError{"\"" + value + "\" is not relative to \"" + base + "\""}
+    }
+    let value_parts = _components(value_clean)
+    let base_parts = _components(base_clean)
+    if _len(base_parts) > _len(value_parts) {
+        return ValueError{"\"" + value + "\" is not relative to \"" + base + "\""}
+    }
+    let index = 0
+    while index < _len(base_parts) {
+        let left = value_parts[index]
+        let right = base_parts[index]
+        if _windows {
+            left = _strings.lower(left)
+            right = _strings.lower(right)
+        }
+        if left != right {
+            return ValueError{"\"" + value + "\" is not relative to \"" + base + "\""}
+        }
+        index = index + 1
+    }
+    let result = []
+    while index < _len(value_parts) {
+        result = _append(result, value_parts[index])
+        index = index + 1
+    }
+    return result
+}
+
+let _is_relative_to = fn(self: Path, other) bool | TypeError {
+    let base = _path_text(other, "is_relative_to", 2)
+    try {
+        _relative_components(self.path, base)
+        return True
+    } catch ValueError err {
+        return False
+    }
+}
+
+let _iterdir = fn(self: Path) array | ValueError {
+    let names = []
+    try {
+        names = _io._read_dir(self.path)
+    } catch IOError err {
+        return _operation_error("iterdir", self.path, err.message)
+    }
+    let result = []
+    for name in names {
+        result = _append(result, new(_join_texts(self.path,[name])))
+    }
+    return result
+}
+
+let _joinpath = fn(self: Path, parts: any...) Path | TypeError {
+    let values = _arrays.of(parts)
+    if _len(values) == 0 {
+        return TypeError{"wrong number of arguments. got=1, want at least=2"}
+    }
+    let normalized = []
+    let index = 0
+    while index < _len(values) {
+        normalized = _append(normalized, _path_text(values[index], "joinpath", index + 2))
+        index = index + 1
+    }
+    return new(_join_texts(self.path, normalized))
+}
+
+let _stat_value = fn(self: Path, symlink: bool, operation: str) map | ValueError {
+    let result = {}
+    try {
+        result = if symlink{_io._lstat(self.path)} else { _io._stat(self.path) }
+    } catch IOError err {
+        return _operation_error(operation, self.path, err.message)
+    }
+    return result
+}
+
+let _lstat = fn(self: Path) map | ValueError { _stat_value(self, True, "lstat") }
+let _stat = fn(self: Path) map | ValueError { _stat_value(self, False, "stat") }
+
+let _class = fn(pattern: array, start: int, character: str) _ClassResult | ValueError {
+    let index = start
+    let negate = False
+    if index < _len(pattern) && (pattern[index] == "!" || pattern[index] == "^") {
+        negate = True
+        index = index + 1
+    }
+    let matched = False
+    let found_end = False
+    while index < _len(pattern) {
+        if pattern[index] == "]" {
+            found_end = True
+            break
+        }
+        let first = _strings.codepoint(pattern[index])
+        if index + 2 < _len(pattern) && pattern[index + 1] == "-" && pattern[index + 2] != "]" {
+            let last = _strings.codepoint(pattern[index + 2])
+            let current = _strings.codepoint(character)
+            if current >= first && current <= last { matched = True }
+            index = index + 3
+        } else {
+            if pattern[index] == character { matched = True }
+            index = index + 1
+        }
+    }
+    if !found_end{return ValueError { "invalid path pattern" } }
+    if negate { matched =!matched }
+    return _ClassResult{matched, index + 1}
+}
+
+let _match_at = fn(pattern: array, pattern_index: int, value: array, value_index: int) bool | ValueError {
+    if pattern_index >= _len(pattern) {
+        return value_index >= _len(value)
+    }
+    let token = pattern[pattern_index]
+    if token == "*" {
+        let next = pattern_index + 1
+        while next < _len(pattern) && pattern[next] == "*" { next = next + 1 }
+        let index = value_index
+        while True {
+            if _match_at(pattern, next, value, index) { return True }
+            if index >= _len(value) || value[index] == "/" { break }
+            index = index + 1
+        }
+        return False
+    }
+    if value_index >= _len(value) || value[value_index] == "/" { return False }
+    if token == "?" {
+        return _match_at(pattern, pattern_index + 1, value, value_index + 1)
+    }
+    if token == "[" {
+        let result = _class(pattern, pattern_index + 1, value[value_index])
+        if !result.matched { return False }
+        return _match_at(pattern, result.next, value, value_index + 1)
+    }
+    if token != value[value_index] { return False }
+    return _match_at(pattern, pattern_index + 1, value, value_index + 1)
+}
+
+let _matches = fn(pattern: str, value: str) bool | ValueError {
+    _match_at(_strings.chars(pattern), 0, _strings.chars(value), 0)
+}
+
+let _match = fn(self: Path, pattern: str) bool | ValueError {
+    let candidate = _as_posix(self)
+    if !_strings.contains(pattern, "/") { candidate = self.name }
+    return _matches(pattern, candidate)
+}
+
+let _glob_segments = fn(current: Path, segments: array, index: int) array | ValueError {
+    let result = []
+    for child in _iterdir(current) {
+        if _matches(segments[index], child.name) {
+            if index + 1 == _len(segments) {
+                result = _append(result, child)
+            } else if child.is_dir() {
+                for nested in _glob_segments(child, segments, index + 1) {
+                    result = _append(result, nested)
+                }
+            }
+        }
+    }
+    return result
+}
+
+let _glob = fn(self: Path, pattern: str) array | ValueError {
+    if !self.is_dir() { return [] }
+    let normalized = _strings.replace(pattern, _separator, "/")
+    let segments = _strings.split(normalized, "/")
+    if _len(segments) == 0 { return [] }
+    return _glob_segments(self, segments, 0)
+}
+
+let _hardlink_to = fn(self: Path, target) | TypeError | ValueError {
+    let target_path = _path_text(target, "hardlink_to", 2)
+    try {
+        _io._hardlink(target_path, self.path)
+    } catch IOError err {
+        return _operation_error("hardlink_to", self.path, err.message)
+    }
+}
+
+let _mkdir = fn(self: Path, options: any...) | TypeError | ValueError {
+    let args = _arrays.of(options)
+    if _len(args) > 2 {
+        return TypeError{
+            "wrong number of arguments. got=" + _strings.from_int(_len(args) + 1) + ", want=1..3"
+        }
+    }
+    let parents = False
+    let exist_ok = False
+    if _len(args) > 0 {
+        if _type(args[0]) != bool {
+            return TypeError{"argument 2 to `mkdir` must be BOOLEAN, got " + _type_name(args[0])}
+        }
+        parents = args[0]
+    }
+    if _len(args) > 1 {
+        if _type(args[1]) != bool {
+            return TypeError{"argument 3 to `mkdir` must be BOOLEAN, got " + _type_name(args[1])}
+        }
+        exist_ok = args[1]
+    }
+    try {
+        _io._mkdir(self.path, parents, exist_ok)
+    } catch IOError err {
+        return _operation_error("mkdir", self.path, err.message)
+    }
+}
+
+let _open = fn(self: Path) File | FileNotFound | PermissionDenied {
+    _io.open(self.path)
+}
+
+let _read = fn(self: Path, operation: str) str | ValueError {
+    let result = ""
+    try {
+        result = _io._read_file(self.path)
+    } catch IOError err {
+        return _operation_error(operation, self.path, err.message)
+    }
+    return result
+}
+
+let _read_bytes = fn(self: Path) str | ValueError { _read(self, "read_bytes") }
+let _read_text = fn(self: Path) str | ValueError { _read(self, "read_text") }
+
+let _readlink = fn(self: Path) Path | ValueError {
+    let target = ""
+    try {
+        target = _io._readlink(self.path)
+    } catch IOError err {
+        return _operation_error("readlink", self.path, err.message)
+    }
+    return new(target)
+}
+
+let _relative_to = fn(self: Path, other) Path | TypeError | ValueError {
+    let base = _path_text(other, "relative_to", 2)
+    let components = _relative_components(self.path, base)
+    return new(_strings.join(components, _separator))
+}
+
+let _rename_value = fn(self: Path, target, operation: str) Path | TypeError | ValueError {
+    let target_path = _path_text(target, operation, 2)
+    try {
+        _io._rename(self.path, target_path)
+    } catch IOError err {
+        return _operation_error(operation, self.path, err.message)
+    }
+    return new(target_path)
+}
+
+let _rename = fn(self: Path, target) Path | TypeError | ValueError {
+    _rename_value(self, target, "rename")
+}
+
+let _replace = fn(self: Path, target) Path | TypeError | ValueError {
+    _rename_value(self, target, "replace")
+}
+
+let _resolve = fn(self: Path) Path | ValueError {
+    let resolved = ""
+    try {
+        resolved = _io._realpath(self.path)
+    } catch IOError err {
+        return _operation_error("resolve", self.path, err.message)
+    }
+    return _absolute(new(resolved))
+}
+
+let _rglob_visit = fn(base: Path, current: Path, pattern: str, qualified: bool) array | ValueError {
+    let result = []
+    for child in _iterdir(current) {
+        let candidate = child.name
+        if qualified {
+            candidate = _as_posix(_relative_to(child, base))
+        }
+        if _matches(pattern, candidate) {
+            result = _append(result, child)
+        }
+        if child.is_dir() {
+            for nested in _rglob_visit(base, child, pattern, qualified) {
+                result = _append(result, nested)
+            }
+        }
+    }
+    return result
+}
+
+let _rglob = fn(self: Path, pattern: str) array | ValueError {
+    _rglob_visit(self, self, pattern, _strings.contains(pattern, "/"))
+}
+
+let _rmdir = fn(self: Path) | ValueError {
+    try {
+        _io._remove(self.path, False)
+    } catch IOError err {
+        return _operation_error("rmdir", self.path, err.message)
+    }
+}
+
+let _samefile = fn(self: Path, other) bool | TypeError | ValueError {
+    let other_path = _path_text(other, "samefile", 2)
+    let result = False
+    try {
+        result = _io._same_file(self.path, other_path)
+    } catch IOError err {
+        return _operation_error("samefile", self.path, err.message)
+    }
+    return result
+}
+
+let _symlink_to = fn(self: Path, target) | TypeError | ValueError {
+    let target_path = _path_text(target, "symlink_to", 2)
+    try {
+        _io._symlink(target_path, self.path)
+    } catch IOError err {
+        return _operation_error("symlink_to", self.path, err.message)
+    }
+}
+
+let _optional_bool = fn(args: array, index: int, fallback: bool, function: str) bool | TypeError {
+    if index >= _len(args) { return fallback }
+    if _type(args[index]) != bool {
+        return TypeError{
+            "argument " + _strings.from_int(index + 2) + " to `" + function +
+            "` must be BOOLEAN, got " + _type_name(args[index])
+        }
+    }
+    return args[index]
+}
+
+let _touch = fn(self: Path, options: any...) | TypeError | ValueError {
+    let args = _arrays.of(options)
+    if _len(args) > 1 {
+        return TypeError{
+            "wrong number of arguments. got=" + _strings.from_int(_len(args) + 1) + ", want=1..2"
+        }
+    }
+    let exist_ok = _optional_bool(args, 0, True, "touch")
+    try {
+        _io._touch(self.path, exist_ok)
+    } catch IOError err {
+        return _operation_error("touch", self.path, err.message)
+    }
+}
+
+let _unlink = fn(self: Path, options: any...) | TypeError | ValueError {
+    let args = _arrays.of(options)
+    if _len(args) > 1 {
+        return TypeError{
+            "wrong number of arguments. got=" + _strings.from_int(_len(args) + 1) + ", want=1..2"
+        }
+    }
+    let missing_ok = _optional_bool(args, 0, False, "unlink")
+    try {
+        _io._remove(self.path, missing_ok)
+    } catch IOError err {
+        return _operation_error("unlink", self.path, err.message)
+    }
+}
+
+let _walk_visit = fn(current: Path) array | ValueError {
+    let directories = []
+    let files = []
+    let children = _iterdir(current)
+    for child in children {
+        if child.is_dir() {
+            directories = _append(directories, child.name)
+        } else {
+            files = _append(files, child.name)
+        }
+    }
+    let result = [[current, directories, files]]
+    for child in children {
+        if child.is_dir() {
+            for row in _walk_visit(child) {
+                result = _append(result, row)
+            }
+        }
+    }
+    return result
+}
+
+let _walk = fn(self: Path) array | ValueError { _walk_visit(self) }
+
+let _with_name = fn(self: Path, name: str) Path | ValueError {
+    if name == "" || _name(name) != name || name == "." || name == ".." {
+        return ValueError{"invalid path name \"" + name + "\""}
+    }
+    return new(_join_texts(_parent_text(self.path),[name]))
+}
+
+let _with_stem = fn(self: Path, stem: str) Path | ValueError {
+    if stem == "" || _name(stem) != stem {
+        return ValueError{"invalid path stem \"" + stem + "\""}
+    }
+    return new(_join_texts(_parent_text(self.path),[stem + self.suffix]))
+}
+
+let _with_suffix = fn(self: Path, suffix: str) Path | ValueError {
+    if suffix != "" && (!_strings.startswith(suffix, ".") ||
+        _strings.contains(suffix, "/") || _strings.contains(suffix, "\\")){
+        return ValueError{"invalid suffix \"" + suffix + "\""}
+    }
+    return new(_join_texts(_parent_text(self.path),[_strings.removesuffix(self.name, self.suffix) + suffix]))
+}
+
+let _write = fn(self: Path, contents: str, operation: str) int | ValueError {
+    let result = 0
+    try {
+        result = _io._write_file(self.path, contents)
+    } catch IOError err {
+        return _operation_error(operation, self.path, err.message)
+    }
+    return result
+}
+
+let _write_bytes = fn(self: Path, contents: str) int | ValueError {
+    _write(self, contents, "write_bytes")
+}
+
+let _write_text = fn(self: Path, contents: str) int | ValueError {
+    _write(self, contents, "write_text")
+}
+
+let new = fn(value) Path | TypeError {
+    if _type(value) != str {
+        return TypeError{"argument 1 to `new` must be STRING, got " + _type_name(value)}
+    }
+    let cleaned = _clean(value)
+    let drive = _volume_name(cleaned)
+    let root = ""
+    let anchor = ""
+    if _is_absolute_text(cleaned) {
+        root = _separator
+        anchor = drive + root
+    }
+    return Path{
+        cleaned,
+        anchor,
+        drive,
+        _name(cleaned),
+        _parts(cleaned),
+        root,
+        _stem(cleaned),
+        _suffix(cleaned),
+        _suffixes(cleaned),
+        _parent,
+        _parents,
+        _absolute,
+        _as_posix,
+        _as_uri,
+        _chmod,
+        _exists,
+        _expanduser,
+        _glob,
+        _hardlink_to,
+        _is_absolute,
+        _is_block_device,
+        _is_char_device,
+        _is_dir,
+        _is_fifo,
+        _is_file,
+        _is_mount,
+        _is_relative_to,
+        _is_socket,
+        _is_symlink,
+        _iterdir,
+        _joinpath,
+        _lstat,
+        _match,
+        _mkdir,
+        _open,
+        _read_bytes,
+        _read_text,
+        _readlink,
+        _relative_to,
+        _rename,
+        _replace,
+        _resolve,
+        _rglob,
+        _rmdir,
+        _samefile,
+        _stat,
+        _symlink_to,
+        _touch,
+        _unlink,
+        _walk,
+        _with_name,
+        _with_stem,
+        _with_suffix,
+        _write_bytes,
+        _write_text
+    }
+}
+
+let cwd = fn() Path | ValueError {
+    let value = ""
+    try {
+        value = _io._cwd()
+    } catch IOError err {
+        return _operation_error("cwd", "", err.message)
+    }
+    return new(value)
+}
+
+let home = fn() Path | ValueError {
+    let value = ""
+    try {
+        value = _io._home()
+    } catch IOError err {
+        return _operation_error("home", "", err.message)
+    }
+    return new(value)
+}
+
+export { Path, new, cwd, home }

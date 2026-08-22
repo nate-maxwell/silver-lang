@@ -2,6 +2,8 @@
 
 `path` offers object-oriented, platform-native filesystem paths. Each `Path` stores computed properties and callable
 operations; methods returning paths produce new `Path` values.
+Path construction, lexical operations, matching, and traversal are implemented in Silver; host filesystem access is
+delegated to low-level `io` operations.
 
 ```silver
 let path = import("path")
@@ -47,7 +49,7 @@ These properties are computed when the `Path` is constructed.
 | `expanduser()`                                                | Expand a leading `~`.                                                      |
 | `is_absolute()`                                               | Test platform-native absoluteness.                                         |
 | `is_relative_to(other)` / `relative_to(other)`                | Test or compute lexical containment.                                       |
-| `joinpath(part)`                                              | Append one string path component. Chain calls for several components.     |
+| `joinpath(parts: any...)`                                     | Append one or more string or `Path` components.                            |
 | `match(pattern)`                                              | Match a path pattern.                                                      |
 | `with_name(name)` / `with_stem(stem)` / `with_suffix(suffix)` | Return a path with one component changed.                                  |
 

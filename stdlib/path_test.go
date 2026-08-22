@@ -1,6 +1,7 @@
 package stdlib_test
 
 import (
+	"net/url"
 	"os"
 	"path/filepath"
 	"silver/object"
@@ -95,6 +96,51 @@ core.type(value.parents()[0]) == paths.Path`
 	for _, factory := range []string{`paths.cwd()`, `paths.home()`} {
 		input = `core.type(` + factory + `) == paths.Path`
 		testBooleanObject(t, testEval(pathImport+coreImport+input), true)
+	}
+}
+
+func TestPathJoinpathAcceptsVariadicStringsAndPaths(t *testing.T) {
+	input := `let base = paths.new("projects")
+let source = paths.new("silver/src")
+base.joinpath(source, "stdlib", paths.new("path/path.slv")).path`
+	want := filepath.Join("projects", "silver", "src", "stdlib", "path", "path.slv")
+	result, ok := testEval(pathImport + input).(*object.String)
+	if !ok || result.Value != want {
+		t.Fatalf("mixed joinpath returned %T (%v), want %q", result, result, want)
+	}
+
+	resultError, ok := testEval(pathImport + `paths.new("one").joinpath(2)`).(*object.Error)
+	if !ok {
+		t.Fatalf("invalid joinpath returned %T, want *object.Error", resultError)
+	}
+	if got, want := resultError.MessageText(), "argument 2 to `joinpath` must be STRING, got INTEGER"; got != want {
+		t.Fatalf("error is %q, want %q", got, want)
+	}
+}
+
+func TestPathAsURIEscapesUnicodeAndSpaces(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "雪 report.txt")
+	uriPath := filepath.ToSlash(path)
+	if filepath.VolumeName(path) != "" && !strings.HasPrefix(uriPath, "/") {
+		uriPath = "/" + uriPath
+	}
+	want := (&url.URL{Scheme: "file", Path: uriPath}).String()
+	result, ok := testEval(pathImport + `paths.new(` + silverString(path) + `).as_uri()`).(*object.String)
+	if !ok || result.Value != want {
+		t.Fatalf("as_uri returned %T (%v), want %q", result, result, want)
+	}
+}
+
+func TestPathFilesystemErrorsRemainValueErrors(t *testing.T) {
+	missing := filepath.Join(t.TempDir(), "missing")
+	for _, expression := range []string{"read_text()", "iterdir()", "stat()"} {
+		result, ok := testEval(pathImport + `paths.new(` + silverString(missing) + `).` + expression).(*object.Error)
+		if !ok {
+			t.Fatalf("%s returned %T, want *object.Error", expression, result)
+		}
+		if !strings.Contains(result.MessageText(), "failed for") {
+			t.Fatalf("%s error is %q, want path operation context", expression, result.MessageText())
+		}
 	}
 }
 

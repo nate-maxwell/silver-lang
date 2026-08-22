@@ -58,7 +58,23 @@ func stringDefinitions(trueValue, falseValue *object.Boolean) []definition {
 		{name: "to_float", fn: stringToFloat, signature: callSignature([]string{"value"}, []*ast.TypeAnnotation{namedType("str")}, namedType("float"), "ValueError")},
 		{name: "to_int", fn: stringToInt, signature: callSignature([]string{"value"}, []*ast.TypeAnnotation{namedType("str")}, namedType("int"), "ValueError")},
 		{name: "upper", fn: unaryStringFunction("upper", strings.ToUpper)},
+		{name: "utf8_bytes", fn: stringUTF8Bytes, signature: callSignature([]string{"value"}, []*ast.TypeAnnotation{namedType("str")}, namedType("array"))},
 	}
+}
+
+func stringUTF8Bytes(args ...object.Object) object.Object {
+	if err := requireArgumentCount(args, 1); err != nil {
+		return err
+	}
+	value, ok := args[0].(*object.String)
+	if !ok {
+		return newError(object.RuntimeErrorKindType, "argument to `utf8_bytes` must be STRING, got %s", args[0].Type())
+	}
+	elements := make([]object.Object, len(value.Value))
+	for index, value := range []byte(value.Value) {
+		elements[index] = &object.Integer{Value: int64(value)}
+	}
+	return &object.Array{Elements: elements}
 }
 
 func stringCodepoint(args ...object.Object) object.Object {

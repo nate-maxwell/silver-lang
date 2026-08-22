@@ -111,6 +111,17 @@ func TestStringFromPrimitiveConversions(t *testing.T) {
 	}
 }
 
+func TestStringCodepointConversions(t *testing.T) {
+	testIntegerObject(t, testEval(stringImport+`strings.codepoint("𝄞")`), 0x1d11e)
+	result, ok := testEval(stringImport + `strings.from_codepoint(119070)`).(*object.String)
+	if !ok {
+		t.Fatalf("result is %T, want *object.String", result)
+	}
+	if result.Value != "𝄞" {
+		t.Fatalf("result is %q, want %q", result.Value, "𝄞")
+	}
+}
+
 func TestStringConversionSignatures(t *testing.T) {
 	input := stringImport + coreImport + `let to_int: call(value: str) int | ValueError = strings.to_int
 let from_int: call(value: int) str = strings.from_int

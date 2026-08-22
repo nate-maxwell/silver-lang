@@ -17,6 +17,7 @@ func stringDefinitions(trueValue, falseValue *object.Boolean) []definition {
 		{name: "chars", fn: stringChars},
 		{name: "compare", fn: stringCompare},
 		{name: "contains", fn: binaryStringPredicate("contains", strings.Contains, trueValue, falseValue)},
+		{name: "codepoint", fn: stringCodepoint, signature: callSignature([]string{"value"}, []*ast.TypeAnnotation{namedType("str")}, namedType("int"), "ValueError")},
 		{name: "count", fn: stringCount},
 		{name: "endswith", fn: binaryStringPredicate("endswith", strings.HasSuffix, trueValue, falseValue)},
 		{name: "equal_fold", fn: binaryStringPredicate("equal_fold", strings.EqualFold, trueValue, falseValue)},
@@ -25,6 +26,7 @@ func stringDefinitions(trueValue, falseValue *object.Boolean) []definition {
 		{name: "from_bool", fn: stringFromBool, signature: callSignature([]string{"value"}, []*ast.TypeAnnotation{namedType("bool")}, namedType("str"))},
 		{name: "from_float", fn: stringFromFloat, signature: callSignature([]string{"value"}, []*ast.TypeAnnotation{namedType("float")}, namedType("str"))},
 		{name: "from_int", fn: stringFromInt, signature: callSignature([]string{"value"}, []*ast.TypeAnnotation{namedType("int")}, namedType("str"))},
+		{name: "from_codepoint", fn: stringFromCodepoint, signature: callSignature([]string{"value"}, []*ast.TypeAnnotation{namedType("int")}, namedType("str"), "ValueError")},
 		{name: "isalnum", fn: stringClassifier("isalnum", isAlphanumeric, trueValue, falseValue)},
 		{name: "isalpha", fn: stringClassifier("isalpha", isAlpha, trueValue, falseValue)},
 		{name: "isascii", fn: stringClassifier("isascii", isASCII, trueValue, falseValue)},
@@ -57,6 +59,35 @@ func stringDefinitions(trueValue, falseValue *object.Boolean) []definition {
 		{name: "to_int", fn: stringToInt, signature: callSignature([]string{"value"}, []*ast.TypeAnnotation{namedType("str")}, namedType("int"), "ValueError")},
 		{name: "upper", fn: unaryStringFunction("upper", strings.ToUpper)},
 	}
+}
+
+func stringCodepoint(args ...object.Object) object.Object {
+	if err := requireArgumentCount(args, 1); err != nil {
+		return err
+	}
+	value, ok := args[0].(*object.String)
+	if !ok {
+		return newError(object.RuntimeErrorKindType, "argument to `codepoint` must be STRING, got %s", args[0].Type())
+	}
+	runes := []rune(value.Value)
+	if len(runes) != 1 {
+		return newError(object.RuntimeErrorKindValue, "argument to `codepoint` must contain exactly one character")
+	}
+	return &object.Integer{Value: int64(runes[0])}
+}
+
+func stringFromCodepoint(args ...object.Object) object.Object {
+	if err := requireArgumentCount(args, 1); err != nil {
+		return err
+	}
+	value, ok := args[0].(*object.Integer)
+	if !ok {
+		return newError(object.RuntimeErrorKindType, "argument to `from_codepoint` must be INTEGER, got %s", args[0].Type())
+	}
+	if value.Value < 0 || value.Value > utf8.MaxRune || value.Value >= 0xd800 && value.Value <= 0xdfff {
+		return newError(object.RuntimeErrorKindValue, "argument to `from_codepoint` is not a Unicode scalar value: %d", value.Value)
+	}
+	return &object.String{Value: string(rune(value.Value))}
 }
 
 func stringFromBool(args ...object.Object) object.Object {

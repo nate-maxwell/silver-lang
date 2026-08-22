@@ -187,6 +187,9 @@ func typeMatches(annotation *ast.TypeAnnotation, value object.Object, env *objec
 	name := annotation.String()
 	if len(annotation.Parts) == 1 {
 		if definition, ok := object.TypeDefinitionByName(name); ok {
+			if name == "any" {
+				return value != nil, ""
+			}
 			expected := definition.RuntimeType
 			if expected == object.FUNCTION_OBJ && value != nil && value.Type() == object.BUILTIN_OBJ {
 				return true, ""
@@ -241,9 +244,16 @@ func runtimeFunctionMatches(expected *ast.TypeAnnotation, actual *object.Functio
 
 // annotationAssignable reports whether every value described by source is
 // accepted by target. Function parameters are contravariant and returns are
-// covariant; all other Silver types currently require nominal equality.
+// covariant; any accepts every source type and other Silver types require
+// nominal equality.
 func annotationAssignable(target, source *ast.TypeAnnotation, targetEnv, sourceEnv *object.Environment) (bool, string) {
 	if target == nil || source == nil {
+		return false, ""
+	}
+	if isPrimitiveAnnotation(target, "any") {
+		return true, ""
+	}
+	if isPrimitiveAnnotation(source, "any") {
 		return false, ""
 	}
 	if target.IsCallSignature() {

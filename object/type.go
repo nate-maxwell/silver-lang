@@ -15,6 +15,7 @@ func (t *TypeDefinition) Type() ObjectType { return TYPE_OBJ }
 func (t *TypeDefinition) Inspect() string { return t.Name }
 
 var (
+	anyType    = &TypeDefinition{Name: "any"}
 	intType    = &TypeDefinition{Name: "int", RuntimeType: INTEGER_OBJ}
 	floatType  = &TypeDefinition{Name: "float", RuntimeType: FLOAT_OBJ}
 	boolType   = &TypeDefinition{Name: "bool", RuntimeType: BOOLEAN_OBJ}
@@ -42,6 +43,7 @@ var primitiveTypeDefinitions = map[ObjectType]*TypeDefinition{
 }
 
 var namedTypeDefinitions = map[string]*TypeDefinition{
+	"any":    anyType,
 	"int":    intType,
 	"float":  floatType,
 	"bool":   boolType,

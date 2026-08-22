@@ -54,8 +54,8 @@ let choose = fn(value: int, enabled) int {
 }
 ```
 
-Here `value` must be an integer while `enabled` accepts any value. Silver has no `any` annotation; leave a parameter
-unannotated when it should accept every value.
+Here `value` must be an integer while `enabled` accepts any value. Use `any` for an explicit unrestricted contract, or
+leave a parameter unannotated when it should accept every value.
 
 An annotation can name a primitive type, struct, enum, built-in nominal type, or a qualified type from a
 [module](modules.md#module-values-and-qualified-types):
@@ -67,6 +67,9 @@ let describe = fn(value: paths.Path) str {
     return value.path
 }
 ```
+
+The `any` annotation is especially useful as the return type of a function that intentionally returns heterogeneous
+data.
 
 ## Return behavior
 

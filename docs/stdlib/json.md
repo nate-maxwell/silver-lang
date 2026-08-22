@@ -1,6 +1,7 @@
 # `json`
 
 `json` converts between JSON and Silver's null, boolean, string, integer, float, array, and string-keyed map values.
+Parsing and encoding are implemented in Silver; `load` and `dump` delegate only file reads and writes to `io`.
 
 ```silver
 let json = import("json")

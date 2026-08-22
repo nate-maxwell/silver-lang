@@ -14,6 +14,7 @@ func TestArrayModuleFunctions(t *testing.T) {
 		want  string
 	}{
 		{name: "append", input: `arrays.append([1, 2], 3)`, want: `[1, 2, 3]`},
+		{name: "of", input: `arrays.of(1, "two", True)`, want: `[1, two, true]`},
 		{name: "first", input: `arrays.first([1, 2])`, want: `1`},
 		{name: "last", input: `arrays.last([1, 2])`, want: `2`},
 		{name: "remove", input: `arrays.remove([1, 2, 3], 1)`, want: `[1, 3]`},

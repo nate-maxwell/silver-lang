@@ -1,0 +1,573 @@
+# JSON parsing and serialization implemented in Silver. The only native work
+# used by load and dump is the read/write operation supplied by the io module.
+
+let _arrays = import("array")
+let _core = import("core")
+let _strings = import("string")
+
+let _append = _arrays.append
+let _contains = _arrays.contains
+let _len = _core.len
+let _type = _core.type
+
+struct JSONDecodeError {
+    message: str
+    msg: str
+    doc: str
+    pos: int
+    lineno: int
+    colno: int
+}
+
+struct _Parser {
+    document: str
+    characters: array
+    position: int
+}
+
+struct _EncodeOptions {
+    pretty: bool
+    indentation: str
+}
+
+let _null = fn() {}()
+
+let _type_name = fn(value) str {
+    let kind = _type(value)
+    if value == kind {
+        return "TYPE"
+    }
+    switch kind {
+        case int: "INTEGER"
+        case float: "FLOAT"
+        case bool: "BOOLEAN"
+        case str: "STRING"
+        case null: "NULL"
+        case array: "ARRAY"
+        case map: "MAP"
+        case module: "MODULE"
+        case call: "FUNCTION"
+        default: "STRUCT_VALUE"
+    }
+}
+
+let _decode_error = fn(message: str, parser: _Parser, position: int) JSONDecodeError {
+    if position < 0 {
+        position = 0
+    }
+    if position > _len(parser.characters) {
+        position = _len(parser.characters)
+    }
+
+    let line = 1
+    let column = 1
+    let index = 0
+    while index < position {
+        if parser.characters[index] == "\n" {
+            line = line + 1
+            column = 1
+        } else {
+            column = column + 1
+        }
+        index = index + 1
+    }
+    let complete = message + ": line " + _strings.from_int(line)
+    complete = complete + " column " + _strings.from_int(column)
+    complete = complete + " (char " + _strings.from_int(position) + ")"
+    return JSONDecodeError{complete, message, parser.document, position, line, column}
+}
+
+let _unexpected_value = fn(parser: _Parser) JSONDecodeError {
+    if parser.position >= _len(parser.characters) {
+        return _decode_error("Unexpected end of JSON input", parser, parser.position)
+    }
+    let character = parser.characters[parser.position]
+    return _decode_error(
+        "invalid character '" + character + "' looking for beginning of value",
+        parser,
+        parser.position
+    )
+}
+
+let _is_whitespace = fn(character: str) bool {
+    character == " " || character == "\t" || character == "\n" || character == "\r"
+}
+
+let _skip_whitespace = fn(parser: _Parser) {
+    while parser.position < _len(parser.characters) && _is_whitespace(parser.characters[parser.position]) {
+        parser.position = parser.position + 1
+    }
+}
+
+let _is_digit = fn(character: str) bool {
+    _strings.contains("0123456789", character)
+}
+
+let _hex_value = fn(character: str) int {
+    _strings.find("0123456789abcdef", _strings.lower(character))
+}
+
+let _parse_hex4 = fn(parser: _Parser) int | JSONDecodeError {
+    if parser.position + 4 > _len(parser.characters) {
+        return _decode_error("Unexpected end of JSON input", parser, _len(parser.characters))
+    }
+    let value = 0
+    let count = 0
+    while count < 4 {
+        let digit = _hex_value(parser.characters[parser.position])
+        if digit < 0 {
+            return _decode_error("invalid character in Unicode escape", parser, parser.position)
+        }
+        value = value * 16 + digit
+        parser.position = parser.position + 1
+        count = count + 1
+    }
+    return value
+}
+
+let _replacement_character = fn() str {
+    _strings.from_codepoint(65533)
+}
+
+let _parse_string = fn(parser: _Parser) str | JSONDecodeError {
+    parser.position = parser.position + 1
+    let result = ""
+    while parser.position < _len(parser.characters) {
+        let character = parser.characters[parser.position]
+        if character == "\"" {
+            parser.position = parser.position + 1
+            return result
+        }
+        if _strings.codepoint(character) < 32 {
+            return _decode_error("invalid control character in string", parser, parser.position)
+        }
+        if character != "\\" {
+            result = result + character
+            parser.position = parser.position + 1
+            continue
+        }
+
+        parser.position = parser.position + 1
+        if parser.position >= _len(parser.characters) {
+            return _decode_error("Unexpected end of JSON input", parser, parser.position)
+        }
+        let escape = parser.characters[parser.position]
+        parser.position = parser.position + 1
+        if escape == "\"" || escape == "\\" || escape == "/" {
+            result = result + escape
+        } else if escape == "b" {
+            result = result + "\b"
+        } else if escape == "f" {
+            result = result + "\f"
+        } else if escape == "n" {
+            result = result + "\n"
+        } else if escape == "r" {
+            result = result + "\r"
+        } else if escape == "t" {
+            result = result + "\t"
+        } else if escape == "u" {
+            let first = _parse_hex4(parser)
+            if first >= 55296 && first <= 56319 {
+                if parser.position + 2 <= _len(parser.characters) &&
+                parser.characters[parser.position] == "\\" &&
+                parser.characters[parser.position + 1] == "u"{
+                    parser.position = parser.position + 2
+                    let second = _parse_hex4(parser)
+                    if second >= 56320 && second <= 57343 {
+                        let codepoint = 65536 + (first - 55296) * 1024 + second - 56320
+                        result = result + _strings.from_codepoint(codepoint)
+                    } else {
+                        result = result + _replacement_character()
+                        result = result + _replacement_character()
+                    }
+                } else {
+                    result = result + _replacement_character()
+                }
+            } else if first >= 56320 && first <= 57343 {
+                result = result + _replacement_character()
+            } else {
+                result = result + _strings.from_codepoint(first)
+            }
+        } else {
+            return _decode_error("invalid character in string escape", parser, parser.position - 1)
+        }
+    }
+    return _decode_error("Unexpected end of JSON input", parser, parser.position)
+}
+
+let _parse_literal = fn(parser: _Parser, literal: str, value) any | JSONDecodeError {
+    let expected = _strings.chars(literal)
+    let start = parser.position
+    let index = 0
+    while index < _len(expected) {
+        if parser.position >= _len(parser.characters) || parser.characters[parser.position] != expected[index] {
+            return _decode_error("invalid character looking for beginning of value", parser, start)
+        }
+        parser.position = parser.position + 1
+        index = index + 1
+    }
+    return value
+}
+
+let _parse_number = fn(parser: _Parser) any | JSONDecodeError | ValueError {
+    let start = parser.position
+    if parser.characters[parser.position] == "-" {
+        parser.position = parser.position + 1
+        if parser.position >= _len(parser.characters) {
+            return _decode_error("Unexpected end of JSON input", parser, parser.position)
+        }
+    }
+
+    if parser.characters[parser.position] == "0" {
+        parser.position = parser.position + 1
+    } else {
+        if !_strings.contains("123456789", parser.characters[parser.position]) {
+            return _unexpected_value(parser)
+        }
+        while parser.position < _len(parser.characters) && _is_digit(parser.characters[parser.position]) {
+            parser.position = parser.position + 1
+        }
+    }
+
+    let floating = False
+    if parser.position < _len(parser.characters) && parser.characters[parser.position] == "." {
+        floating = True
+        parser.position = parser.position + 1
+        if parser.position >= _len(parser.characters) ||!_is_digit(parser.characters[parser.position]) {
+            return _decode_error("invalid character in number", parser, parser.position)
+        }
+        while parser.position < _len(parser.characters) && _is_digit(parser.characters[parser.position]) {
+            parser.position = parser.position + 1
+        }
+    }
+
+    if parser.position < _len(parser.characters) &&
+    (parser.characters[parser.position] == "e" || parser.characters[parser.position] == "E"){
+        floating = True
+        parser.position = parser.position + 1
+        if parser.position < _len(parser.characters) &&
+        (parser.characters[parser.position] == "+" || parser.characters[parser.position] == "-"){
+            parser.position = parser.position + 1
+        }
+        if parser.position >= _len(parser.characters) ||!_is_digit(parser.characters[parser.position]) {
+            return _decode_error("invalid character in number", parser, parser.position)
+        }
+        while parser.position < _len(parser.characters) && _is_digit(parser.characters[parser.position]) {
+            parser.position = parser.position + 1
+        }
+    }
+
+    let pieces = []
+    let index = start
+    while index < parser.position {
+        pieces = _append(pieces, parser.characters[index])
+        index = index + 1
+    }
+    let literal = _strings.join(pieces, "")
+    if floating {
+        let converted = try {
+            _strings.to_float(literal)
+        } catch ValueError err {
+            return ValueError{"JSON number \"" + literal + "\" cannot be represented as a float"}
+        }
+        let rendered = _strings.from_float(converted)
+        if rendered == "+Inf" || rendered == "-Inf" || rendered == "NaN" {
+            return ValueError{"JSON number \"" + literal + "\" cannot be represented as a float"}
+        }
+        return converted
+    }
+    return try {
+        _strings.to_int(literal)
+    } catch ValueError err {
+        return ValueError{"JSON integer \"" + literal + "\" is outside Silver's integer range"}
+    }
+}
+
+let _parse_value = fn(parser: _Parser) any | JSONDecodeError | ValueError {
+    _skip_whitespace(parser)
+    if parser.position >= _len(parser.characters) {
+        return _unexpected_value(parser)
+    }
+    let character = parser.characters[parser.position]
+    if character == "\"" {
+        return _parse_string(parser)
+    }
+    if character == "{" {
+        parser.position = parser.position + 1
+        let result = {}
+        _skip_whitespace(parser)
+        if parser.position < _len(parser.characters) && parser.characters[parser.position] == "}" {
+            parser.position = parser.position + 1
+            return result
+        }
+        while True {
+            if parser.position >= _len(parser.characters) {
+                return _decode_error("Unexpected end of JSON input", parser, parser.position)
+            }
+            if parser.characters[parser.position] != "\"" {
+                return _decode_error(
+                    "invalid character '" + parser.characters[parser.position] + "' looking for beginning of object key string",
+                    parser,
+                    parser.position
+                )
+            }
+            let key = _parse_string(parser)
+            _skip_whitespace(parser)
+            if parser.position >= _len(parser.characters) {
+                return _decode_error("Unexpected end of JSON input", parser, parser.position)
+            }
+            if parser.characters[parser.position] != ":" {
+                return _decode_error("expected ':' after object key", parser, parser.position)
+            }
+            parser.position = parser.position + 1
+            result[key] = _parse_value(parser)
+            _skip_whitespace(parser)
+            if parser.position >= _len(parser.characters) {
+                return _decode_error("Unexpected end of JSON input", parser, parser.position)
+            }
+            if parser.characters[parser.position] == "}" {
+                parser.position = parser.position + 1
+                return result
+            }
+            if parser.characters[parser.position] != "," {
+                return _decode_error("expected ',' after object value", parser, parser.position)
+            }
+            parser.position = parser.position + 1
+            _skip_whitespace(parser)
+        }
+    }
+    if character == "[" {
+        parser.position = parser.position + 1
+        let result = []
+        _skip_whitespace(parser)
+        if parser.position < _len(parser.characters) && parser.characters[parser.position] == "]" {
+            parser.position = parser.position + 1
+            return result
+        }
+        while True {
+            result = _append(result, _parse_value(parser))
+            _skip_whitespace(parser)
+            if parser.position >= _len(parser.characters) {
+                return _decode_error("Unexpected end of JSON input", parser, parser.position)
+            }
+            if parser.characters[parser.position] == "]" {
+                parser.position = parser.position + 1
+                return result
+            }
+            if parser.characters[parser.position] != "," {
+                return _decode_error("expected ',' after array value", parser, parser.position)
+            }
+            parser.position = parser.position + 1
+            _skip_whitespace(parser)
+        }
+    }
+    if character == "t" { return _parse_literal(parser, "true", True) }
+    if character == "f" { return _parse_literal(parser, "false", False) }
+    if character == "n" { return _parse_literal(parser, "null", _null) }
+    if character == "-" || _is_digit(character) {
+        return _parse_number(parser)
+    }
+    return _unexpected_value(parser)
+}
+
+let loads = fn(arguments...) any | JSONDecodeError | TypeError | ValueError {
+    let args = _arrays.of(arguments)
+    if _len(args) != 1 {
+        return TypeError{"wrong number of arguments. got=" + _strings.from_int(_len(args)) + ", want=1"}
+    }
+    if _type(args[0]) != str {
+        return TypeError{"argument to `loads` must be STRING, got " + _type_name(args[0])}
+    }
+    let parser = _Parser{args[0], _strings.chars(args[0]), 0}
+    _skip_whitespace(parser)
+    if parser.position >= _len(parser.characters) {
+        return _decode_error("Expecting value", parser, parser.position)
+    }
+    let value = _parse_value(parser)
+    _skip_whitespace(parser)
+    if parser.position != _len(parser.characters) {
+        return _decode_error("Extra data", parser, parser.position)
+    }
+    return value
+}
+
+let load = fn(arguments...) any | JSONDecodeError | TypeError | ValueError | IOError {
+    let args = _arrays.of(arguments)
+    if _len(args) != 1 {
+        return TypeError{"wrong number of arguments. got=" + _strings.from_int(_len(args)) + ", want=1"}
+    }
+    let kind = _type(args[0])
+    if kind != File && kind != IOStream {
+        return TypeError{"argument to `load` must be file-like, got " + _type_name(args[0])}
+    }
+    return loads(args[0].read())
+}
+
+let _hex_digit = fn(value: int) str {
+    if value < 10 { return _strings.from_int(value) }
+    switch value {
+        case 10: "a"
+        case 11: "b"
+        case 12: "c"
+        case 13: "d"
+        case 14: "e"
+        default: "f"
+    }
+}
+
+let _hex4 = fn(value: int) str {
+    "\\u" + _hex_digit((value // 4096) % 16) +
+    _hex_digit((value // 256) % 16) +
+    _hex_digit((value // 16) % 16) +
+    _hex_digit(value % 16)
+}
+
+let _quote = fn(value: str) str {
+    let result = "\""
+    for character in _strings.chars(value) {
+        if character == "\"" {
+            result = result + "\\\""
+        } else if character == "\\" {
+            result = result + "\\\\"
+        } else if character == "\b" {
+            result = result + "\\b"
+        } else if character == "\f" {
+            result = result + "\\f"
+        } else if character == "\n" {
+            result = result + "\\n"
+        } else if character == "\r" {
+            result = result + "\\r"
+        } else if character == "\t" {
+            result = result + "\\t"
+        } else {
+            let codepoint = _strings.codepoint(character)
+            if codepoint < 32 || character == "<" || character == ">" || character == "&" ||
+            codepoint == 8232 || codepoint == 8233{
+                result = result + _hex4(codepoint)
+            } else {
+                result = result + character
+            }
+        }
+    }
+    return result + "\""
+}
+
+let _line_indent = fn(options: _EncodeOptions, level: int) str {
+    "\n" + _strings.repeat(options.indentation, level)
+}
+
+let _encode = fn(value, options: _EncodeOptions, level: int, active: array) str | TypeError | ValueError {
+    let kind = _type(value)
+    if kind == null { return "null" }
+    if kind == bool { return _strings.from_bool(value) }
+    if kind == str { return _quote(value) }
+    if kind == int { return _strings.from_int(value) }
+    if kind == float {
+        let rendered = _strings.from_float(value)
+        if rendered == "+Inf" || rendered == "-Inf" || rendered == "NaN" {
+            return ValueError{"out of range float values are not JSON compliant"}
+        }
+        return rendered
+    }
+    if kind == array {
+        if _contains(active, value) {
+            return ValueError{"circular reference detected while encoding JSON"}
+        }
+        if _len(value) == 0 { return "[]" }
+        let nested_active = _append(active, value)
+        let pieces = []
+        for element in value {
+            pieces = _append(pieces, _encode(element, options, level + 1, nested_active))
+        }
+        if !options.pretty {
+            return "[" + _strings.join(pieces, ",") + "]"
+        }
+        let separator = "," + _line_indent(options, level + 1)
+        return "[" + _line_indent(options, level + 1) + _strings.join(pieces, separator) +
+        _line_indent(options, level) + "]"
+    }
+    if kind == map {
+        if _contains(active, value) {
+            return ValueError{"circular reference detected while encoding JSON"}
+        }
+        if _len(value) == 0 { return "{}" }
+        let keys = []
+        for key, element in value {
+            if _type(key) != str {
+                return TypeError{"JSON map keys must be STRING, got " + _type_name(key)}
+            }
+            keys = _append(keys, key)
+        }
+        keys = _arrays.sort(keys)
+        let nested_active = _append(active, value)
+        let pieces = []
+        for key in keys {
+            let separator = ":"
+            if options.pretty { separator = ": " }
+            pieces = _append(
+                pieces,
+                _quote(key) + separator + _encode(value[key], options, level + 1, nested_active)
+            )
+        }
+        if !options.pretty {
+            return "{" + _strings.join(pieces, ",") + "}"
+        }
+        let separator = "," + _line_indent(options, level + 1)
+        return "{" + _line_indent(options, level + 1) + _strings.join(pieces, separator) +
+        _line_indent(options, level) + "}"
+    }
+    return TypeError{"object of type " + _type_name(value) + " is not JSON serializable"}
+}
+
+let _options = fn(args: array, index: int, function: str) _EncodeOptions | TypeError | ValueError {
+    if index >= _len(args) {
+        return _EncodeOptions{False, ""}
+    }
+    let indent = args[index]
+    if _type(indent) == int {
+        if indent > 1000 {
+            return ValueError{
+                "argument " + _strings.from_int(index + 1) + " to `" + function +
+                "` is too large (maximum 1000)"
+            }
+        }
+        if indent <= 0 {
+            return _EncodeOptions{True, ""}
+        }
+        return _EncodeOptions{True, _strings.repeat(" ", indent)}
+    }
+    if _type(indent) == str {
+        return _EncodeOptions{True, indent}
+    }
+    return TypeError{
+        "argument " + _strings.from_int(index + 1) + " to `" + function +
+        "` must be INTEGER or STRING, got " + _type_name(indent)
+    }
+}
+
+let dumps = fn(arguments...) str | TypeError | ValueError {
+    let args = _arrays.of(arguments)
+    if _len(args) < 1 || _len(args) > 2 {
+        return TypeError{
+            "wrong number of arguments. got=" + _strings.from_int(_len(args)) + ", want=1..2"
+        }
+    }
+    return _encode(args[0], _options(args, 1, "dumps"), 0,[])
+}
+
+let dump = fn(arguments...) | TypeError | ValueError | IOError {
+    let args = _arrays.of(arguments)
+    if _len(args) < 2 || _len(args) > 3 {
+        return TypeError{
+            "wrong number of arguments. got=" + _strings.from_int(_len(args)) + ", want=2..3"
+        }
+    }
+    let kind = _type(args[1])
+    if kind != File && kind != IOStream {
+        return TypeError{"argument to `dump` must be file-like, got " + _type_name(args[1])}
+    }
+    let options = _options(args, 2, "dump")
+    args[1].write(_encode(args[0], options, 0,[]))
+}
+
+export { JSONDecodeError, load, loads, dump, dumps }

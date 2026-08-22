@@ -1,4 +1,4 @@
-### <div align="center"> "I hate all languages equally" - Nate Maxwell </div>
+### <div align="center"> "I hate all languages equally." - Nate Maxwell </div>
 
 # Silver
 

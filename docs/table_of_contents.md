@@ -8,6 +8,12 @@
 
 ## Standard library
 
+- [`http`](stdlib/http.md) - HTTP methods, status codes, descriptions, and status classes.
+- [`http/client`](stdlib/http_client.md) - blocking HTTP/1.1 requests and responses.
+- [`http/cookiejar`](stdlib/http_cookiejar.md) - in-memory cookie storage and URL matching.
+- [`http/cookies`](stdlib/http_cookies.md) - Cookie and Set-Cookie parsing and serialization.
+- [`http/server`](stdlib/http_server.md) - blocking HTTP/1.1 servers and handlers.
+
 - [`args`](stdlib/args.md) — command-line argument parsing.
 - [`array`](stdlib/array.md) — non-mutating array transformations and queries.
 - [`collections`](stdlib/collections.md) — mutable deques, stacks, and default maps.

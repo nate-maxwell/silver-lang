@@ -1,0 +1,25 @@
+# Editor stub for import("http/cookiejar").
+#
+# An in-memory cookie jar with host, domain, path, Secure, and Max-Age
+# matching. Add Set-Cookie values with set_from_header and obtain a Cookie
+# request-header value with header.
+
+let cookies = import("./cookies.stb")
+
+struct JarError {
+    # JarError reports an invalid URL, mismatched cookie domain, or malformed
+    # cookie header.
+    message: str
+}
+
+struct Jar {
+    cookies: array
+    set: call(self: Jar, url: str, cookie: cookies.Cookie) | JarError
+    set_from_header: call(self: Jar, url: str, header: str) | JarError
+    header: call(self: Jar, url: str) str | JarError
+    clear: call(self: Jar)
+}
+
+let new = fn() Jar {
+    # Create an empty in-memory cookie jar.
+}

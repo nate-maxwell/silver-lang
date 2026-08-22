@@ -1,0 +1,50 @@
+# Editor stub for import("http/cookies").
+#
+# Cookie and Set-Cookie parsing and serialization. Cookie attributes use
+# empty strings, zero, or False when they were not supplied.
+
+enum SameSite {
+    Default,
+    Lax,
+    Strict,
+    None,
+}
+
+struct Cookie {
+    name: str
+    value: str
+    path: str
+    domain: str
+    expires: str
+    max_age: int
+    secure: bool
+    http_only: bool
+    same_site: SameSite
+}
+
+struct CookieError {
+    # CookieError reports a malformed name, value, pair, or Max-Age value.
+    message: str
+}
+
+let new = fn(name: str, value: str) Cookie | CookieError {
+    # Build a cookie with default attributes.
+}
+
+let parse = fn(header: str) array | CookieError {
+    # Parse a request Cookie header into an array of Cookie values. Request
+    # headers contain no attributes, so each parsed cookie keeps defaults.
+}
+
+let parse_set_cookie = fn(header: str) Cookie | CookieError {
+    # Parse one Set-Cookie response-header value. Recognized attributes are
+    # Path, Domain, Expires, Max-Age, Secure, HttpOnly, and SameSite.
+}
+
+let to_set_cookie = fn(cookie: Cookie) str | CookieError {
+    # Serialize one Cookie as a Set-Cookie response-header value.
+}
+
+let to_cookie_header = fn(cookies: array) str | CookieError {
+    # Serialize an array of cookies as a request Cookie header value.
+}

@@ -1,0 +1,179 @@
+# Parsing and serialization for HTTP Cookie and Set-Cookie header values.
+
+let _arrays = import("array")
+let _core = import("core")
+let _strings = import("string")
+
+enum SameSite {
+    Default,
+    Lax,
+    Strict,
+    None,
+}
+
+struct Cookie {
+    name: str
+    value: str
+    path: str
+    domain: str
+    expires: str
+    max_age: int
+    secure: bool
+    http_only: bool
+    same_site: SameSite
+}
+
+struct CookieError {
+    message: str
+}
+
+struct _Pair {
+    name: str
+    value: str
+}
+
+let new = fn(name: str, value: str) Cookie | CookieError {
+    _validate_name(name)
+    _validate_value(value)
+    Cookie{name, value, "", "", "", 0, False, False, SameSite.Default}
+}
+
+let _validate_name = fn(name: str) | CookieError {
+    if name == "" {
+        return CookieError{"cookie name must not be empty"}
+    }
+    let invalid = "()<>@,;:\"/[]?={} \t\r\n"
+    for character in _strings.chars(name) {
+        if _strings.contains(invalid, character) {
+            return CookieError{"invalid cookie name: " + name}
+        }
+    }
+}
+
+let _validate_value = fn(value: str) | CookieError {
+    if _strings.contains(value, ";") || _strings.contains(value, "\r") || _strings.contains(value, "\n") {
+        return CookieError{"invalid cookie value"}
+    }
+}
+
+let _pair = fn(value: str) _Pair | CookieError {
+    let pieces = _strings.split(value, "=")
+    if _core.len(pieces) < 2 {
+        return CookieError{"cookie pair is missing '=': " + value}
+    }
+    let tail = []
+    let index = 1
+    while index < _core.len(pieces) {
+        tail = _arrays.append(tail, pieces[index])
+        index = index + 1
+    }
+    return _Pair{_strings.strip(pieces[0]), _strings.strip(_strings.join(tail, "="))}
+}
+
+let _unquote = fn(value: str) str {
+    if _strings.startswith(value, "\"") && _strings.endswith(value, "\"") {
+        return _strings.removesuffix(_strings.removeprefix(value, "\""), "\"")
+    }
+    return value
+}
+
+# Parse a request Cookie header into cookies in header order. Cookie request
+# headers contain only names and values, so all attributes retain defaults.
+let parse = fn(header: str) array | CookieError {
+    let result = []
+    if _strings.strip(header) == "" {
+        return result
+    }
+    for part in _strings.split(header, ";") {
+        let pair = _pair(part)
+        result = _arrays.append(result, new(pair.name, _unquote(pair.value)))
+    }
+    return result
+}
+
+# Parse one Set-Cookie response header. Unknown extensions are ignored.
+let parse_set_cookie = fn(header: str) Cookie | CookieError {
+    let parts = _strings.split(header, ";")
+    if _core.len(parts) == 0 {
+        return CookieError{"Set-Cookie header must not be empty"}
+    }
+    let first = _pair(parts[0])
+    let cookie = new(first.name, _unquote(first.value))
+    let index = 1
+    while index < _core.len(parts) {
+        let attribute = _strings.strip(parts[index])
+        let attribute_parts = _strings.split(attribute, "=")
+        let name = _strings.lower(_strings.strip(attribute_parts[0]))
+        let value_parts = []
+        let value_index = 1
+        while value_index < _core.len(attribute_parts) {
+            value_parts = _arrays.append(value_parts, attribute_parts[value_index])
+            value_index = value_index + 1
+        }
+        let value = _strings.strip(_strings.join(value_parts, "="))
+
+        if name == "path" {
+            cookie.path = value
+        } else if name == "domain" {
+            cookie.domain = _strings.lower(value)
+        } else if name == "expires" {
+            cookie.expires = value
+        } else if name == "max-age" {
+            try {
+                cookie.max_age = _strings.to_int(value)
+                if cookie.max_age == 0 {
+                    cookie.max_age = -1
+                }
+            } catch ValueError err {
+                return CookieError{"invalid Max-Age: " + value}
+            }
+        } else if name == "secure" {
+            cookie.secure = True
+        } else if name == "httponly" {
+            cookie.http_only = True
+        } else if name == "samesite" {
+            let same_site = _strings.lower(value)
+            if same_site == "lax" {
+                cookie.same_site = SameSite.Lax
+            } else if same_site == "strict" {
+                cookie.same_site = SameSite.Strict
+            } else if same_site == "none" {
+                cookie.same_site = SameSite.None
+            }
+        }
+        index = index + 1
+    }
+    return cookie
+}
+
+# Serialize a Cookie as one Set-Cookie response-header value.
+let to_set_cookie = fn(cookie: Cookie) str | CookieError {
+    _validate_name(cookie.name)
+    _validate_value(cookie.value)
+    let result = cookie.name + "=" + cookie.value
+    if cookie.path != "" { result = result + "; Path=" + cookie.path }
+    if cookie.domain != "" { result = result + "; Domain=" + cookie.domain }
+    if cookie.expires != "" { result = result + "; Expires=" + cookie.expires }
+    if cookie.max_age > 0 {
+        result = result + "; Max-Age=" + _strings.from_int(cookie.max_age)
+    } else if cookie.max_age < 0 {
+        result = result + "; Max-Age=0"
+    }
+    if cookie.secure { result = result + "; Secure" }
+    if cookie.http_only { result = result + "; HttpOnly" }
+    if cookie.same_site == SameSite.Lax { result = result + "; SameSite=Lax" }
+    if cookie.same_site == SameSite.Strict { result = result + "; SameSite=Strict" }
+    if cookie.same_site == SameSite.None { result = result + "; SameSite=None" }
+    return result
+}
+
+# Serialize cookies as a request Cookie header value.
+let to_cookie_header = fn(cookies: array) str | CookieError {
+    let pairs = []
+    for cookie in cookies {
+        _validate_name(cookie.name)
+        _validate_value(cookie.value)
+        pairs = _arrays.append(pairs, cookie.name + "=" + cookie.value)
+    }
+    return _strings.join(pairs, "; ")
+}

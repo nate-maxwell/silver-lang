@@ -97,6 +97,11 @@ func NewWithStreams(in io.Reader, out, errOut io.Writer, null *object.Null, true
 		"time":        timeDefinitions(null, trueValue, falseValue),
 	}, []sourceDefinition{
 		{name: "args", path: "silver/args/args.slv"},
+		{name: "http", path: "silver/http/http.slv"},
+		{name: "http/client", path: "silver/http/client.slv"},
+		{name: "http/cookiejar", path: "silver/http/cookiejar.slv"},
+		{name: "http/cookies", path: "silver/http/cookies.slv"},
+		{name: "http/server", path: "silver/http/server.slv"},
 		{name: "logging", path: "silver/logging/logging.slv"},
 		{name: "networking", path: "silver/networking/networking.slv"},
 		{name: "testing", path: "silver/testing/testing.slv"},

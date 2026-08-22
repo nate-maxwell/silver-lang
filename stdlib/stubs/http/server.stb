@@ -1,0 +1,51 @@
+# Editor stub for import("http/server").
+#
+# The server accepts HTTP/1.1 requests over a blocking TCP listener. It handles
+# one request per connection, normalizes incoming header names to lowercase,
+# and closes the connection after writing a Content-Length response.
+
+struct Request {
+    method: str
+    path: str
+    version: str
+    headers: map
+    body: str
+    remote_address: str
+}
+
+struct Response {
+    status_code: int
+    reason: str
+    headers: map
+    body: str
+}
+
+struct ServerError {
+    # ServerError reports malformed HTTP input or a socket failure while
+    # accepting, reading, or writing a request.
+    message: str
+}
+
+struct Server {
+    address: str
+    listener: Listener
+    handler: call(self: Server, request: Request) Response
+    serve_once: call(self: Server) | ServerError
+    serve: call(self: Server) | ServerError
+    close: call(self: Server) | ConnectionError
+}
+
+let response = fn(status_code: int, body: str) Response {
+    # Build a response with no custom headers and the standard reason phrase
+    # known for status_code.
+}
+
+let response_with_headers = fn(status_code: int, headers: map, body: str) Response {
+    # Build a response with custom headers. Content-Length and Connection are
+    # supplied by the server when the response is written.
+}
+
+let new = fn(address: str, handler: call(request: Request) Response) Server | ListenError {
+    # Listen at address and return a server. Use port 0 to ask the operating
+    # system for a free port, then read the selected address from Server.address.
+}

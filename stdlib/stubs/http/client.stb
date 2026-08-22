@@ -1,0 +1,49 @@
+# Editor stub for import("http/client").
+#
+# The client implements one blocking HTTP/1.1 exchange per TCP connection.
+# It supports plain http:// URLs, sends Content-Length and Connection: close,
+# and returns response headers with lowercase names. HTTPS, redirects, chunked
+# transfer encoding, and connection pooling are not provided.
+
+struct Request {
+    method: str
+    url: str
+    headers: map
+    body: str
+}
+
+struct Response {
+    # status contains the numeric code and reason, such as "200 OK".
+    status: str
+    status_code: int
+    reason: str
+    headers: map
+    body: str
+}
+
+struct ClientError {
+    # ClientError reports an invalid URL or HTTP message, or wraps a socket
+    # connection, read, or write failure.
+    message: str
+}
+
+let new_request = fn(method: str, url: str, headers: map, body: str) Request {
+    # Build a request value without sending it.
+}
+
+let send = fn(request: Request) Response | ClientError {
+    # Send request and read one complete response. Header names are normalized
+    # to lowercase and user Content-Length/Connection values are replaced.
+}
+
+let request = fn(method: str, url: str, headers: map, body: str) Response | ClientError {
+    # Build and send a request in one call.
+}
+
+let get = fn(url: str) Response | ClientError {
+    # Send a GET request with no custom headers or body.
+}
+
+let post = fn(url: str, body: str) Response | ClientError {
+    # Send a POST request with no custom headers.
+}

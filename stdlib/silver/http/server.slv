@@ -1,0 +1,190 @@
+# A small blocking HTTP/1.1 server implemented over the networking standard
+# library. Each call to serve_once accepts and handles one connection.
+
+let _arrays = import("array")
+let _core = import("core")
+let _maps = import("map")
+let _net = import("networking")
+let _strings = import("string")
+let _http = import("http")
+
+struct Request {
+    method: str
+    path: str
+    version: str
+    headers: map
+    body: str
+    remote_address: str
+}
+
+struct Response {
+    status_code: int
+    reason: str
+    headers: map
+    body: str
+}
+
+struct ServerError {
+    message: str
+}
+
+struct Server {
+    address: str
+    listener: Listener
+    handler: call(self: Server, request: Request) Response
+    serve_once: call(self: Server) | ServerError
+    serve: call(self: Server) | ServerError
+    close: call(self: Server) | ConnectionError
+}
+
+let response = fn(status_code: int, body: str) Response {
+    Response{status_code, _http.status_description(status_code), {}, body}
+}
+
+let response_with_headers = fn(status_code: int, headers: map, body: str) Response {
+    Response{status_code, _http.status_description(status_code), headers, body}
+}
+
+let _normalized_headers = fn(headers: map) map {
+    let normalized = {}
+    for name, value in headers {
+        normalized[_strings.lower(_strings.strip(name))] = _strings.strip(value)
+    }
+    return normalized
+}
+
+let _header_lines = fn(headers: map) str {
+    let rendered = ""
+    for name, value in headers {
+        rendered = rendered + name + ": " + value + "\r\n"
+    }
+    return rendered
+}
+
+let _parse_headers = fn(lines: array, start: int) map | ServerError {
+    let headers = {}
+    let index = start
+    while index < _core.len(lines) {
+        let line = lines[index]
+        let separator = _strings.find(line, ":")
+        if separator <= 0 {
+            return ServerError{"malformed HTTP header: " + line}
+        }
+        let pieces = _strings.split(line, ":")
+        let value_pieces = []
+        let piece_index = 1
+        while piece_index < _core.len(pieces) {
+            value_pieces = _arrays.append(value_pieces, pieces[piece_index])
+            piece_index = piece_index + 1
+        }
+        let name = _strings.lower(_strings.strip(pieces[0]))
+        headers[name] = _strings.strip(_strings.join(value_pieces, ":"))
+        index = index + 1
+    }
+    return headers
+}
+
+let _body_length = fn(raw: str) int | ServerError {
+    let sections = _strings.split(raw, "\r\n\r\n")
+    let lines = _strings.split(sections[0], "\r\n")
+    let headers = _parse_headers(lines, 1)
+    if !_maps.contains(headers, "content-length") {
+        return 0
+    }
+    try {
+        let length = _strings.to_int(headers["content-length"])
+        if length < 0 {
+            return ServerError{"negative Content-Length"}
+        }
+        return length
+    } catch ValueError err {
+        return ServerError{"invalid Content-Length: " + headers["content-length"]}
+    }
+}
+
+let _read_request = fn(connection: Connection) Request | ServerError | ReadError {
+    let raw = ""
+    let header_end = -1
+    while header_end < 0 {
+        raw = raw + connection.read(4096)
+        header_end = _strings.find(raw, "\r\n\r\n")
+    }
+
+    let body_length = _body_length(raw)
+    while _core.len(raw) < header_end + 4 + body_length {
+        raw = raw + connection.read(4096)
+    }
+
+    let sections = _strings.split(raw, "\r\n\r\n")
+    let lines = _strings.split(sections[0], "\r\n")
+    let request_parts = _strings.fields(lines[0])
+    if _core.len(request_parts) != 3 || !_strings.startswith(request_parts[2], "HTTP/") {
+        return ServerError{"malformed HTTP request line: " + lines[0]}
+    }
+    let headers = _parse_headers(lines, 1)
+
+    let body_parts = []
+    let index = 1
+    while index < _core.len(sections) {
+        body_parts = _arrays.append(body_parts, sections[index])
+        index = index + 1
+    }
+    let body = _strings.join(body_parts, "\r\n\r\n")
+    return Request{
+        request_parts[0], request_parts[1], request_parts[2], headers, body,
+        connection.address
+    }
+}
+
+let _write_response = fn(connection: Connection, response_value: Response) | WriteError {
+    let headers = _normalized_headers(response_value.headers)
+    headers["content-length"] = _strings.from_int(_core.len(response_value.body))
+    headers["connection"] = "close"
+    connection.write(
+        "HTTP/1.1 " + _strings.from_int(response_value.status_code) + " " +
+        response_value.reason + "\r\n" + _header_lines(headers) + "\r\n" +
+        response_value.body
+    )
+}
+
+let _close_connection_quietly = fn(connection: Connection) {
+    try {
+        connection.close()
+    } catch ConnectionError err {}
+}
+
+let _serve_once = fn(self: Server) | ServerError {
+    try {
+        let connection = self.listener.accept()
+        defer _close_connection_quietly(connection)
+        let request_value = _read_request(connection)
+        let response_value = self.handler(request_value)
+        _write_response(connection, response_value)
+    } catch ServerError err {
+        return ServerError{err.message}
+    } catch ConnectionError err {
+        return ServerError{err.message}
+    } catch ReadError err {
+        return ServerError{err.message}
+    } catch WriteError err {
+        return ServerError{err.message}
+    }
+}
+
+let _serve = fn(self: Server) | ServerError {
+    while True {
+        self.serve_once()
+    }
+}
+
+let _close = fn(self: Server) | ConnectionError {
+    self.listener.close()
+}
+
+let new = fn(address: str, handler: call(request: Request) Response) Server | ListenError {
+    let listener = _net.listen(address)
+    let bound_handler = fn(self: Server, request: Request) Response {
+        handler(request)
+    }
+    Server{listener.address, listener, bound_handler, _serve_once, _serve, _close}
+}

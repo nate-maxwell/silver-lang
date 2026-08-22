@@ -32,7 +32,7 @@ func (i *Identifier) DeclarationString() string {
 		return i.Value
 	}
 	if i.Embedded {
-		return i.Value + " :: " + i.Type.String()
+		return i.Value + ":: " + i.Type.String()
 	}
 	return i.Value + ": " + i.Type.String()
 }

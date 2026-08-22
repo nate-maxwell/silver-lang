@@ -30,6 +30,20 @@ Arguments are evaluated from left to right and normally bind by position. Every 
 arguments are rejected. Structs and modules can also fill several parameters through
 [object destructuring](objects.md#object-destructuring).
 
+The final parameter may be variadic. Write `...` after its type; the annotation is checked against every remaining
+argument. A variadic parameter also accepts zero values:
+
+```silver
+let print_all = fn(parts: str...) {
+    import("io").println(parts)
+}
+
+print_all("one", "two", "three") # prints: one two three
+```
+
+Using it as an argument contributes its individual values automatically, with no spread syntax. Only the final
+parameter may be variadic. An untyped form such as `fn(values...)` accepts remaining values of any type.
+
 ## Parameters and runtime contracts
 
 Parameter annotations are optional and checked when arguments bind:
@@ -133,6 +147,7 @@ A detailed callable annotation constrains parameter types, its result, and any d
 ```text
 call(int, str) bool
 call(path: str) str | NotFound
+call(parts: str...) str
 ```
 
 Parameter names are optional. When a callable annotation includes names, both the names and types must match the

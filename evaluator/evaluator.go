@@ -208,7 +208,7 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 		if isError(function) {
 			return function
 		}
-		arguments := e.evalExpressions(node.Call.Arguments, env)
+		arguments := e.evalCallArguments(node.Call.Arguments, env)
 		if len(arguments) == 1 && isError(arguments[0]) {
 			return arguments[0]
 		}
@@ -365,7 +365,7 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 		if isError(function) {
 			return function
 		}
-		args := e.evalExpressions(node.Arguments, env)
+		args := e.evalCallArguments(node.Arguments, env)
 		if len(args) == 1 && isError(args[0]) {
 			return args[0]
 		}

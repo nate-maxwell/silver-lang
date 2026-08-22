@@ -8,6 +8,7 @@ type Identifier struct {
 	Value    string
 	Type     *TypeAnnotation // optional declaration annotation
 	Embedded bool            // struct field declared with :: instead of :
+	Variadic bool            // final function parameter collects remaining arguments
 }
 
 // expressionNode marks Identifier as an Expression.
@@ -29,10 +30,17 @@ func (i *Identifier) String() string { return i.Value }
 // into ordinary name references.
 func (i *Identifier) DeclarationString() string {
 	if i.Type == nil {
+		if i.Variadic {
+			return i.Value + "..."
+		}
 		return i.Value
 	}
-	if i.Embedded {
-		return i.Value + ":: " + i.Type.String()
+	suffix := ""
+	if i.Variadic {
+		suffix = "..."
 	}
-	return i.Value + ": " + i.Type.String()
+	if i.Embedded {
+		return i.Value + ":: " + i.Type.String() + suffix
+	}
+	return i.Value + ": " + i.Type.String() + suffix
 }

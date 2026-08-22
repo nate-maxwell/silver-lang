@@ -112,13 +112,18 @@ func (e *Evaluator) applyUserFunction(fn *object.Function, args []object.Object,
 // named fields or exports are offered to the remaining parameters. A value
 // that satisfies its parameter is therefore kept intact.
 func (e *Evaluator) bindFunctionArguments(fn *object.Function, args []object.Object) ([]object.Object, *object.Error) {
-	if len(args) > len(fn.Parameters) {
+	variadicIndex := -1
+	if len(fn.Parameters) > 0 && fn.Parameters[len(fn.Parameters)-1].Variadic {
+		variadicIndex = len(fn.Parameters) - 1
+	}
+	if variadicIndex < 0 && len(args) > len(fn.Parameters) {
 		return nil, newError(object.RuntimeErrorKindType, "wrong number of arguments. got=%d, want=%d", len(args), len(fn.Parameters))
 	}
 
 	bound := make([]object.Object, len(fn.Parameters))
 	assigned := make([]bool, len(fn.Parameters))
 	boundCount := 0
+	variadicArguments := make([]object.Object, 0)
 
 	for _, argument := range args {
 		parameterIndex := nextUnassignedParameter(assigned)
@@ -127,6 +132,17 @@ func (e *Evaluator) bindFunctionArguments(fn *object.Function, args []object.Obj
 		}
 
 		parameter := fn.Parameters[parameterIndex]
+		if parameter.Variadic {
+			matches, resolutionError := parameterTypeMatches(parameter, argument, fn.Env)
+			if resolutionError != "" {
+				return nil, newError(object.RuntimeErrorKindName, "%s", resolutionError)
+			}
+			if !matches {
+				return nil, e.parameterTypeError(parameter, argument, fn.Env)
+			}
+			variadicArguments = append(variadicArguments, argument)
+			continue
+		}
 		matches, resolutionError := parameterTypeMatches(parameter, argument, fn.Env)
 		if resolutionError != "" {
 			return nil, newError(object.RuntimeErrorKindName, "%s", resolutionError)
@@ -149,6 +165,9 @@ func (e *Evaluator) bindFunctionArguments(fn *object.Function, args []object.Obj
 				continue
 			}
 			candidate := fn.Parameters[index]
+			if candidate.Variadic {
+				continue
+			}
 			fieldValue, ok := destructurable.Get(candidate.Value)
 			if !ok {
 				continue
@@ -166,7 +185,19 @@ func (e *Evaluator) bindFunctionArguments(fn *object.Function, args []object.Obj
 		}
 	}
 
-	if boundCount != len(fn.Parameters) {
+	if variadicIndex >= 0 {
+		bound[variadicIndex] = &object.VariadicArguments{Elements: variadicArguments}
+		assigned[variadicIndex] = true
+	}
+
+	fixedParameterCount := len(fn.Parameters)
+	if variadicIndex >= 0 {
+		fixedParameterCount--
+	}
+	if boundCount != fixedParameterCount {
+		if variadicIndex >= 0 {
+			return nil, newError(object.RuntimeErrorKindType, "wrong number of arguments. got=%d, want>=%d", boundCount, fixedParameterCount)
+		}
 		return nil, newError(object.RuntimeErrorKindType, "wrong number of arguments. got=%d, want=%d", boundCount, len(fn.Parameters))
 	}
 	return bound, nil
@@ -198,7 +229,13 @@ func extendFunctionEnv(fn *object.Function, args []object.Object) *object.Enviro
 	env := object.NewEnclosedEnvironment(fn.Env)
 
 	for i, param := range fn.Parameters {
-		env.SetTyped(param.Value, args[i], param.Type)
+		annotation := param.Type
+		if param.Variadic {
+			// The annotation constrains each incoming argument, not the bound
+			// argument pack itself.
+			annotation = nil
+		}
+		env.SetTyped(param.Value, args[i], annotation)
 	}
 
 	return env

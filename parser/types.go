@@ -69,9 +69,17 @@ func (p *Parser) parseTypeAnnotationFromCurrent() *ast.TypeAnnotation {
 				}
 				annotation.ParameterNames = append(annotation.ParameterNames, parameterName)
 				annotation.ParameterTypes = append(annotation.ParameterTypes, parameterType)
+				if p.peekTokenIs(token.ELLIPSIS) {
+					p.nextToken()
+					annotation.Variadic = true
+				}
 
 				if !p.peekTokenIs(token.COMMA) {
 					break
+				}
+				if annotation.Variadic {
+					p.addError(p.peekToken.Position, "variadic parameter must be last")
+					return nil
 				}
 				p.nextToken()
 			}

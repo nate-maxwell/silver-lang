@@ -32,6 +32,7 @@ const (
 	STRUCT_VALUE_OBJ = "STRUCT_VALUE"
 	TYPE_OBJ         = "TYPE"
 	TASK_OBJ         = "TASK"
+	VARIADIC_OBJ     = "VARIADIC_ARGUMENTS"
 )
 
 // Object is any value that can exist at runtime in a Silver program.

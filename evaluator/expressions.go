@@ -22,6 +22,26 @@ func (e *Evaluator) evalExpressions(exps []ast.Expression, env *object.Environme
 	return result
 }
 
+// evalCallArguments evaluates call operands from left to right and expands
+// variadic parameter references into their individual positional arguments.
+func (e *Evaluator) evalCallArguments(exps []ast.Expression, env *object.Environment) []object.Object {
+	var result []object.Object
+
+	for _, expression := range exps {
+		evaluated := e.Eval(expression, env)
+		if isError(evaluated) {
+			return []object.Object{evaluated}
+		}
+		if variadic, ok := evaluated.(*object.VariadicArguments); ok {
+			result = append(result, variadic.Elements...)
+			continue
+		}
+		result = append(result, evaluated)
+	}
+
+	return result
+}
+
 // evalPrefixExpression dispatches unary operators by their source spelling.
 func evalPrefixExpression(operator string, right object.Object) object.Object {
 	switch operator {

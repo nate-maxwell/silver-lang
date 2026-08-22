@@ -16,6 +16,7 @@ type TypeAnnotation struct {
 	Parts          []string
 	ParameterNames []string
 	ParameterTypes []*TypeAnnotation
+	Variadic       bool // final callable parameter accepts zero or more values
 	ReturnType     *TypeAnnotation
 	ErrorTypes     []*TypeAnnotation
 }
@@ -43,9 +44,16 @@ func (ta *TypeAnnotation) String() string {
 		}
 		if index < len(ta.ParameterNames) && ta.ParameterNames[index] != "" {
 			out.WriteString(ta.ParameterNames[index])
-			out.WriteString(": ")
+			if parameterType != nil {
+				out.WriteString(": ")
+			}
 		}
-		out.WriteString(parameterType.String())
+		if parameterType != nil {
+			out.WriteString(parameterType.String())
+		}
+		if ta.Variadic && index == len(ta.ParameterTypes)-1 {
+			out.WriteString("...")
+		}
 	}
 	out.WriteString(")")
 	if ta.ReturnType != nil {

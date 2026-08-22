@@ -46,14 +46,14 @@ struct File {
     close: call() | IOError
 }
 
-let print = fn(values) {
+let print = fn(values...) {
     # Print any number of inspected values separated by single spaces to
     # stdout without a trailing newline, then return null. Values are rendered
     # the same way they would appear in an error message or template-string
     # interpolation, not necessarily as raw strings.
 }
 
-let println = fn(values) {
+let println = fn(values...) {
     # Print values exactly like print, followed by one newline, then return
     # null. Calling println with no values prints one newline.
 }

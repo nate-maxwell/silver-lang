@@ -85,3 +85,26 @@ let stderr: IOStream = IOStream{
     fn() str | IOError {},
     fn(data: str) | IOError {}
 }
+
+# Internal OS boundary used by the Silver-authored path module. These are
+# intentionally underscore-prefixed but remain indexed so navigation from
+# path.slv reaches the operation implemented in Go.
+let _path_separator: str = ""
+let _is_windows: bool = False
+let _cwd = fn() str | IOError {}
+let _home = fn() str | IOError {}
+let _stat = fn(path: str) map | IOError {}
+let _lstat = fn(path: str) map | IOError {}
+let _read_dir = fn(path: str) array | IOError {}
+let _read_file = fn(path: str) str | IOError {}
+let _write_file = fn(path: str, contents: str) int | IOError {}
+let _chmod = fn(path: str, mode: int) | IOError {}
+let _mkdir = fn(path: str, parents: bool, exist_ok: bool) | IOError {}
+let _remove = fn(path: str, missing_ok: bool) | IOError {}
+let _rename = fn(source: str, target: str) | IOError {}
+let _hardlink = fn(target: str, link: str) | IOError {}
+let _symlink = fn(target: str, link: str) | IOError {}
+let _readlink = fn(path: str) str | IOError {}
+let _realpath = fn(path: str) str | IOError {}
+let _same_file = fn(left: str, right: str) bool | IOError {}
+let _touch = fn(path: str, exist_ok: bool) | IOError {}

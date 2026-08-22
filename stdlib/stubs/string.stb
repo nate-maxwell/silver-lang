@@ -6,6 +6,19 @@
 # non-ASCII text. Every function here returns a new string; none mutate
 # their arguments, since Silver strings are immutable.
 
+let codepoint = fn(value: str) int | ValueError {
+    # Return the Unicode code point of a string containing exactly one
+    # character.
+}
+
+let from_codepoint = fn(value: int) str | ValueError {
+    # Return the character represented by a valid Unicode scalar value.
+}
+
+let utf8_bytes = fn(value: str) array {
+    # Return value's UTF-8 encoding as an array of integer bytes.
+}
+
 let to_int = fn(value: str) int | ValueError {
     # Parse a signed base-10 integer, e.g. "-42" or "7". Surrounding
     # whitespace, non-numeric text, and values outside the signed 64-bit

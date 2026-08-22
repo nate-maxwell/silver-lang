@@ -4,6 +4,11 @@
 # and leaves its input untouched; there is no in-place mutation, so results
 # must be captured with a let binding or returned to be visible.
 
+let of = fn(values...) array {
+    # Collect all supplied values into a new array. Calling of() returns an
+    # empty array.
+}
+
 let append = fn(values: array, value) array {
     # Return a copy of values with value added at the end. The original
     # array is not mutated, so chained calls like append(append(a, x), y)

@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"silver/ast"
 	"silver/lexer"
 	"silver/parser"
+	"sort"
 	"strings"
 )
 
@@ -31,7 +33,7 @@ type element struct {
 // unchanged by callers because formatting only starts after a successful parse.
 func Source(name string, source []byte) ([]byte, error) {
 	p := parser.New(lexer.NewWithSource(string(source), name))
-	p.ParseProgram()
+	program := p.ParseProgram()
 	if diagnostics := p.Errors(); len(diagnostics) != 0 {
 		return nil, errors.New(strings.Join(diagnostics, "\n"))
 	}
@@ -39,7 +41,18 @@ func Source(name string, source []byte) ([]byte, error) {
 		return []byte{}, nil
 	}
 
-	return render(scan(string(source))), nil
+	return render(scan(string(source), declaredOperators(program))), nil
+}
+
+func declaredOperators(program *ast.Program) []string {
+	var operators []string
+	for _, statement := range program.Statements {
+		if declaration, ok := statement.(*ast.OperatorStatement); ok && declaration.Symbol != "" {
+			operators = append(operators, declaration.Symbol)
+		}
+	}
+	sort.SliceStable(operators, func(i, j int) bool { return len(operators[i]) > len(operators[j]) })
+	return operators
 }
 
 // File formats exactly one regular file in place and reports whether its
@@ -70,7 +83,7 @@ func File(path string) (bool, error) {
 	return true, nil
 }
 
-func scan(source string) []element {
+func scan(source string, operators []string) []element {
 	elements := make([]element, 0, len(source)/2)
 	for index := 0; index < len(source); {
 		ch := source[index]
@@ -128,6 +141,10 @@ func scan(source string) []element {
 				}
 			}
 			elements = append(elements, element{kind: literalElement, value: source[start:index]})
+		case matchingOperator(source[index:], operators) != "":
+			operator := matchingOperator(source[index:], operators)
+			elements = append(elements, element{kind: symbolElement, value: operator})
+			index += len(operator)
 		default:
 			value := string(ch)
 			if index+1 < len(source) && isDoubleSymbol(source[index:index+2]) {
@@ -139,6 +156,15 @@ func scan(source string) []element {
 		}
 	}
 	return elements
+}
+
+func matchingOperator(source string, operators []string) string {
+	for _, operator := range operators {
+		if strings.HasPrefix(source, operator) {
+			return operator
+		}
+	}
+	return ""
 }
 
 func render(elements []element) []byte {
@@ -358,9 +384,16 @@ func isOperator(value string) bool {
 	switch value {
 	case "=", "+", "-", "*", "**", "/", "//", "%", "==", "!=", "<", ">", "<=", ">=", "&&", "||", "|", "::":
 		return true
-	default:
+	}
+	if value == "" {
 		return false
 	}
+	for _, ch := range value {
+		if !strings.ContainsRune("!$%&*+-./:;<=>?@^|~", ch) {
+			return false
+		}
+	}
+	return true
 }
 
 func isClosing(value string) bool {

@@ -6,6 +6,7 @@ import (
 	"os"
 	"silver/ast"
 	"silver/object"
+	"silver/parser"
 	stdlibpkg "silver/stdlib"
 	"sync"
 	"sync/atomic"
@@ -27,6 +28,19 @@ type Evaluator struct {
 	// nextEnumValueID gives every evaluated enum member a session-unique hash
 	// identity, even when separate modules declare enums with the same names.
 	nextEnumValueID *atomic.Uint64
+	infix           *infixDefinitions
+	operators       *parser.InfixRegistry
+}
+
+type infixDefinitions struct {
+	mu     sync.Mutex
+	values map[string]*infixDefinition
+}
+
+type infixDefinition struct {
+	node     *ast.OperatorStatement
+	env      *object.Environment
+	callable *object.Function
 }
 
 // synchronizedWriter makes builtin output and warnings safe when tasks write
@@ -72,6 +86,12 @@ func (w *synchronizedWriter) TerminalFileDescriptor() (uintptr, bool) {
 // New constructs an evaluator whose print builtin writes to standard output.
 func New() *Evaluator {
 	return NewWithStreams(os.Stdin, os.Stdout, os.Stderr)
+}
+
+// InfixRegistry returns the parser registry for this interpreter session.
+// Interactive and embedding frontends should use it for every parsed source.
+func (e *Evaluator) InfixRegistry() *parser.InfixRegistry {
+	return e.operators
 }
 
 // NewWithOutput constructs an evaluator with an explicit destination for
@@ -124,6 +144,8 @@ func newEvaluator(in io.Reader, out, errOut, warnings io.Writer) *Evaluator {
 		contexts:        make([]string, 0),
 		warnings:        warnings,
 		nextEnumValueID: &atomic.Uint64{},
+		infix:           &infixDefinitions{values: make(map[string]*infixDefinition)},
+		operators:       parser.NewInfixRegistry(),
 	}
 }
 
@@ -143,6 +165,8 @@ func (e *Evaluator) fork() *Evaluator {
 		contexts:        append([]string(nil), e.contexts...),
 		warnings:        e.warnings,
 		nextEnumValueID: e.nextEnumValueID,
+		infix:           e.infix,
+		operators:       e.operators,
 	}
 }
 
@@ -219,6 +243,9 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 		// Export declarations affect the module object assembled after the
 		// source finishes evaluating; they do not alter lexical bindings.
 		return NULL
+
+	case *ast.OperatorStatement:
+		return e.registerInfix(node, env)
 
 	case *ast.LetStatement:
 		if err := e.validateTypeAnnotation(node.Name.Type, env); err != nil {
@@ -324,6 +351,13 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 		if node.Operator == "&&" || node.Operator == "||" {
 			return nativeBoolToBooleanObject(isTruthy(right))
 		}
+		if callable, failure := e.infixCallable(node.Operator); failure != nil {
+			return failure
+		} else if callable != nil {
+			result := e.applyFunction(callable, []object.Object{left, right})
+			e.prependCallerFrame(result, node)
+			return result
+		}
 
 		return e.evalInfixExpression(node, left, right)
 
@@ -424,4 +458,38 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 	}
 
 	return nil
+}
+
+func (e *Evaluator) registerInfix(node *ast.OperatorStatement, env *object.Environment) object.Object {
+	e.infix.mu.Lock()
+	defer e.infix.mu.Unlock()
+	if _, exists := e.infix.values[node.Symbol]; exists {
+		return newError(object.RuntimeErrorKindName, "operator %q is already defined", node.Symbol)
+	}
+	e.infix.values[node.Symbol] = &infixDefinition{node: node, env: env}
+	return NULL
+}
+
+func (e *Evaluator) infixCallable(symbol string) (*object.Function, *object.Error) {
+	e.infix.mu.Lock()
+	defer e.infix.mu.Unlock()
+	definition := e.infix.values[symbol]
+	if definition == nil {
+		return nil, nil
+	}
+	if definition.callable != nil {
+		return definition.callable, nil
+	}
+	callable := e.Eval(definition.node.Function, definition.env)
+	if failure, ok := callable.(*object.Error); ok {
+		return nil, failure
+	}
+	function, ok := callable.(*object.Function)
+	if !ok {
+		return nil, newError(object.RuntimeErrorKindType, "operator %q must be defined by a function", symbol)
+	}
+	function.Operator = true
+	function.Name = fmt.Sprintf("operator %q", symbol)
+	definition.callable = function
+	return function, nil
 }

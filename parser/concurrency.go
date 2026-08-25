@@ -27,6 +27,8 @@ func (p *Parser) validateTaskStatements(statements []ast.Statement, bindings map
 		case *ast.LetStatement:
 			p.validateTaskExpression(node.Value, bindings)
 			p.bindTaskUsage(node.Name.Value, node.Value, bindings)
+		case *ast.OperatorStatement:
+			p.validateTaskExpression(node.Function, bindings)
 		case *ast.AssignmentStatement:
 			p.validateTaskExpression(node.Value, bindings)
 			p.bindTaskUsage(node.Name.Value, node.Value, bindings)

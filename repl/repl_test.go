@@ -35,3 +35,13 @@ func TestStandardErrorUsesREPLOutput(t *testing.T) {
 		t.Fatalf("REPL output %q does not contain stderr text", got)
 	}
 }
+
+func TestOperatorDeclarationPersistsAcrossREPLLines(t *testing.T) {
+	input := "operator @ fn(left, right) int { left + right }\n20 @ 22\n"
+	var output bytes.Buffer
+	Start(strings.NewReader(input), &output)
+
+	if got := output.String(); !strings.Contains(got, "42") {
+		t.Fatalf("REPL output %q does not contain operator result", got)
+	}
+}

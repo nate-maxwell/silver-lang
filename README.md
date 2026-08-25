@@ -6,13 +6,12 @@ Silver is an interpreted, struct-centric programming language where behavior is 
 the values an object carries and the callable fields that give it behavior. Methods, operator overloads, indexing,
 dependency injection, and even standard-library objects all grow from that small idea.
 
-Silver exists to maximize code reuse without the drawbacks of inheritance:
+Silver exists to maximize code reuse without the drawbacks of inheritance, while minimizing boilerplate:
 
 - functions are values, attachable to any struct that needs them;
 - polymorphism works through shape — if a struct has the right fields, it works;
-- behavior is swappable at construction time without subclassing;
 - structs compose through embedding, promoting fields and behavior up the chain;
-- expected failures are modeled in function signatures and caught by nominal type.
+- user-defined infix operators to minimize repetitive actions.
 
 The implementation is written in Go and includes a REPL, source modules, cached ASTs, tracebacks, and a standard
 library implemented in both Go and Silver. Silver is currently a young language: it is a good place to experiment,

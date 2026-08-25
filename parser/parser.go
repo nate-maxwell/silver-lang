@@ -8,8 +8,10 @@ import (
 
 // Pratt binding powers increase from weak logical operators to tight calls,
 // indexing, and member access.
+// Power increases by a factor of 10 for each operator, so user-defined
+// operators can use a higher granularity of binding power.
 const (
-	_ int = iota
+	_ int = iota * 10
 	LOWEST
 	OR          // ||
 	AND         // &&
@@ -41,6 +43,7 @@ type Parser struct {
 	loopDepth        int          // lexical loop nesting for break/continue validation
 	blockDepth       int          // lexical block nesting for top-level-only declarations
 	exportSeen       bool         // only one export declaration is permitted per source file
+	operators        *InfixRegistry
 
 	curToken  token.Token // token currently being parsed
 	peekToken token.Token // one-token lookahead
@@ -52,9 +55,22 @@ type Parser struct {
 // New constructs a parser, registers the language grammar, and primes current
 // and lookahead tokens.
 func New(l *lexer.Lexer) *Parser {
+	return NewWithInfixRegistry(l, NewInfixRegistry())
+}
+
+// NewWithInfixRegistry constructs a parser that shares user-defined operator
+// declarations with other parser instances, as required by a line-based REPL.
+func NewWithInfixRegistry(l *lexer.Lexer, operators *InfixRegistry) *Parser {
+	if operators == nil {
+		operators = NewInfixRegistry()
+	}
+	for symbol := range operators.precedences {
+		l.RegisterOperator(symbol)
+	}
 	p := &Parser{
-		l:      l,
-		errors: []string{},
+		l:         l,
+		errors:    []string{},
+		operators: operators,
 	}
 
 	p.prefixParseFns = make(map[token.TokenType]prefixParseFn)

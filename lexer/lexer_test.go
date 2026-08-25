@@ -503,3 +503,22 @@ func TestDeferKeyword(t *testing.T) {
 		t.Fatalf("token is (%q, %q), want (DEFER, defer)", tok.Type, tok.Literal)
 	}
 }
+
+func TestRegisteredUserOperatorIsOneToken(t *testing.T) {
+	l := New(`left |> right`)
+	l.RegisterOperator("|>")
+
+	for index, want := range []struct {
+		type_   token.TokenType
+		literal string
+	}{
+		{token.IDENT, "left"},
+		{token.CUSTOM_OPERATOR, "|>"},
+		{token.IDENT, "right"},
+	} {
+		got := l.NextToken()
+		if got.Type != want.type_ || got.Literal != want.literal {
+			t.Fatalf("token %d is (%q, %q), want (%q, %q)", index, got.Type, got.Literal, want.type_, want.literal)
+		}
+	}
+}

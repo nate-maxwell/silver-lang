@@ -23,6 +23,7 @@ type Lexer struct {
 	templateDepth int
 	templateOpen  token.Position
 	templateStack []templateContext
+	operators     []string // registered user-defined spellings, longest first
 }
 
 // New constructs a lexer for in-memory input using <input> as its diagnostic
@@ -77,6 +78,12 @@ func (l *Lexer) NextToken() token.Token {
 
 	l.skipIgnoredCharacters()
 	position := l.currentPosition()
+	if literal := l.registeredOperator(); literal != "" {
+		for range literal {
+			l.readChar()
+		}
+		return token.Token{Type: lookupRegisteredOperator(literal), Literal: literal, Position: position}
+	}
 
 	switch l.ch {
 	case '=':
@@ -204,9 +211,9 @@ func (l *Lexer) NextToken() token.Token {
 			tok.Literal, tok.Type = l.readNumber()
 			tok.Position = position
 			return tok
-		} else {
-			tok = newToken(token.ILLEGAL, l.ch, position)
 		}
+
+		tok = newToken(token.ILLEGAL, l.ch, position)
 	}
 
 	l.readChar()
@@ -248,9 +255,9 @@ func (l *Lexer) skipLineComment() {
 func (l *Lexer) peekChar() byte {
 	if l.readPosition >= len(l.input) {
 		return 0 // Set to ascii null for EOF
-	} else {
-		return l.input[l.readPosition]
 	}
+
+	return l.input[l.readPosition]
 }
 
 func (l *Lexer) peekSecondChar() byte {

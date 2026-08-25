@@ -18,6 +18,7 @@ func Start(in io.Reader, out io.Writer) {
 	reader := bufio.NewReader(in)
 	env := object.NewEnvironment()
 	engine := evaluator.NewWithStreams(reader, out, out)
+	operators := engine.InfixRegistry()
 
 	for {
 		io.WriteString(out, prompt)
@@ -28,7 +29,7 @@ func Start(in io.Reader, out io.Writer) {
 		line = strings.TrimSuffix(line, "\n")
 		line = strings.TrimSuffix(line, "\r")
 		l := lexer.NewWithSource(line, "<repl>")
-		p := parser.New(l)
+		p := parser.NewWithInfixRegistry(l, operators)
 
 		program := p.ParseProgram()
 		if len(p.Errors()) != 0 {

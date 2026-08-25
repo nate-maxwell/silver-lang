@@ -31,6 +31,8 @@ func foldStatementConstants(statement ast.Statement) ast.Statement {
 		node.Expression = foldExpressionConstants(node.Expression)
 	case *ast.LetStatement:
 		node.Value = foldExpressionConstants(node.Value)
+	case *ast.OperatorStatement:
+		foldExpressionConstants(node.Function)
 	case *ast.AssignmentStatement:
 		node.Value = foldExpressionConstants(node.Value)
 	case *ast.MemberAssignmentStatement:

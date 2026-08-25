@@ -1,6 +1,7 @@
 package evaluator
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"silver/ast"
@@ -22,7 +23,7 @@ func (e *Evaluator) EvalFile(path string, env *object.Environment) object.Object
 	}
 	absolutePath = filepath.Clean(absolutePath)
 
-	program, parseError := parseFile(absolutePath)
+	program, parseError := e.parseFile(absolutePath)
 	if parseError != nil {
 		return parseError
 	}
@@ -62,7 +63,7 @@ func (e *Evaluator) importModule(path string, env *object.Environment) object.Ob
 	e.loading[absolutePath] = true
 	defer delete(e.loading, absolutePath)
 
-	program, parseError := parseFile(absolutePath)
+	program, parseError := e.parseFile(absolutePath)
 	if parseError != nil {
 		return parseError
 	}
@@ -102,9 +103,12 @@ func (e *Evaluator) importSourceModule(name, sourceName, source string, cache []
 
 	sourceBytes := []byte(source)
 	program, cached := astcache.LoadBytes(sourceName, sourceBytes, cache)
+	if e.operators.HasUserOperators() || bytes.Contains(sourceBytes, []byte("operator")) {
+		cached = false
+	}
 	if !cached {
 		var parseError *object.Error
-		program, parseError = ParseSource(sourceName, sourceBytes)
+		program, parseError = parseSourceWithRegistry(sourceName, sourceBytes, e.operators)
 		if parseError != nil {
 			return parseError
 		}
@@ -212,21 +216,23 @@ func importCandidateExists(path string) bool {
 
 // parseFile reads a source file and parses it with its absolute path attached
 // to every token for diagnostics and tracebacks.
-func parseFile(path string) (*ast.Program, *object.Error) {
+func (e *Evaluator) parseFile(path string) (*ast.Program, *object.Error) {
 	input, err := os.ReadFile(path)
 	if err != nil {
 		return nil, newError(object.RuntimeErrorKindImport, "could not read %q: %s", path, err)
 	}
-	if program, ok := astcache.Load(path, input); ok {
+	if program, ok := astcache.Load(path, input); ok && !e.operators.HasUserOperators() && !bytes.Contains(input, []byte("operator")) {
 		return program, nil
 	}
-	program, parseError := ParseSource(path, input)
+	program, parseError := parseSourceWithRegistry(path, input, e.operators)
 	if parseError != nil {
 		return nil, parseError
 	}
 	// A cache is an optimization only. Read-only directories and other cache
 	// write failures must not prevent valid source from running.
-	_ = astcache.Store(path, input, program)
+	if !e.operators.HasUserOperators() {
+		_ = astcache.Store(path, input, program)
+	}
 	return program, nil
 }
 
@@ -235,6 +241,15 @@ func parseFile(path string) (*ast.Program, *object.Error) {
 // the same pipeline as ordinary file parsing through this entry point.
 func ParseSource(sourceName string, input []byte) (*ast.Program, *object.Error) {
 	p := parser.New(lexer.NewWithSource(string(input), sourceName))
+	return finishParse(sourceName, p)
+}
+
+func parseSourceWithRegistry(sourceName string, input []byte, registry *parser.InfixRegistry) (*ast.Program, *object.Error) {
+	p := parser.NewWithInfixRegistry(lexer.NewWithSource(string(input), sourceName), registry)
+	return finishParse(sourceName, p)
+}
+
+func finishParse(sourceName string, p *parser.Parser) (*ast.Program, *object.Error) {
 	program := p.ParseProgram()
 	if len(p.Errors()) != 0 {
 		return nil, newError(object.RuntimeErrorKindSyntax, "could not parse %q:\n%s", sourceName, strings.Join(p.Errors(), "\n"))

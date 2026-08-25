@@ -98,6 +98,18 @@ func TestSourceFormatsEmbeddedStructField(t *testing.T) {
 	}
 }
 
+func TestSourceKeepsUserOperatorsTogether(t *testing.T) {
+	source := []byte("operator |> fn(left,right:call){ return right(left) }\nlet result=first()|>second\n")
+	formatted, err := Source("operators.slv", source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "operator |> fn(left, right: call) { return right(left) }\nlet result = first() |> second\n"
+	if got := string(formatted); got != want {
+		t.Fatalf("formatted source is %q, want %q", got, want)
+	}
+}
+
 func TestSourceRejectsInvalidCode(t *testing.T) {
 	if _, err := Source("broken.slv", []byte("let value =\n")); err == nil {
 		t.Fatal("Source accepted invalid code")

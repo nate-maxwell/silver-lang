@@ -14,6 +14,7 @@ func TestRoundTrip(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "all.slv")
 	source := []byte(`
 export { State, Person, Details, values, choose, module }
+operator @ 55 fn(left: int, right: int) int { left + right }
 enum State { Ready, Waiting }
 struct Person { name: string, age: int }
 struct Details { person :: Person }
@@ -39,6 +40,7 @@ for key, value in ({"answer": 42}) { print(key, value) }
 while False { break }
 let module = import("./library.slv")
 module.member(choose(values[0]))
+1 @ 2
 `)
 	program := parse(t, path, source)
 

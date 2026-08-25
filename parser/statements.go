@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"silver/ast"
 	"silver/token"
+	"strconv"
+	"strings"
 )
 
 // parseStatement dispatches according to the current statement-leading token.
@@ -31,9 +33,84 @@ func (p *Parser) parseStatement() ast.Statement {
 		return p.parseDeferStatement()
 	case token.EXPORT:
 		return p.parseExportStatement()
+	case token.OPERATOR:
+		return p.parseOperatorStatement()
 	default:
 		return p.parseExpressionStatement()
 	}
+}
+
+// parseOperatorStatement parses `operator <symbol> [binding-power] fn(...)`.
+// The optional power defaults to SUM. Registration happens at the declaration,
+// so only expressions read afterward can use the symbol.
+func (p *Parser) parseOperatorStatement() *ast.OperatorStatement {
+	statement := &ast.OperatorStatement{Token: p.curToken, BindingPower: SUM}
+	if p.peekTokenIs(token.FUNCTION) || p.peekTokenIs(token.INT) || p.peekTokenIs(token.EOF) {
+		p.addError(p.peekToken.Position, "operator declaration requires a symbolic operator")
+		return statement
+	}
+
+	p.nextToken()
+	var symbol strings.Builder
+	for {
+		if !isOperatorFragment(p.curToken.Literal) {
+			p.addError(p.curToken.Position, "operator declaration requires a symbolic operator")
+			return statement
+		}
+		symbol.WriteString(p.curToken.Literal)
+		if p.peekTokenIs(token.FUNCTION) || p.peekTokenIs(token.INT) {
+			break
+		}
+		if p.peekTokenIs(token.EOF) || p.lineBreakBeforePeek() ||
+			p.peekToken.Position.Offset != p.curToken.Position.Offset+len(p.curToken.Literal) {
+			p.addError(p.peekToken.Position, "expected fn after operator symbol")
+			return statement
+		}
+		p.nextToken()
+	}
+	statement.Symbol = symbol.String()
+
+	if p.peekTokenIs(token.INT) {
+		p.nextToken()
+		statement.ExplicitPower = true
+		power, err := strconv.Atoi(p.curToken.Literal)
+		if err != nil || power <= LOWEST {
+			p.addError(p.curToken.Position, fmt.Sprintf("operator binding power must be greater than %d", LOWEST))
+			return statement
+		}
+		statement.BindingPower = power
+	}
+	if message := p.operators.define(statement.Symbol, statement.BindingPower, statement.Position()); message != "" {
+		p.addError(statement.Position(), message)
+	} else {
+		p.l.RegisterOperator(statement.Symbol)
+	}
+
+	if !p.expectPeek(token.FUNCTION) {
+		return statement
+	}
+	function, _ := p.parseFunctionLiteral().(*ast.FunctionLiteral)
+	statement.Function = function
+	if function == nil {
+		return statement
+	}
+	if len(function.Parameters) != 2 || function.Parameters[0].Variadic || function.Parameters[1].Variadic {
+		p.addError(function.Position(), "operator function must declare exactly two non-variadic parameters")
+	}
+	p.consumeStatementEnd()
+	return statement
+}
+
+func isOperatorFragment(literal string) bool {
+	if literal == "" {
+		return false
+	}
+	for _, ch := range literal {
+		if !strings.ContainsRune("!$%&*+-./:;<=>?@^|~", ch) {
+			return false
+		}
+	}
+	return true
 }
 
 // parseExportStatement parses the module-level public binding list. Newlines

@@ -44,11 +44,12 @@ const (
 	TEMPLATE_END   = "TEMPLATE_END"   // ```
 
 	// Operators
-	ASSIGN = "="
-	BANG   = "!"
-	PIPE   = "|"
-	AND    = "&&"
-	OR     = "||"
+	CUSTOM_OPERATOR = "CUSTOM_OPERATOR" // registered user-defined symbolic operator
+	ASSIGN          = "="
+	BANG            = "!"
+	PIPE            = "|"
+	AND             = "&&"
+	OR              = "||"
 
 	PLUS     = "+"
 	MINUS    = "-"
@@ -105,6 +106,7 @@ const (
 	SWITCH   = "SWITCH"
 	CASE     = "CASE"
 	DEFAULT  = "DEFAULT"
+	OPERATOR = "OPERATOR"
 )
 
 // keywords maps reserved source words to their specialized token types. Any
@@ -135,6 +137,7 @@ var keywords = map[string]TokenType{
 	"switch":   SWITCH,
 	"case":     CASE,
 	"default":  DEFAULT,
+	"operator": OPERATOR,
 }
 
 // LookupIdent classifies an identifier as a reserved keyword or a normal

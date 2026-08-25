@@ -2,6 +2,7 @@ package ast
 
 import (
 	"bytes"
+	"fmt"
 	"silver/token"
 )
 
@@ -195,6 +196,40 @@ type LetStatement struct {
 	Token token.Token // the token.LET token
 	Name  *Identifier
 	Value Expression
+}
+
+/* ----------------------------------------------------------------------------------------------------------
+Operator declarations
+---------------------------------------------------------------------------------------------------------- */
+
+// OperatorStatement binds a symbolic infix operator to a two-argument Silver
+// function. BindingPower controls how the Pratt parser groups later uses.
+type OperatorStatement struct {
+	Token         token.Token // the 'operator' keyword
+	Symbol        string
+	BindingPower  int
+	ExplicitPower bool
+	Function      *FunctionLiteral
+}
+
+func (os *OperatorStatement) statementNode()           {}
+func (os *OperatorStatement) TokenLiteral() string     { return os.Token.Literal }
+func (os *OperatorStatement) Position() token.Position { return os.Token.Position }
+
+func (os *OperatorStatement) String() string {
+	var out bytes.Buffer
+	out.WriteString(os.TokenLiteral())
+	out.WriteString(" ")
+	out.WriteString(os.Symbol)
+	if os.ExplicitPower {
+		out.WriteString(" ")
+		out.WriteString(fmt.Sprintf("%d", os.BindingPower))
+	}
+	if os.Function != nil {
+		out.WriteString(" ")
+		out.WriteString(os.Function.String())
+	}
+	return out.String()
 }
 
 // statementNode marks LetStatement as a Statement.

@@ -18,7 +18,7 @@ import (
 const (
 	// Version must change whenever the serialized AST representation or the
 	// parse/optimization pipeline changes.
-	Version uint32 = 28
+	Version uint32 = 31
 
 	cacheSuffix   = ".astc"
 	maxPathLength = 1 << 20
@@ -33,6 +33,7 @@ func init() {
 	gob.Register(&ast.BlockStatement{})
 	gob.Register(&ast.ExpressionStatement{})
 	gob.Register(&ast.LetStatement{})
+	gob.Register(&ast.OperatorStatement{})
 	gob.Register(&ast.AssignmentStatement{})
 	gob.Register(&ast.MemberAssignmentStatement{})
 	gob.Register(&ast.IndexAssignmentStatement{})

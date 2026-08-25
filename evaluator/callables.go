@@ -87,15 +87,17 @@ func (e *Evaluator) applyUserFunction(fn *object.Function, args []object.Object,
 	// A completely omitted return declaration denotes a void function. A leading
 	// pipe instead declares null success plus one or more
 	// struct error alternatives, so its actual result must escape.
-	if fn.ReturnType == nil && len(fn.ErrorTypes) == 0 {
+	if fn.ReturnType == nil && len(fn.ErrorTypes) == 0 && !fn.Operator {
 		return NULL
 	}
 	evaluated = unwrapReturnValue(evaluated)
 	if evaluated == nil {
 		evaluated = NULL
 	}
-	if err := e.requireReturnType(fn.ReturnType, fn.ErrorTypes, evaluated, fn.Env, fmt.Sprintf("return value of %q", contextName)); err != nil {
-		return err
+	if !fn.Operator || fn.ReturnType != nil {
+		if err := e.requireReturnType(fn.ReturnType, fn.ErrorTypes, evaluated, fn.Env, fmt.Sprintf("return value of %q", contextName)); err != nil {
+			return err
+		}
 	}
 	if matches, err := matchesDeclaredError(fn.ErrorTypes, evaluated, fn.Env); err != nil {
 		return err

@@ -52,6 +52,11 @@ The binding power must be greater than 10. Built-in powers are spaced by ten so 
 Symbols may contain the punctuation characters `!$%&*+-./:;<=>?@^|~`. Existing delimiter spellings such as `::` can
 therefore be declared for ordinary expressions without affecting their established declaration syntax.
 
+## Limitations
+
+Silver uses pass-by-copy semantics. Therefore, creating operators that bind, like
+`+=` in other languages, is not currently doable.
+
 ## Examples
 
 ### Pipeline Operator

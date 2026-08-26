@@ -36,9 +36,35 @@ Silver resolves module names in this order:
 | Absolute filesystem path                      | Load that exact path.                                                           |
 | Relative or bare path in a `.slv` file        | Check the directory containing that `.slv` file.                                |
 | Relative or bare path entered in the REPL     | Check the process working directory.                                            |
-| Unresolved source path                        | Check each directory in `SILVER_PATH` using the platform's path-list separator. |
+| Unresolved source path                        | Check exposed package/source entries in `SILVER_PATH` using the platform's path-list separator. |
 
 Use an explicit relative path such as `./testing.slv` when a user file has the same name as a bundled module.
+
+## Packages and YAML manifests
+
+A package root may contain a `.yaml` or `.yml` manifest. Add the directory containing that manifest to `SILVER_PATH`:
+
+```yaml
+package: my_library
+export:
+  - ./this_module.slv
+  - ./that_module.slv
+  - ./that_other/module.slv
+```
+
+The manifest is a single YAML document with a required `package` string and `export` list. Unknown fields are rejected.
+Each listed file becomes importable by its declared relative path or filename. Silver resolves these as canonical full
+paths internally; it does not rewrite the process environment. A `SILVER_PATH` directory with a manifest exposes only
+manifest exports. A directory without a manifest retains directory-wide lookup, and a `.slv` file may itself be a
+`SILVER_PATH` entry for an individual-file export. A manifest file can also be added directly.
+
+Export paths must be relative `.slv` files inside the package root and must exist when the package index is loaded. The
+manifest's file exports are separate from a source module's `export { Name }` declaration: the manifest controls which
+modules can be found, while the source declaration controls which bindings a loaded module exposes.
+
+All exported files in one manifest share a package-local custom-operator grammar. Operator declarations are discovered
+across the package before its files are parsed, regardless of export order. Their runtime definitions still execute
+normally when the declaring module is imported.
 
 ## Module members and exports
 

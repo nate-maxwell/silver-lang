@@ -24,6 +24,7 @@ func (e *Evaluator) evalStructStatement(node *ast.StructStatement, env *object.E
 
 	definition := &object.Struct{
 		Name:           node.Name.Value,
+		PackageID:      env.PackageID(),
 		Fields:         fields,
 		FieldTypes:     fieldTypes,
 		EmbeddedFields: embeddedFields,

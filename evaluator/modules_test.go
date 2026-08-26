@@ -127,6 +127,145 @@ func TestImportSearchesSilverPath(t *testing.T) {
 	assertInteger(t, result, 42)
 }
 
+func TestSilverPathPackageExposesManifestFiles(t *testing.T) {
+	sourceDir := t.TempDir()
+	packageDir := t.TempDir()
+	if err := os.Mkdir(filepath.Join(packageDir, "nested"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	writeSilverFile(t, filepath.Join(packageDir, "nested", "library.slv"), `let value = 42`)
+	writeSilverFile(t, filepath.Join(packageDir, "hidden.slv"), `let value = 99`)
+	if err := os.WriteFile(filepath.Join(packageDir, "example.yaml"), []byte(`
+package: example
+export:
+  - ./nested/library.slv
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv(importPathEnvironment, packageDir)
+
+	env := object.NewEnvironment()
+	env.SetSourceDir(sourceDir)
+	engine := New()
+	assertInteger(t, evalInput(t, engine, env, `import("nested/library.slv").value`), 42)
+	assertInteger(t, evalInput(t, engine, env, `import("library.slv").value`), 42)
+
+	result := evalInput(t, engine, env, `import("hidden.slv")`)
+	if failure, ok := result.(*object.Error); !ok || !strings.Contains(failure.MessageText(), "could not read") {
+		t.Fatalf("hidden import is %#v, want package-interface import error", result)
+	}
+}
+
+func TestSilverPathAcceptsExplicitSourceFile(t *testing.T) {
+	sourceDir := t.TempDir()
+	fileDir := t.TempDir()
+	path := filepath.Join(fileDir, "single.slv")
+	writeSilverFile(t, path, `let value = 42`)
+	t.Setenv(importPathEnvironment, path)
+
+	env := object.NewEnvironment()
+	env.SetSourceDir(sourceDir)
+	result := evalInput(t, New(), env, `import("single.slv").value`)
+	assertInteger(t, result, 42)
+}
+
+func TestSilverPathRefreshesAfterEnvironmentChange(t *testing.T) {
+	sourceDir := t.TempDir()
+	packageDir := t.TempDir()
+	writeSilverFile(t, filepath.Join(packageDir, "library.slv"), `let value = 42`)
+	if err := os.WriteFile(filepath.Join(packageDir, "example.yaml"), []byte(`
+package: example
+export:
+  - ./library.slv
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv(importPathEnvironment, "")
+
+	engine := New()
+	env := object.NewEnvironment()
+	env.SetSourceDir(sourceDir)
+	if result := evalInput(t, engine, env, `import("missing.slv")`); !isError(result) {
+		t.Fatalf("initial import is %#v, want an error", result)
+	}
+	if err := os.Setenv(importPathEnvironment, packageDir); err != nil {
+		t.Fatal(err)
+	}
+	assertInteger(t, evalInput(t, engine, env, `import("library.slv").value`), 42)
+}
+
+func TestPackageOperatorsAreScopedByManifest(t *testing.T) {
+	packageDir := t.TempDir()
+	writePackageOperatorFixture(t, packageDir)
+	t.Setenv(importPathEnvironment, packageDir)
+
+	mainPath := filepath.Join(t.TempDir(), "main.slv")
+	writeSilverFile(t, mainPath, `
+let foo = import("foo.slv")
+let bar = import("bar.slv")
+foo.apply(foo.make(4), 2) * 10 + bar.apply(foo.make(4), 2)
+`)
+	result := New().EvalFile(mainPath, object.NewEnvironment())
+	assertInteger(t, result, 427)
+}
+
+func TestImportedPackageOperatorIsNotVisibleToImporter(t *testing.T) {
+	packageDir := t.TempDir()
+	writePackageOperatorFixture(t, packageDir)
+	t.Setenv(importPathEnvironment, packageDir)
+
+	mainPath := filepath.Join(t.TempDir(), "main.slv")
+	writeSilverFile(t, mainPath, `
+let foo = import("foo.slv")
+foo.make(4) @@ 2
+`)
+	result := New().EvalFile(mainPath, object.NewEnvironment())
+	failure, ok := result.(*object.Error)
+	if !ok || !strings.Contains(failure.MessageText(), "could not parse") {
+		t.Fatalf("result is %#v, want syntax error for package-local operator", result)
+	}
+}
+
+func writePackageOperatorFixture(t *testing.T, directory string) {
+	t.Helper()
+	writeSilverFile(t, filepath.Join(directory, "foo_operators.slv"), `operator @@ fn(left, right) int { 999 }`)
+	writeSilverFile(t, filepath.Join(directory, "foo.slv"), `
+export { Foo, make, apply }
+let operators = import("./foo_operators.slv")
+struct Foo {
+    value: int
+    @@: call(self: Foo, other: int) int
+}
+let overload = fn(self: Foo, other: int) int { self.value * 10 + other }
+let make = fn(value: int) Foo { Foo{value, overload} }
+let apply = fn(left: Foo, right: int) int { left @@ right }
+`)
+	if err := os.WriteFile(filepath.Join(directory, "foo.yaml"), []byte(`
+package: package_foo
+export:
+  - ./foo.slv
+  - ./foo_operators.slv
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	writeSilverFile(t, filepath.Join(directory, "bar_operators.slv"), `operator @@ fn(left, right) int { 7 }`)
+	writeSilverFile(t, filepath.Join(directory, "bar.slv"), `
+export { apply }
+let operators = import("./bar_operators.slv")
+let foo = import("./foo.slv")
+let apply = fn(left: foo.Foo, right: int) int { left @@ right }
+`)
+	if err := os.WriteFile(filepath.Join(directory, "bar.yaml"), []byte(`
+package: package_bar
+export:
+  - ./bar.slv
+  - ./bar_operators.slv
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestImportPrefersImporterDirectoryOverSilverPath(t *testing.T) {
 	sourceDir := t.TempDir()
 	libraryDir := t.TempDir()

@@ -13,6 +13,7 @@ type Environment struct {
 	types     map[string]*ast.TypeAnnotation
 	outer     *Environment // enclosing lexical scope, if any
 	sourceDir string       // directory of the source file being evaluated
+	packageID string       // manifest identity owning this source, if any
 	tasks     []*Task      // tasks launched directly in this lexical scope
 	defers    []DeferredCall
 }
@@ -131,6 +132,31 @@ func (e *Environment) SourceDir() string {
 	e.mu.RUnlock()
 	if outer != nil {
 		return outer.SourceDir()
+	}
+	return ""
+}
+
+// SetPackageID records the package whose source is evaluated in this scope.
+func (e *Environment) SetPackageID(id string) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.packageID = id
+}
+
+// PackageID returns this scope's package identity, inheriting it through
+// closures and call environments. The empty identity is the standalone/REPL
+// session shared by files that are not owned by a manifest.
+func (e *Environment) PackageID() string {
+	e.mu.RLock()
+	if e.packageID != "" {
+		id := e.packageID
+		e.mu.RUnlock()
+		return id
+	}
+	outer := e.outer
+	e.mu.RUnlock()
+	if outer != nil {
+		return outer.PackageID()
 	}
 	return ""
 }

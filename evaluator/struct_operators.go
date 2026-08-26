@@ -5,50 +5,39 @@ import (
 	"silver/object"
 )
 
-// structInfixOperatorMethods is the complete operator-overload registry.
-// Adding or replacing an entry here changes only struct dispatch; primitive
-// operator behavior remains in the existing type-specific evaluators.
-var structInfixOperatorMethods = map[string]string{
-	// Arithmetic operators
-	"+": "add",
-	"-": "sub",
-	"*": "mul",
-	"/": "div",
-	"%": "mod",
-
-	"**": "pow",
-	"//": "int_div",
-
-	// Comparison operators
-	"==": "eq",
-	"!=": "not_eq",
-
-	"<":  "lt",
-	">":  "gt",
-	"<=": "lte",
-	">=": "gte",
+// structOperatorVisible preserves the identity of package-local operators.
+// Built-in operators are language-wide, while a custom spelling overloads a
+// struct only when the expression and struct declaration belong to the same
+// package. Thus another package's identically-spelled operator cannot invoke
+// an imported struct's field accidentally.
+func (e *Evaluator) structOperatorVisible(symbol string, instance *object.StructInstance, env *object.Environment) bool {
+	packageID := env.PackageID()
+	if !e.operatorScope(packageID).registry.Has(symbol) {
+		return true
+	}
+	return instance.Struct.PackageID == packageID
 }
 
-// evalInfixExpression invokes an operator method when the left operand is a
-// struct instance and otherwise preserves Silver's primitive dispatch.
-func (e *Evaluator) evalInfixExpression(node *ast.InfixExpression, left, right object.Object) object.Object {
-	instance, ok := left.(*object.StructInstance)
-	if !ok {
-		return evalInfixExpression(node.Operator, left, right)
+// evalInfixExpression dispatches eligible struct values through their exact
+// symbolic field and otherwise retains primitive operator behavior.
+func (e *Evaluator) evalInfixExpression(node *ast.InfixExpression, left, right object.Object, env *object.Environment) object.Object {
+	if instance, ok := left.(*object.StructInstance); ok && e.structOperatorVisible(node.Operator, instance, env) {
+		return e.evalStructInfixExpression(node, instance, right)
 	}
+	return evalInfixExpression(node.Operator, left, right)
+}
 
-	methodName, ok := structInfixOperatorMethods[node.Operator]
-	if !ok {
-		return newError(object.RuntimeErrorKindType, "unknown operator: %s %s %s", left.Type(), node.Operator, right.Type())
-	}
-	method, exists := instance.Get(methodName)
+// evalStructInfixExpression invokes the field whose name exactly matches the
+// operator spelling.
+func (e *Evaluator) evalStructInfixExpression(node *ast.InfixExpression, instance *object.StructInstance, right object.Object) object.Object {
+	method, exists := instance.Get(node.Operator)
 	if !exists {
 		return newError(
 			object.RuntimeErrorKindAttribute,
-			"operator %q is not defined for struct %q: missing method %q",
+			"operator %q is not defined for struct %q: missing field %q",
 			node.Operator,
 			instance.Struct.Name,
-			methodName,
+			node.Operator,
 		)
 	}
 
@@ -58,7 +47,7 @@ func (e *Evaluator) evalInfixExpression(node *ast.InfixExpression, left, right o
 		callable = &object.BoundMethod{
 			Method:   method,
 			Receiver: instance,
-			Name:     methodName,
+			Name:     node.Operator,
 		}
 	case *object.BoundMethod:
 		// Rebind stored bound methods to the struct currently participating in
@@ -66,13 +55,13 @@ func (e *Evaluator) evalInfixExpression(node *ast.InfixExpression, left, right o
 		callable = &object.BoundMethod{
 			Method:   method.Method,
 			Receiver: instance,
-			Name:     methodName,
+			Name:     node.Operator,
 		}
 	default:
 		return newError(
 			object.RuntimeErrorKindType,
-			"operator method %q on struct %q is not callable",
-			methodName,
+			"operator field %q on struct %q is not callable",
+			node.Operator,
 			instance.Struct.Name,
 		)
 	}

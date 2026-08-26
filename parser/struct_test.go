@@ -73,6 +73,21 @@ func TestStructEmbeddedField(t *testing.T) {
 	}
 }
 
+func TestStructCustomOperatorField(t *testing.T) {
+	p := New(lexer.New(`
+operator @@ fn(left, right) { left }
+struct Box { value: int, @@: call(self: Box, other: int) int }
+`))
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	statement := program.Statements[1].(*ast.StructStatement)
+	field := statement.Fields[1]
+	if field.Value != "@@" || field.Type == nil || field.Type.String() != "call(self: Box, other: int) int" {
+		t.Fatalf("operator field is %#v, want typed @@ field", field)
+	}
+}
+
 func TestStructLiteral(t *testing.T) {
 	p := New(lexer.New(`Location{0.0, 1.0, 2.0}`))
 	program := p.ParseProgram()

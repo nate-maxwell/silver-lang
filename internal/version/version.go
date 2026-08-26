@@ -5,7 +5,7 @@ import "fmt"
 
 const (
 	Major int64 = 0
-	Minor int64 = 7
+	Minor int64 = 8
 	Patch int64 = 0
 )
 

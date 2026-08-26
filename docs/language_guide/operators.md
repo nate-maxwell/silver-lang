@@ -79,6 +79,8 @@ io.println( first_function() |> second_function |> third_function )
 ```
 
 ### Boilerplate Operators
+
+#### Appending
 ```silver
 operator <> 15 fn(left: array, right: any) array {
     return arrays.append(left, right)
@@ -89,6 +91,36 @@ io.println( foo <> "new" )
 ```
 ```
 >> [new]
+```
+
+#### Range
+```silver
+operator .. 60 fn(left: int, right: int) array {
+    return core.range(left, right)
+}
+
+for i in 2..10 {
+    io.print(i)
+}
+```
+```
+>> 23456789
+```
+
+#### null Coalescing
+Think `let name = user.name ?? "anonymous"`
+```silver
+operator ?? fn(left: any, right: any) any {
+    if core.type(left) == null {
+        return right
+    }
+    return left
+}
+
+io.println(null ?? 5)
+```
+```
+>> 5
 ```
 
 ### Destructuring Utilization

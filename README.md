@@ -105,6 +105,29 @@ Because `move` has a detailed `call(self: MovableLocation)` field contract, read
 as its first argument. Nothing special was declared outside the struct: the method is an ordinary function stored
 in an ordinary field. Silver builds operator overloading and custom indexing on the same foundation.
 
+## Extensible syntax
+
+Silver allows users to create their own infix operators (operators with a left and
+right expression, like `+`).
+
+```
+operator .. 65 fn(left: int, right: int) array {
+    return core.range(left, right)
+}
+
+for i in 0..100 { io.println(i) }
+```
+```silver
+operator ?? fn(left: any, right: any) any {
+    if core.type(left) == null {
+        return right
+    }
+    return left
+}
+
+let name = user.name ?? "anonymous"
+```
+
 ## Errors are part of the signature
 
 Any struct can be an expected error type. Returning one of a function's declared error alternatives unwinds to

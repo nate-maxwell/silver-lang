@@ -6,6 +6,11 @@
 - [Language Guide](language_guide/language_guide.md) — syntax, values, types, structs, errors, modules, concurrency, and
   templates.
 
+## Command-line interface
+
+- [CLI reference](cli.md) — run files and the REPL, format source, generate caches, initialize packages, and inspect
+  the version.
+
 ## Standard library
 
 - [`http`](stdlib/http.md) - HTTP methods, status codes, descriptions, and status classes.

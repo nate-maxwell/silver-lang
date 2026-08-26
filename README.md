@@ -17,7 +17,8 @@ The implementation is written in Go and includes a REPL, source modules, cached 
 library implemented in both Go and Silver. Silver is currently a young language: it is a good place to experiment,
 learn, and contribute, but its syntax and APIs may still evolve.
 
-Read the [documentation table of contents](docs/table_of_contents.md), start with [Getting Started](docs/getting_started.md), or dive into the
+Read the [documentation table of contents](docs/table_of_contents.md), start with
+[Getting Started](docs/getting_started.md), browse the [CLI reference](docs/cli.md), or dive into the
 [Language Guide](docs/language_guide/language_guide.md).
 
 

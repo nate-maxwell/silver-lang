@@ -104,12 +104,10 @@ operator .. 60 fn(left: int, right: int) array {
     return core.range(left, right)
 }
 
-for i in 2..10 {
-    io.print(i)
-}
+io.print(2..10)
 ```
 ```
->> 23456789
+>> [2, 3, 4, 5, 6, 7, 8, 9]
 ```
 
 #### null Coalescing

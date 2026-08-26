@@ -9,6 +9,7 @@ import (
 	"silver/formatter"
 	"silver/internal/version"
 	"silver/object"
+	"silver/packages"
 	"silver/repl"
 )
 
@@ -16,6 +17,7 @@ const usage = `usage:
   silver [file]
   silver astgen <path>
   silver frmt <file>
+  silver package init <package_name>
   silver version`
 
 type command struct {
@@ -26,6 +28,7 @@ type command struct {
 var commands = []command{
 	{name: "astgen", run: astgen.RunASTGen},
 	{name: "frmt", run: runFormat},
+	{name: "package", run: runPackage},
 	{name: "version", run: runVersion},
 }
 
@@ -85,6 +88,21 @@ func runFormat(args []string, _ io.Reader, out, errOut io.Writer) int {
 	if changed {
 		fmt.Fprintln(out, args[0])
 	}
+	return 0
+}
+
+func runPackage(args []string, _ io.Reader, out, errOut io.Writer) int {
+	if len(args) != 2 || args[0] != "init" {
+		fmt.Fprintln(errOut, "usage: silver package init <package_name>")
+		return 2
+	}
+
+	path, err := packages.Init(".", args[1])
+	if err != nil {
+		fmt.Fprintln(errOut, err)
+		return 1
+	}
+	fmt.Fprintf(out, "created %s\n", path)
 	return 0
 }
 

@@ -30,6 +30,12 @@ silver astgen <path>
 
 When given a directory, `astgen` recursively generates a sibling `.astc` file for every `.slv` file below it.
 
+Initialize a `package.yaml` manifest in the current directory with a package name and an empty export list:
+
+```text
+silver package init <package_name>
+```
+
 ## Use the REPL
 
 Start Silver without a file:

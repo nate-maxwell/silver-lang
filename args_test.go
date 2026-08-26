@@ -145,6 +145,84 @@ func TestRunFormatRequiresExactlyOneFile(t *testing.T) {
 	}
 }
 
+func TestRunPackageInit(t *testing.T) {
+	directory := t.TempDir()
+	t.Chdir(directory)
+
+	var stdout, stderr bytes.Buffer
+	code := run([]string{"package", "init", "example_2"}, strings.NewReader(""), &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("run returned %d; stderr: %s", code, stderr.String())
+	}
+	if got, want := stdout.String(), "created package.yaml\n"; got != want {
+		t.Fatalf("stdout is %q, want %q", got, want)
+	}
+	contents, err := os.ReadFile(filepath.Join(directory, "package.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := string(contents), "package: example_2\nexport: []\n"; got != want {
+		t.Fatalf("package.yaml is %q, want %q", got, want)
+	}
+}
+
+func TestRunPackageInitRejectsInvalidUsage(t *testing.T) {
+	for _, args := range [][]string{
+		{"package"},
+		{"package", "init"},
+		{"package", "init", "example", "extra"},
+		{"package", "unknown", "example"},
+	} {
+		var stdout, stderr bytes.Buffer
+		if code := run(args, strings.NewReader(""), &stdout, &stderr); code != 2 {
+			t.Fatalf("run(%q) returned %d, want 2", args, code)
+		}
+		if got, want := stderr.String(), "usage: silver package init <package_name>\n"; got != want {
+			t.Fatalf("stderr is %q, want %q", got, want)
+		}
+	}
+}
+
+func TestRunPackageInitRejectsInvalidName(t *testing.T) {
+	directory := t.TempDir()
+	t.Chdir(directory)
+
+	var stdout, stderr bytes.Buffer
+	if code := run([]string{"package", "init", "2invalid"}, strings.NewReader(""), &stdout, &stderr); code != 1 {
+		t.Fatalf("run returned %d, want 1", code)
+	}
+	if !strings.Contains(stderr.String(), `package name "2invalid" is invalid`) {
+		t.Fatalf("unexpected stderr: %q", stderr.String())
+	}
+	if _, err := os.Stat(filepath.Join(directory, "package.yaml")); !os.IsNotExist(err) {
+		t.Fatalf("package.yaml exists after invalid input: %v", err)
+	}
+}
+
+func TestRunPackageInitDoesNotOverwriteManifest(t *testing.T) {
+	directory := t.TempDir()
+	t.Chdir(directory)
+	path := filepath.Join(directory, "package.yaml")
+	if err := os.WriteFile(path, []byte("keep me"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	var stdout, stderr bytes.Buffer
+	if code := run([]string{"package", "init", "example"}, strings.NewReader(""), &stdout, &stderr); code != 1 {
+		t.Fatalf("run returned %d, want 1", code)
+	}
+	if !strings.Contains(stderr.String(), "package.yaml already exists") {
+		t.Fatalf("unexpected stderr: %q", stderr.String())
+	}
+	contents, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := string(contents), "keep me"; got != want {
+		t.Fatalf("existing package.yaml is %q, want %q", got, want)
+	}
+}
+
 func TestRunVersion(t *testing.T) {
 	var stdout, stderr bytes.Buffer
 	if code := run([]string{"version"}, strings.NewReader(""), &stdout, &stderr); code != 0 {

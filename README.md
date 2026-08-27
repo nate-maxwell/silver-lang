@@ -9,7 +9,7 @@ dependency injection, and even standard-library objects all grow from that small
 Silver exists to maximize code reuse without the drawbacks of inheritance, while minimizing boilerplate:
 
 - ordinary structs have ordinary functions added to fields as struct methods;
-- structs destructure, or unpack, themselves when passed to functions that expect different types;
+- structs offer their fields when passed to functions that expect different types;
 - composed structs can "embed" themselvevs, elevating their members to the outer struct namespace;
 - users can define custom operators that are accessible package-wide;
 - structs can overload builtin and custom operators.

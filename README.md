@@ -77,7 +77,8 @@ print(location.x, location.y, location.z)
 
 Because `move` has a detailed `call(self: MovableLocation)` field contract, reading `location.move` binds `location`
 as its first argument. Nothing special was declared outside the struct: the method is an ordinary function stored
-in an ordinary field. Silver builds operator overloading and custom indexing on the same foundation.
+in an ordinary field. Silver builds operator overloading and custom indexing on the same foundation and has a multitude
+of ways structs can utilize callable fields.
 
 ## Struct Embedding
 

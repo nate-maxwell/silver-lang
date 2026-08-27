@@ -21,7 +21,7 @@ Read the [documentation table of contents](docs/table_of_contents.md), start wit
 [Getting Started](docs/getting_started.md), browse the [CLI reference](docs/cli.md), or dive into the
 [Language Guide](docs/language_guide/language_guide.md).
 
-## Behavior iI Data
+## Behavior Is Data
 
 Silver functions can destructure structs by parameter name. Here, `move` declares three float parameters, but
 receives one `Location`:

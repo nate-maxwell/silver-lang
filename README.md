@@ -8,48 +8,20 @@ dependency injection, and even standard-library objects all grow from that small
 
 Silver exists to maximize code reuse without the drawbacks of inheritance, while minimizing boilerplate:
 
-- functions are values, attachable to any struct that needs them;
-- polymorphism works through shape — if a struct has the right fields, it works;
-- structs compose through embedding, promoting fields and behavior up the chain;
-- user-defined infix operators to minimize repetitive actions.
+- ordinary structs have ordinary functions added to fields as struct methods;
+- structs destructure, or unpack, themselves when passed to functions that expect different types;
+- composed structs can "embed" themselvevs, elevating their members to the outer struct namespace;
+- users can define custom operators that are accessible package-wide;
+- structs can overload builtin and custom operators.
 
 The implementation is written in Go and includes a REPL, source modules, cached ASTs, tracebacks, and a standard
-library implemented in both Go and Silver. Silver is currently a young language: it is a good place to experiment,
-learn, and contribute, but its syntax and APIs may still evolve.
+library implemented in both Go and Silver. Silver is currently a young language: it is a good place to experiment and learn, but its syntax and APIs may still evolve.
 
 Read the [documentation table of contents](docs/table_of_contents.md), start with
 [Getting Started](docs/getting_started.md), browse the [CLI reference](docs/cli.md), or dive into the
 [Language Guide](docs/language_guide/language_guide.md).
 
-
-## Basic syntax
-
-Import a module, create values, and use familiar control flow:
-
-```silver
-let io = import("io")
-let core = import("core")
-
-let total = 0
-for number in core.range(1, 6) {
-    total = total + number
-}
-
-io.println("1 + 2 + 3 + 4 + 5 =", total)
-```
-
-Types are optional and checked when the program runs:
-
-```silver
-let apply = fn(operation: call(int) int, value: int) int {
-    return operation(value)
-}
-
-let double = fn(value: int) int { return value * 2 }
-apply(double, 21) # 42
-```
-
-## Behavior is data
+## Behavior iI Data
 
 Silver functions can destructure structs by parameter name. Here, `move` declares three float parameters, but
 receives one `Location`:
@@ -98,7 +70,8 @@ let move = fn(self: MovableLocation) {
 let location = MovableLocation{0.0, 0.0, 0.0, move}
 location.move()
 print(location.x, location.y, location.z)
-
+```
+```
 >> 5.0 5.0 5.0
 ```
 
@@ -106,7 +79,31 @@ Because `move` has a detailed `call(self: MovableLocation)` field contract, read
 as its first argument. Nothing special was declared outside the struct: the method is an ordinary function stored
 in an ordinary field. Silver builds operator overloading and custom indexing on the same foundation.
 
-## Extensible syntax
+## Struct Embedding
+
+Struts can "embed" themsleves in other structs, raising their members to the outer struct's namespace.
+
+```
+struct Location {
+    x: float
+    y: float
+}
+
+struct Actor {
+    name: str
+    location:: Location
+}
+
+let foo = Location { 1.0, 2.0 }
+let bar = Actor { "Ada", foo }
+
+io.print(bar.x, bar.y)
+```
+```
+>> 1.0 2.0
+```
+
+## Custom Operators
 
 Silver allows users to create their own infix operators (operators with a left and
 right expression, like `+`).
@@ -129,56 +126,34 @@ operator ?? fn(left: any, right: any) any {
 let name = user.name ?? "anonymous"
 ```
 
-## Errors are part of the signature
+## Operator Overloading
 
-Any struct can be an expected error type. Returning one of a function's declared error alternatives unwinds to
-a matching `catch`:
-
-```silver
-struct MissingUser { message: str, id: int }
-
-let find_user = fn(id: int) str | MissingUser {
-    if id == 7 {
-        return "Ada"
-    } else {
-        return MissingUser{"user not found", id}
-    }
-}
-
-let result = try {
-    find_user(42)
-} catch MissingUser err {
-    err.message
-}
-```
-
-Runtime failures use the same path, so errors such as `TypeError`, `KeyError`, and `AssertionError` are catchable too.
-
-## Lazy templates and structured concurrency
-
-Triple-backtick templates capture their lexical scope and evaluate only when asked:
-
-````silver
-let name = "Silver"
-let greeting: TemplateString = ```Hello, {name}!```
-name = "world"
-greeting.eval() # "Hello, world!"
-````
-
-Tasks run zero-argument callables concurrently. `collect` joins them and names each non-null result after its
-handle:
+Structs overload an operator by declaring a callable field named after that operator. The left operand becomes
+`self`, and the right operand is passed as the method's argument:
 
 ```silver
-let answer = fn() int { return 6 * 7 }
-let greeting = fn() str { return "hello" }
+struct Vector {
+    x: int
+    y: int
+    +: call(self: Vector, other: Vector) Vector
+}
 
-let calculation = task answer
-let message = task greeting
-let results = collect calculation, message
+let add = fn(self: Vector, other: Vector) Vector {
+    return Vector{self.x + other.x, self.y + other.y, add}
+}
 
-results.calculation # 42
-results.message     # "hello"
+let first = Vector{2, 3, add}
+let second = Vector{5, 8, add}
+let sum = first + second
 ```
+```
+>> Vector{7, 11, add}
+```
+
+The same mechanism works for both built-in and custom infix operators.
+
+Structs overload operators defined in their package of origin. This prevents dependent
+packages from consuming all possible operator spellings.
 
 ## Get started
 

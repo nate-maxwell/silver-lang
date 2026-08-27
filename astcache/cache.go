@@ -23,6 +23,7 @@ const (
 	cacheSuffix   = ".astc"
 	maxPathLength = 1 << 20
 	maxCacheSize  = 64 << 20
+	contextFlag   = uint32(1 << 31)
 )
 
 var magic = [8]byte{'S', 'L', 'V', 'R', 'A', 'S', 'T', 0}
@@ -80,6 +81,17 @@ func Path(sourcePath string) string {
 // contents match. Any cache problem is reported as a miss so callers can fall
 // back to parsing the source.
 func Load(sourcePath string, source []byte) (*ast.Program, bool) {
+	return loadFile(sourcePath, source, nil)
+}
+
+// LoadWithContext returns a cached program only when the cache also matches
+// the supplied parser context. Package-local operator grammars use this to
+// keep their ASTs distinct from context-free file ASTs.
+func LoadWithContext(sourcePath string, source, context []byte) (*ast.Program, bool) {
+	return loadFile(sourcePath, source, context)
+}
+
+func loadFile(sourcePath string, source, context []byte) (*ast.Program, bool) {
 	file, err := os.Open(Path(sourcePath))
 	if err != nil {
 		return nil, false
@@ -90,7 +102,7 @@ func Load(sourcePath string, source []byte) (*ast.Program, bool) {
 	if err != nil || info.Size() > maxCacheSize {
 		return nil, false
 	}
-	return load(file, sourcePath, source)
+	return load(file, sourcePath, source, context)
 }
 
 // LoadBytes returns a cached program from in-memory cache data only when its
@@ -100,10 +112,10 @@ func LoadBytes(sourcePath string, source, cache []byte) (*ast.Program, bool) {
 	if len(cache) > maxCacheSize {
 		return nil, false
 	}
-	return load(bytes.NewReader(cache), sourcePath, source)
+	return load(bytes.NewReader(cache), sourcePath, source, nil)
 }
 
-func load(input io.Reader, sourcePath string, source []byte) (*ast.Program, bool) {
+func load(input io.Reader, sourcePath string, source, context []byte) (*ast.Program, bool) {
 	reader := bufio.NewReader(input)
 	var cachedMagic [len(magic)]byte
 	if _, err := io.ReadFull(reader, cachedMagic[:]); err != nil || cachedMagic != magic {
@@ -111,13 +123,23 @@ func load(input io.Reader, sourcePath string, source []byte) (*ast.Program, bool
 	}
 
 	var version uint32
-	if err := binary.Read(reader, binary.BigEndian, &version); err != nil || version != Version {
+	if err := binary.Read(reader, binary.BigEndian, &version); err != nil {
+		return nil, false
+	}
+	contextual := version == Version|contextFlag
+	if version != Version && !contextual || version == Version && len(context) != 0 {
 		return nil, false
 	}
 
 	var cachedHash [sha256.Size]byte
 	if _, err := io.ReadFull(reader, cachedHash[:]); err != nil || cachedHash != sha256.Sum256(source) {
 		return nil, false
+	}
+	if contextual {
+		var cachedContextHash [sha256.Size]byte
+		if _, err := io.ReadFull(reader, cachedContextHash[:]); err != nil || cachedContextHash != sha256.Sum256(context) {
+			return nil, false
+		}
 	}
 
 	var pathLength uint32
@@ -139,6 +161,15 @@ func load(input io.Reader, sourcePath string, source []byte) (*ast.Program, bool
 // Store atomically writes program's cache. The source file remains the source
 // of truth; callers may safely ignore a returned error.
 func Store(sourcePath string, source []byte, program *ast.Program) error {
+	return store(sourcePath, source, nil, program)
+}
+
+// StoreWithContext atomically writes a cache tied to a parser context.
+func StoreWithContext(sourcePath string, source, context []byte, program *ast.Program) error {
+	return store(sourcePath, source, context, program)
+}
+
+func store(sourcePath string, source, context []byte, program *ast.Program) error {
 	if program == nil {
 		return errors.New("cannot cache a nil AST")
 	}
@@ -152,7 +183,7 @@ func Store(sourcePath string, source []byte, program *ast.Program) error {
 	defer os.Remove(temporaryPath)
 
 	writer := bufio.NewWriter(temporary)
-	writeError := write(writer, sourcePath, source, program)
+	writeError := write(writer, sourcePath, source, context, program)
 	if writeError == nil {
 		writeError = writer.Flush()
 	}
@@ -169,16 +200,26 @@ func Store(sourcePath string, source []byte, program *ast.Program) error {
 	return nil
 }
 
-func write(writer io.Writer, sourcePath string, source []byte, program *ast.Program) error {
+func write(writer io.Writer, sourcePath string, source, context []byte, program *ast.Program) error {
 	if _, err := writer.Write(magic[:]); err != nil {
 		return err
 	}
-	if err := binary.Write(writer, binary.BigEndian, Version); err != nil {
+	version := Version
+	if len(context) != 0 {
+		version |= contextFlag
+	}
+	if err := binary.Write(writer, binary.BigEndian, version); err != nil {
 		return err
 	}
 	digest := sha256.Sum256(source)
 	if _, err := writer.Write(digest[:]); err != nil {
 		return err
+	}
+	if len(context) != 0 {
+		contextDigest := sha256.Sum256(context)
+		if _, err := writer.Write(contextDigest[:]); err != nil {
+			return err
+		}
 	}
 	pathBytes := []byte(sourcePath)
 	if len(pathBytes) > maxPathLength {

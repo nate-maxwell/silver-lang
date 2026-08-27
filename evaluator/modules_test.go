@@ -156,6 +156,44 @@ export:
 	}
 }
 
+func TestSilverPathPackageUsesAndCreatesASTCaches(t *testing.T) {
+	sourceDir := t.TempDir()
+	packageDir := t.TempDir()
+	cachedPath := filepath.Join(packageDir, "cached.slv")
+	uncachedPath := filepath.Join(packageDir, "uncached.slv")
+	cachedSource := []byte("let value = 1")
+	uncachedSource := []byte("let value = 42")
+	writeSilverFile(t, cachedPath, string(cachedSource))
+	writeSilverFile(t, uncachedPath, string(uncachedSource))
+
+	// Store an AST whose source hash matches cached.slv but whose value makes
+	// cache use observable. A package import should load this program instead
+	// of reparsing the source.
+	cachedProgram, parseError := ParseSource(cachedPath, []byte("let value = 41"))
+	if parseError != nil {
+		t.Fatal(parseError)
+	}
+	if err := astcache.Store(cachedPath, cachedSource, cachedProgram); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(packageDir, "package.yaml"), []byte(`
+package: example
+export:
+  - cached.slv
+  - uncached.slv
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv(importPathEnvironment, packageDir)
+
+	env := object.NewEnvironment()
+	env.SetSourceDir(sourceDir)
+	assertInteger(t, evalInput(t, New(), env, `import("cached.slv").value`), 41)
+	if _, ok := astcache.Load(uncachedPath, uncachedSource); !ok {
+		t.Fatal("package import did not create an AST cache for an uncached export")
+	}
+}
+
 func TestSilverPathAcceptsExplicitSourceFile(t *testing.T) {
 	sourceDir := t.TempDir()
 	fileDir := t.TempDir()
@@ -206,6 +244,16 @@ let bar = import("bar.slv")
 foo.apply(foo.make(4), 2) * 10 + bar.apply(foo.make(4), 2)
 `)
 	result := New().EvalFile(mainPath, object.NewEnvironment())
+	assertInteger(t, result, 427)
+	for _, name := range []string{"foo.slv", "foo_operators.slv", "bar.slv", "bar_operators.slv"} {
+		if _, err := os.Stat(astcache.Path(filepath.Join(packageDir, name))); err != nil {
+			t.Fatalf("package operator cache for %s was not created: %v", name, err)
+		}
+	}
+
+	// A fresh evaluator prepares both packages again and consumes their
+	// context-tagged caches without leaking either operator grammar.
+	result = New().EvalFile(mainPath, object.NewEnvironment())
 	assertInteger(t, result, 427)
 }
 

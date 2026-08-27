@@ -1,13 +1,16 @@
 package evaluator
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
 	"silver/ast"
+	"silver/astcache"
 	"silver/object"
 	"silver/packages"
 	"silver/parser"
+	"sort"
 	"strings"
 	"sync"
 )
@@ -60,6 +63,7 @@ func (e *Evaluator) preparePackage(manifest *packages.Manifest) (*packageState, 
 	registry := e.operatorScope(manifest.ID()).registry
 	exports := manifest.Exports()
 	inputs := make(map[string][]byte, len(exports))
+	var declarations []parser.OperatorDeclaration
 	for _, exported := range exports {
 		input, err := os.ReadFile(exported.Path())
 		if err != nil {
@@ -80,18 +84,46 @@ func (e *Evaluator) preparePackage(manifest *packages.Manifest) (*packageState, 
 				)
 				return state, state.parseErr
 			}
+			declarations = append(declarations, declaration)
 		}
 	}
+	cacheContext := packageCacheContext(declarations)
 	for _, exported := range exports {
 		input := inputs[packagePathKey(exported.Path())]
+		if program, ok := astcache.LoadWithContext(exported.Path(), input, cacheContext); ok {
+			state.programs[packagePathKey(exported.Path())] = program
+			continue
+		}
 		program, parseError := parseSourceWithRegistry(exported.Path(), input, registry)
 		if parseError != nil {
 			state.parseErr = parseError
 			return state, parseError
 		}
 		state.programs[packagePathKey(exported.Path())] = program
+		// Cache writes are optional; read-only packages must remain importable.
+		_ = astcache.StoreWithContext(exported.Path(), input, cacheContext, program)
 	}
 	return state, nil
+}
+
+// packageCacheContext identifies the grammar shared by a manifest's exports.
+// An empty context deliberately remains compatible with ordinary file caches.
+func packageCacheContext(declarations []parser.OperatorDeclaration) []byte {
+	if len(declarations) == 0 {
+		return nil
+	}
+	sort.Slice(declarations, func(left, right int) bool {
+		if declarations[left].Symbol != declarations[right].Symbol {
+			return declarations[left].Symbol < declarations[right].Symbol
+		}
+		return declarations[left].BindingPower < declarations[right].BindingPower
+	})
+	var context strings.Builder
+	context.WriteString("package-operators-v1\n")
+	for _, declaration := range declarations {
+		fmt.Fprintf(&context, "%d:%s:%d\n", len(declaration.Symbol), declaration.Symbol, declaration.BindingPower)
+	}
+	return []byte(context.String())
 }
 
 func packagePathKey(path string) string {

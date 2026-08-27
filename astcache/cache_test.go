@@ -71,6 +71,25 @@ func TestSourceChangeInvalidatesCache(t *testing.T) {
 	}
 }
 
+func TestParserContextSeparatesCaches(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "main.slv")
+	source := []byte("let answer = 42")
+	context := []byte("package operators: @@=60")
+	if err := astcache.StoreWithContext(path, source, context, parse(t, path, source)); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, ok := astcache.LoadWithContext(path, source, context); !ok {
+		t.Fatal("cache did not match its parser context")
+	}
+	if _, ok := astcache.LoadWithContext(path, source, []byte("package operators: @@=70")); ok {
+		t.Fatal("cache matched a different parser context")
+	}
+	if _, ok := astcache.Load(path, source); ok {
+		t.Fatal("contextual cache matched a context-free load")
+	}
+}
+
 func TestLoadBytes(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "embedded.slv")
 	source := []byte("let answer = 42")

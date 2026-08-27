@@ -38,11 +38,11 @@ struct Server {
 }
 
 let response = fn(status_code: int, body: str) Response {
-    Response{status_code, _http.status_description(status_code), {}, body}
+    return Response{status_code, _http.status_description(status_code), {}, body}
 }
 
 let response_with_headers = fn(status_code: int, headers: map, body: str) Response {
-    Response{status_code, _http.status_description(status_code), headers, body}
+    return Response{status_code, _http.status_description(status_code), headers, body}
 }
 
 let _normalized_headers = fn(headers: map) map {
@@ -184,7 +184,7 @@ let _close = fn(self: Server) | ConnectionError {
 let new = fn(address: str, handler: call(request: Request) Response) Server | ListenError {
     let listener = _net.listen(address)
     let bound_handler = fn(self: Server, request: Request) Response {
-        handler(request)
+        return handler(request)
     }
-    Server{listener.address, listener, bound_handler, _serve_once, _serve, _close}
+    return Server{listener.address, listener, bound_handler, _serve_once, _serve, _close}
 }

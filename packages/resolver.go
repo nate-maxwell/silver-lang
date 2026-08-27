@@ -8,6 +8,11 @@ import (
 
 // Resolve searches explicit source entries and package exports in search-path
 // order. An exported file may be addressed by its declared path or basename.
+//
+// The returned Manifest is nil for an individual source-file entry or a file
+// found through a legacy directory. If no entry matches, Resolve returns an
+// empty path, a nil Manifest, false, and a nil error. Resolve returns an error
+// when the index has not been refreshed or its latest refresh failed.
 func (index *Index) Resolve(request string) (string, *Manifest, bool, error) {
 	index.mu.RLock()
 	defer index.mu.RUnlock()
@@ -40,10 +45,14 @@ func (index *Index) Resolve(request string) (string, *Manifest, bool, error) {
 	return "", nil, false, nil
 }
 
+// matchesExposedFile reports whether an import request matches an exposed
+// file's basename or its manifest-declared relative path.
 func matchesExposedFile(wanted, base, declared string) bool {
 	return wanted == cleanImportName(base) || declared != "" && wanted == cleanImportName(declared)
 }
 
+// importCandidateExists reports whether a legacy import candidate exists. It
+// preserves non-not-found filesystem errors for the later module read.
 func importCandidateExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil || !os.IsNotExist(err)

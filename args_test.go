@@ -91,7 +91,7 @@ fail()
 func TestRunFileReportsUnhandledStructError(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "main.slv")
 	source := `struct Missing { message: str }
-let read = fn() str | Missing { Missing{"not found"} }
+let read = fn() str | Missing { return Missing{"not found"} }
 read()
 `
 	if err := os.WriteFile(path, []byte(source), 0644); err != nil {

@@ -22,7 +22,7 @@ func TestTypedLetBindingRejectsMismatch(t *testing.T) {
 }
 
 func TestTypedFunctionParameter(t *testing.T) {
-	evaluated := testEval("let double = fn(value: int) int { value * 2 }\ndouble(\"two\")")
+	evaluated := testEval("let double = fn(value: int) int { return value * 2 }\ndouble(\"two\")")
 	err, ok := evaluated.(*object.Error)
 	if !ok {
 		t.Fatalf("result is %T, want *object.Error", evaluated)
@@ -32,8 +32,8 @@ func TestTypedFunctionParameter(t *testing.T) {
 	}
 }
 
-func TestTypedFunctionReturnValue(t *testing.T) {
-	evaluated := testEval("let label = fn() str { 42 }\nlabel()")
+func TestTypedFunctionValidatesExplicitReturnValue(t *testing.T) {
+	evaluated := testEval("let label = fn() str { return 42 }\nlabel()")
 	err, ok := evaluated.(*object.Error)
 	if !ok {
 		t.Fatalf("result is %T, want *object.Error", evaluated)
@@ -71,10 +71,10 @@ func TestModuleTypeAnnotationAcceptsImportedModules(t *testing.T) {
 	dir := t.TempDir()
 	libraryPath := filepath.Join(dir, "library.slv")
 	mainPath := filepath.Join(dir, "main.slv")
-	writeSilverFile(t, libraryPath, `let double = fn(value: int) int { value * 2 }`)
+	writeSilverFile(t, libraryPath, `let double = fn(value: int) int { return value * 2 }`)
 	writeSilverFile(t, mainPath, `
-let load = fn() module { import("./library.slv") }
-let process = fn(lib: module) int { lib.double(21) }
+let load = fn() module { return import("./library.slv") }
+let process = fn(lib: module) int { return lib.double(21) }
 let library: module = load()
 process(library)
 `)
@@ -99,7 +99,7 @@ process(42)
 
 func TestModuleReturnTypeRejectsNonModules(t *testing.T) {
 	evaluated := testEval(`
-let load = fn() module { 42 }
+let load = fn() module { return 42 }
 load()
 `)
 	err, ok := evaluated.(*object.Error)
@@ -134,7 +134,7 @@ func TestTypedHigherOrderFunction(t *testing.T) {
 let apply = fn(operation: call(int) int, value: int) int {
 	return operation(value)
 }
-apply(fn(value: int) int { value * 2 }, 21)
+apply(fn(value: int) int { return value * 2 }, 21)
 `)
 	testIntegerObject(t, evaluated, 42)
 }
@@ -144,7 +144,7 @@ func TestCallSignatureRejectsWrongArgumentSignature(t *testing.T) {
 let apply = fn(operation: call(int) int, value: int) int {
 	return operation(value)
 }
-apply(fn(value: str) int { 1 }, 21)
+apply(fn(value: str) int { return 1 }, 21)
 `)
 	err, ok := evaluated.(*object.Error)
 	if !ok {
@@ -160,7 +160,7 @@ func TestCallSignatureRejectsWrongArity(t *testing.T) {
 let apply = fn(operation: call(int) int, value: int) int {
 	return operation(value)
 }
-apply(fn(left: int, right: int) int { left + right }, 21)
+apply(fn(left: int, right: int) int { return left + right }, 21)
 `)
 	err, ok := evaluated.(*object.Error)
 	if !ok {
@@ -174,7 +174,7 @@ apply(fn(left: int, right: int) int { left + right }, 21)
 func TestCallSignatureReturnTypeAndClosure(t *testing.T) {
 	evaluated := testEval(`
 let makeAdder = fn(amount: int) call(int) int {
-	return fn(value: int) int { value + amount }
+	return fn(value: int) int { return value + amount }
 }
 let addTwo: call(int) int = makeAdder(2)
 addTwo(40)
@@ -185,7 +185,7 @@ addTwo(40)
 func TestCallSignatureRejectsWrongReturnedFunction(t *testing.T) {
 	evaluated := testEval(`
 let makeIdentity = fn() call(int) int {
-	return fn(value: str) int { 1 }
+	return fn(value: str) int { return 1 }
 }
 makeIdentity()
 `)
@@ -204,9 +204,10 @@ struct FileNotFound {
 	message: str
 }
 let open = fn(found: bool) str | FileNotFound {
-	if (found) { "contents" } else { FileNotFound{"missing"} }
+	if (found) { return "contents" }
+	return FileNotFound{"missing"}
 }
-let describe = fn(message: str) str { message }
+let describe = fn(message: str) str { return message }
 try {
 	describe(open(False))
 } catch FileNotFound err {
@@ -222,7 +223,7 @@ try {
 func TestFunctionMayReturnSuccessFromReturnUnion(t *testing.T) {
 	evaluated := testEval(`
 struct FileNotFound { message: str }
-let open = fn() str | FileNotFound { "contents" }
+let open = fn() str | FileNotFound { return "contents" }
 open()
 `)
 	value, ok := evaluated.(*object.String)
@@ -273,7 +274,7 @@ try {
 func TestReturnUnionRejectsUndeclaredValue(t *testing.T) {
 	evaluated := testEval(`
 struct FileNotFound { message: str }
-let open = fn() str | FileNotFound { 42 }
+let open = fn() str | FileNotFound { return 42 }
 open()
 `)
 	err, ok := evaluated.(*object.Error)
@@ -299,7 +300,7 @@ func TestErrorReturnAlternativeMustBeStruct(t *testing.T) {
 func TestCallableReturnUnionAcceptsFunctionWithFewerErrors(t *testing.T) {
 	evaluated := testEval(`
 struct FileNotFound { message: str }
-let opener: call() str | FileNotFound = fn() str { "contents" }
+let opener: call() str | FileNotFound = fn() str { return "contents" }
 opener()
 `)
 	value, ok := evaluated.(*object.String)
@@ -311,7 +312,7 @@ opener()
 func TestCallableReturnUnionRejectsUndeclaredFunctionError(t *testing.T) {
 	evaluated := testEval(`
 struct FileNotFound { message: str }
-let opener: call() str = fn() str | FileNotFound { "contents" }
+let opener: call() str = fn() str | FileNotFound { return "contents" }
 `)
 	err, ok := evaluated.(*object.Error)
 	if !ok {

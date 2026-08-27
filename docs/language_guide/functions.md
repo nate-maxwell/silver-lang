@@ -73,8 +73,9 @@ data.
 
 ## Return behavior
 
-An annotated function returns its final body expression implicitly. `return expression` leaves the function early, and
-`return` by itself produces null:
+Functions never return their final body expression implicitly. `return expression` supplies a result and leaves the
+function; `return` by itself produces null. An annotated function that reaches the end of its body therefore attempts
+to return null, which must satisfy its declared return type:
 
 ```silver
 let first_positive = fn(values: array) int {
@@ -116,7 +117,7 @@ returned. Here is a clsoure example of function currying:
 
 ```silver
 let make_adder = fn(amount: int) call(int) int {
-    return fn(value: int) int { value + amount }
+    return fn(value: int) int { return value + amount }
 }
 
 let add_two = make_adder(2)
@@ -130,7 +131,7 @@ enclosing scope:
 let count = 0
 let next = fn() int {
     count = count + 1
-    count
+    return count
 }
 
 next() # 1

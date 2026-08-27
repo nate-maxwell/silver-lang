@@ -12,7 +12,7 @@ struct Box {
 	get_item: call(self: Box, key: str) int
 	set_item: call(self: Box, key: str, value: int)
 }
-let get_item = fn(self: Box, key: str) int { self.values[key] }
+let get_item = fn(self: Box, key: str) int { return self.values[key] }
 let set_item = fn(self: Box, key: str, value: int) { self.values[key] = value }
 let box = Box{{"answer": 1}, get_item, set_item}
 `

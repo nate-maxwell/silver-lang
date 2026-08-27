@@ -130,7 +130,7 @@ copied.append(4)
 
 func TestDefaultMapSetAndNominalType(t *testing.T) {
 	result := testEval(collectionsImport + `let core = import("core")
-let make_count = fn() int { 0 }
+let make_count = fn() int { return 0 }
 let counts = collections.defaultmap(make_count)
 counts["silver"] = counts["silver"] + 1
 [counts["silver"], core.type(counts) == collections.DefaultMap]`)

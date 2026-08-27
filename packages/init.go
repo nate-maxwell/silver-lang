@@ -6,9 +6,12 @@ import (
 	"path/filepath"
 )
 
+// manifestFilename is the conventional name created by Init.
 const manifestFilename = "package.yaml"
 
-// Init creates an empty package manifest in directory.
+// Init creates package.yaml in directory for packageName and returns its path.
+// The new manifest contains an empty export list. Init refuses to overwrite an
+// existing package.yaml and removes a partially written file on write failure.
 func Init(directory, packageName string) (string, error) {
 	if !validPackageName(packageName) {
 		return "", fmt.Errorf("package name %q is invalid", packageName)

@@ -12,7 +12,7 @@ func TestUserOperatorCanHostBuiltinFunction(t *testing.T) {
 	evaluated := testEval(`
 let arrays = import("array")
 operator ;; fn(left: array, right) array {
-    arrays.append(left, right)
+    return arrays.append(left, right)
 }
 [1, 2] ;; 3
 `)
@@ -31,9 +31,9 @@ func TestUserOperatorCanPipeValuesIntoFunctions(t *testing.T) {
 operator |> fn(left, right: call) {
     return right(left)
 }
-let first_function = fn() int { 5 }
-let second_function = fn(value: int) int { value * 2 }
-let third_function = fn(value: int) int { value + 1 }
+let first_function = fn() int { return 5 }
+let second_function = fn(value: int) int { return value * 2 }
+let third_function = fn(value: int) int { return value + 1 }
 first_function() |> second_function |> third_function
 `)
 	testIntegerObject(t, evaluated, 11)
@@ -41,7 +41,7 @@ first_function() |> second_function |> third_function
 
 func TestDoubleColonCanBeUsedAsUserOperator(t *testing.T) {
 	evaluated := testEval(`
-operator :: fn(left: int, right: int) int { left + right }
+operator :: fn(left: int, right: int) int { return left + right }
 20 :: 22
 `)
 	testIntegerObject(t, evaluated, 42)
@@ -49,7 +49,7 @@ operator :: fn(left: int, right: int) int { left + right }
 
 func TestUserOperatorBindingPowerAffectsEvaluation(t *testing.T) {
 	evaluated := testEval(`
-operator @ 55 fn(left: int, right: int) int { left * 10 + right }
+operator @ 55 fn(left: int, right: int) int { return left * 10 + right }
 1 + 2 @ 3 * 4
 `)
 	testIntegerObject(t, evaluated, 42)
@@ -58,7 +58,7 @@ operator @ 55 fn(left: int, right: int) int { left * 10 + right }
 func TestOperatorDefinedInFunctionIsGloballyAvailableAfterward(t *testing.T) {
 	evaluated := testEval(`
 let install = fn() {
-    operator @ fn(left: int, right: int) int { left + right }
+    operator @ fn(left: int, right: int) int { return left + right }
 }
 install()
 20 @ 22
@@ -70,7 +70,7 @@ func TestOperatorIsAvailableToSourcesParsedLater(t *testing.T) {
 	directory := t.TempDir()
 	operatorPath := filepath.Join(directory, "operators.slv")
 	consumerPath := filepath.Join(directory, "consumer.slv")
-	if err := os.WriteFile(operatorPath, []byte(`operator %% 55 fn(left: int, right: int) int { left + right }`), 0600); err != nil {
+	if err := os.WriteFile(operatorPath, []byte(`operator %% 55 fn(left: int, right: int) int { return left + right }`), 0600); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(consumerPath, []byte("20 %% 22\n"), 0600); err != nil {

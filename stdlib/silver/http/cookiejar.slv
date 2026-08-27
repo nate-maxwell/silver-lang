@@ -170,5 +170,5 @@ let _clear = fn(self: Jar) {
 }
 
 let new = fn() Jar {
-    Jar{[], _set, _set_from_header, _header, _clear}
+    return Jar{[], _set, _set_from_header, _header, _clear}
 }

@@ -136,7 +136,7 @@ An argument that already satisfies its parameter is kept intact:
 
 ```silver
 let move_by = fn(location: Location, amount: float) Location {
-    Location{
+    return Location{
         location.x + amount,
         location.y + amount,
         location.z + amount

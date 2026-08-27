@@ -8,8 +8,8 @@ operator |> fn(left, right: call) {
     return right(left)
 }
 
-let double = fn(value: int) int { value * 2 }
-let increment = fn(value: int) int { value + 1 }
+let double = fn(value: int) int { return value * 2 }
+let increment = fn(value: int) int { return value + 1 }
 let result = 20 |> double |> increment
 ```
 

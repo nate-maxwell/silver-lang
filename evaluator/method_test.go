@@ -71,7 +71,7 @@ Transform{Scale{1}, wrong}
 
 func TestBareCallStructFieldDoesNotBindReceiver(t *testing.T) {
 	evaluated := testEval(`
-let identity = fn(value: int) int { value }
+let identity = fn(value: int) int { return value }
 struct Box {
 	callback: call
 }

@@ -22,7 +22,7 @@ Point{1}.missing`, want: "AttributeError"},
 		{name: "key", input: `{"known": 1}["missing"]`, want: "KeyError"},
 		{name: "index", input: `[1][2]`, want: "IndexError"},
 		{name: "runtime", input: `struct Missing { message: str }
-let read = fn() str | Missing { Missing{"not found"} }
+let read = fn() str | Missing { return Missing{"not found"} }
 let caller = fn() str { read() }
 caller()`, want: "RuntimeError"},
 	}

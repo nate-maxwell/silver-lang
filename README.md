@@ -42,10 +42,10 @@ Types are optional and checked when the program runs:
 
 ```silver
 let apply = fn(operation: call(int) int, value: int) int {
-    operation(value)
+    return operation(value)
 }
 
-let double = fn(value: int) int { value * 2 }
+let double = fn(value: int) int { return value * 2 }
 apply(double, 21) # 42
 ```
 

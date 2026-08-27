@@ -222,7 +222,7 @@ func TestMatchingStructArgumentIsNotDestructured(t *testing.T) {
 struct Wrapped {
 	wrapped: int
 }
-let read = fn(wrapped: Wrapped) int { wrapped.wrapped }
+let read = fn(wrapped: Wrapped) int { return wrapped.wrapped }
 read(Wrapped{7})
 `)
 	testIntegerObject(t, evaluated, 7)
@@ -235,7 +235,7 @@ struct Point {
 	y: int
 }
 let combine = fn(offset: int, x: int, y: int) int {
-	offset + x * 10 + y
+	return offset + x * 10 + y
 }
 combine(100, Point{2, 3})
 `)
@@ -253,7 +253,7 @@ struct Size {
 	height: int
 }
 let encode = fn(x: int, y: int, width: int, height: int) int {
-	x * 1000 + y * 100 + width * 10 + height
+	return x * 1000 + y * 100 + width * 10 + height
 }
 encode(Position{1, 2}, Size{3, 4})
 `)
@@ -267,7 +267,7 @@ struct Coordinates {
 	x: int
 	y: int
 }
-let encode = fn(x: int, y: int, z: int) int { x * 100 + y * 10 + z }
+let encode = fn(x: int, y: int, z: int) int { return x * 100 + y * 10 + z }
 encode(Coordinates{3, 1, 2})
 `)
 	testIntegerObject(t, evaluated, 123)
@@ -278,7 +278,7 @@ func TestDestructuredFieldMustMatchParameterType(t *testing.T) {
 struct Payload {
 	value: str
 }
-let consume = fn(value: int) int { value }
+let consume = fn(value: int) int { return value }
 consume(Payload{"wrong"})
 `)
 	err, ok := evaluated.(*object.Error)
@@ -295,7 +295,7 @@ func TestDestructuringCanBindLaterNamedParameters(t *testing.T) {
 struct Point {
 	x: int
 }
-let combine = fn(value: int, x: int) int { value * 10 + x }
+let combine = fn(value: int, x: int) int { return value * 10 + x }
 combine(Point{2}, 3)
 `)
 	testIntegerObject(t, evaluated, 32)
@@ -306,7 +306,7 @@ func TestStructWithoutMatchingFieldsKeepsTypeMismatch(t *testing.T) {
 struct Point {
 	x: int
 }
-let consume = fn(value: int) int { value }
+let consume = fn(value: int) int { return value }
 consume(Point{1})
 `)
 	err, ok := evaluated.(*object.Error)
@@ -353,7 +353,7 @@ struct Location {
 struct Actor {
 	location: Location
 }
-let move = fn(x: int) Location { Location{x + 1} }
+let move = fn(x: int) Location { return Location{x + 1} }
 let actor = Actor{Location{4}}
 actor.location = move(actor.location)
 actor.location.x

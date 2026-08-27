@@ -35,7 +35,7 @@ struct _Target {
 }
 
 let new_request = fn(method: str, url: str, headers: map, body: str) Request {
-    Request{method, url, headers, body}
+    return Request{method, url, headers, body}
 }
 
 let _target_from_url = fn(url: str) _Target | ClientError {
@@ -205,13 +205,13 @@ let send = fn(request: Request) Response | ClientError {
 }
 
 let request = fn(method: str, url: str, headers: map, body: str) Response | ClientError {
-    send(new_request(method, url, headers, body))
+    return send(new_request(method, url, headers, body))
 }
 
 let get = fn(url: str) Response | ClientError {
-    request(_http.MethodGet, url, {}, "")
+    return request(_http.MethodGet, url, {}, "")
 }
 
 let post = fn(url: str, body: str) Response | ClientError {
-    request(_http.MethodPost, url, {}, body)
+    return request(_http.MethodPost, url, {}, body)
 }

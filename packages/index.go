@@ -7,7 +7,11 @@ import (
 	"sync"
 )
 
-// Index is a concurrency-safe snapshot of the entries in SILVER_PATH.
+// Index is a concurrency-safe snapshot of package and source entries from a
+// platform-separated search path such as SILVER_PATH.
+//
+// The zero value is ready for use, though Refresh must be called before the
+// first call to Resolve.
 type Index struct {
 	mu          sync.RWMutex
 	initialized bool
@@ -17,6 +21,9 @@ type Index struct {
 	err         error
 }
 
+// indexEntry represents one search-path component: a directory, an individual
+// source file, a manifest file, or a directory's collected manifests. legacy
+// selects directory-wide lookup when no manifest governs the directory.
 type indexEntry struct {
 	directory string
 	legacy    bool
@@ -24,11 +31,19 @@ type indexEntry struct {
 	manifests []*Manifest
 }
 
+// NewIndex returns an empty package index. The caller must call Refresh before
+// the first call to Resolve.
 func NewIndex() *Index {
 	return &Index{byFile: make(map[string]*Manifest)}
 }
 
-// Refresh rebuilds the index when the platform-separated search path changes.
+// Refresh loads the entries in the platform-separated searchPath.
+//
+// Directory entries containing manifests expose only their declared exports;
+// directories without manifests retain legacy directory-wide lookup. Manifest
+// files and individual source files may also be listed directly. Refresh is a
+// no-op when searchPath has not changed and returns the result of the previous
+// load in that case.
 func (index *Index) Refresh(searchPath string) error {
 	index.mu.Lock()
 	defer index.mu.Unlock()
@@ -59,6 +74,7 @@ func (index *Index) Refresh(searchPath string) error {
 	return nil
 }
 
+// loadIndexEntry classifies and loads one search-path entry.
 func loadIndexEntry(path string) (indexEntry, error) {
 	absolute, err := filepath.Abs(path)
 	if err != nil {
@@ -86,6 +102,8 @@ func loadIndexEntry(path string) (indexEntry, error) {
 	return indexEntry{file: absolute}, nil
 }
 
+// loadDirectoryEntry loads every manifest immediately inside directory. A
+// directory without manifests is marked for legacy directory-wide lookup.
 func loadDirectoryEntry(directory string) (indexEntry, error) {
 	entry := indexEntry{directory: directory}
 	candidates, err := os.ReadDir(directory)
@@ -106,18 +124,21 @@ func loadDirectoryEntry(directory string) (indexEntry, error) {
 	return entry, nil
 }
 
+// isManifestPath reports whether path has a supported YAML manifest suffix.
 func isManifestPath(path string) bool {
 	extension := filepath.Ext(path)
 	return strings.EqualFold(extension, ".yaml") || strings.EqualFold(extension, ".yml")
 }
 
+// addManifest records ownership of every file exported by manifest.
 func (index *Index) addManifest(manifest *Manifest) {
 	for _, exported := range manifest.exports {
 		index.byFile[pathKey(exported.path)] = manifest
 	}
 }
 
-// ManifestFor returns the manifest that exports path, if any.
+// ManifestFor returns the manifest that exports path. It returns nil when path
+// is not a declared export in the current snapshot.
 func (index *Index) ManifestFor(path string) *Manifest {
 	index.mu.RLock()
 	defer index.mu.RUnlock()

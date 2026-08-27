@@ -51,7 +51,7 @@ struct Parser {
 # option declares a named string option with no default. Its parsed value is
 # absent from ParsedArgs.values when the option was not supplied.
 let option = fn(name: str, short: str, help: str) Argument {
-    Argument{name, short, help, ArgumentKind.Option, False, "", False}
+    return Argument{name, short, help, ArgumentKind.Option, False, "", False}
 }
 
 let option_with_default = fn(
@@ -60,30 +60,30 @@ let option_with_default = fn(
     help: str,
     default_value: str
 ) Argument {
-    Argument{name, short, help, ArgumentKind.Option, False, default_value, True}
+    return Argument{name, short, help, ArgumentKind.Option, False, default_value, True}
 }
 
 let required_option = fn(name: str, short: str, help: str) Argument {
-    Argument{name, short, help, ArgumentKind.Option, True, "", False}
+    return Argument{name, short, help, ArgumentKind.Option, True, "", False}
 }
 
 # flag stores a boolean and count stores the number of appearances.
 let flag = fn(name: str, short: str, help: str) Argument {
-    Argument{name, short, help, ArgumentKind.Flag, False, "", False}
+    return Argument{name, short, help, ArgumentKind.Flag, False, "", False}
 }
 
 let count = fn(name: str, short: str, help: str) Argument {
-    Argument{name, short, help, ArgumentKind.Count, False, "", False}
+    return Argument{name, short, help, ArgumentKind.Count, False, "", False}
 }
 
 # Positional arguments are consumed in the order they are added. Required
 # positionals must precede optional positionals.
 let positional = fn(name: str, help: str) Argument {
-    Argument{name, "", help, ArgumentKind.Positional, True, "", False}
+    return Argument{name, "", help, ArgumentKind.Positional, True, "", False}
 }
 
 let optional_positional = fn(name: str, help: str, default_value: str) Argument {
-    Argument{name, "", help, ArgumentKind.Positional, False, default_value, True}
+    return Argument{name, "", help, ArgumentKind.Positional, False, default_value, True}
 }
 
 let _validate_argument = fn(parser: Parser, argument: Argument) | ArgumentError {
@@ -315,5 +315,5 @@ let _help = fn(self: Parser) str {
 }
 
 let new = fn(program: str, description: str) Parser {
-    Parser{program, description, [], _add, _parse, _help}
+    return Parser{program, description, [], _add, _parse, _help}
 }

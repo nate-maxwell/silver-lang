@@ -21,7 +21,7 @@ let new_stream_handler = fn(stream: IOStream) StreamHandler {
         self.stream.write(record + "\n")
     }
 
-    StreamHandler{stream, handle}
+    return StreamHandler{stream, handle}
 }
 
 struct FileHandler {
@@ -38,7 +38,7 @@ let new_file_handler = fn(path: pathlib.Path) FileHandler {
         self.path.write_text(contents + record + "\n")
     }
 
-    FileHandler{path, handle}
+    return FileHandler{path, handle}
 }
 
 struct RotatingFileHandler {
@@ -65,7 +65,7 @@ let new_rotating_file_handler = fn(path: pathlib.Path, interval: int) RotatingFi
         self.path.write_text(contents + record + "\n")
     }
 
-    RotatingFileHandler{path, interval, times.unix(), handle}
+    return RotatingFileHandler{path, interval, times.unix(), handle}
 }
 
 struct TCPSocketHandler {
@@ -80,7 +80,7 @@ let new_tcp_socket_handler = fn(address: str) TCPSocketHandler {
         connection.write(record + "\n")
     }
 
-    TCPSocketHandler{address, handle}
+    return TCPSocketHandler{address, handle}
 }
 
 struct UDPSocketHandler {
@@ -95,7 +95,7 @@ let new_udp_socket_handler = fn(address: str) UDPSocketHandler {
         connection.write(record + "\n")
     }
 
-    UDPSocketHandler{address, handle}
+    return UDPSocketHandler{address, handle}
 }
 
 struct NullHandler {
@@ -104,7 +104,7 @@ struct NullHandler {
 
 let new_null_handler = fn() NullHandler {
     let handle = fn(self: NullHandler, record: str) {}
-    NullHandler{handle}
+    return NullHandler{handle}
 }
 
 struct Logger {
@@ -120,7 +120,7 @@ struct LogContext {
 }
 
 let standard_format = fn(context: LogContext) TemplateString {
-    ```[{context.level}] {context.time} {context.message}```
+    return ```[{context.level}] {context.time} {context.message}```
 }
 
 let new_logger = fn(
@@ -137,5 +137,5 @@ let new_logger = fn(
         handler.handle(self.format.eval())
     }
 
-    Logger{level, rendered_format, handle}
+    return Logger{level, rendered_format, handle}
 }

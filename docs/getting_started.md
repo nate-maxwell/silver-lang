@@ -51,7 +51,7 @@ Then evaluate expressions and statements one line at a time:
 
 ```silver
 let io = import("io")
-let square = fn(value: int) int { value * value }
+let square = fn(value: int) int { return value * value }
 io.println(square(9))
 ```
 
@@ -71,7 +71,7 @@ struct Person {
 }
 
 let greet = fn(self: Person) str {
-    "Hello, " + self.name + "!"
+    return "Hello, " + self.name + "!"
 }
 
 let person = Person{"Silver", greet}
@@ -96,7 +96,7 @@ programs.
 Every source file is a module. Suppose `math_helpers.slv` contains:
 
 ```silver
-let double = fn(value: int) int { value * 2 }
+let double = fn(value: int) int { return value * 2 }
 let answer = 42
 ```
 

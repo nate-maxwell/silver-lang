@@ -52,7 +52,7 @@ func TestTemplateStringEvalReevaluatesExpressions(t *testing.T) {
 	input := `let count = 0
 let next = fn() int {
     count = count + 1
-    count
+    return count
 }
 let template = ` + templateLiteral(`{next()}`) + `
 let first = template.eval()
@@ -95,7 +95,7 @@ func TestTemplateStringMayContainAnotherTemplateExpression(t *testing.T) {
 
 func TestTemplateStringCapturesFunctionScope(t *testing.T) {
 	input := `let make = fn(value: str) TemplateString {
-    ` + templateLiteral(`captured {value}`) + `
+    return ` + templateLiteral(`captured {value}`) + `
 }
 let template = make("scope")
 template.eval()`

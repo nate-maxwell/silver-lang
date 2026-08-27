@@ -15,7 +15,7 @@ func TestHTTPClientAndServerRoundTrip(t *testing.T) {
     assert request.method == http.MethodPost
     assert request.path == "/submit?source=test"
     assert request.body == "silver"
-    server_module.response_with_headers(http.StatusCreated, {"content-type": "text/plain"}, "created")
+    return server_module.response_with_headers(http.StatusCreated, {"content-type": "text/plain"}, "created")
 }
 let server = server_module.new("127.0.0.1:0", handler)
 let serve = task server.serve_once

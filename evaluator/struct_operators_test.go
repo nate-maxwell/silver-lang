@@ -23,19 +23,19 @@ struct Number {
 	<=: call(self: Number, other: int) bool
 	>=: call(self: Number, other: int) bool
 }
-let add = fn(self: Number, other: int) int { self.value + other }
-let sub = fn(self: Number, other: int) int { self.value - other }
-let mul = fn(self: Number, other: int) int { self.value * other }
-let div = fn(self: Number, other: int) float { self.value / other }
-let mod = fn(self: Number, other: int) int { self.value % other }
-let int_div = fn(self: Number, other: int) int { self.value // other }
-let pow = fn(self: Number, other: int) int { self.value ** other }
-let eq = fn(self: Number, other: int) bool { self.value == other }
-let not_eq = fn(self: Number, other: int) bool { self.value != other }
-let lt = fn(self: Number, other: int) bool { self.value < other }
-let gt = fn(self: Number, other: int) bool { self.value > other }
-let lte = fn(self: Number, other: int) bool { self.value <= other }
-let gte = fn(self: Number, other: int) bool { self.value >= other }
+let add = fn(self: Number, other: int) int { return self.value + other }
+let sub = fn(self: Number, other: int) int { return self.value - other }
+let mul = fn(self: Number, other: int) int { return self.value * other }
+let div = fn(self: Number, other: int) float { return self.value / other }
+let mod = fn(self: Number, other: int) int { return self.value % other }
+let int_div = fn(self: Number, other: int) int { return self.value // other }
+let pow = fn(self: Number, other: int) int { return self.value ** other }
+let eq = fn(self: Number, other: int) bool { return self.value == other }
+let not_eq = fn(self: Number, other: int) bool { return self.value != other }
+let lt = fn(self: Number, other: int) bool { return self.value < other }
+let gt = fn(self: Number, other: int) bool { return self.value > other }
+let lte = fn(self: Number, other: int) bool { return self.value <= other }
+let gte = fn(self: Number, other: int) bool { return self.value >= other }
 let number = Number{10, add, sub, mul, div, mod, int_div, pow, eq, not_eq, lt, gt, lte, gte}
 `
 
@@ -91,7 +91,7 @@ struct Vector {
     +: call(self: Vector, other: Vector) Vector
 }
 let vector_add = fn(self: Vector, other: Vector) Vector {
-    Vector{self.x + other.x, self.y + other.y, vector_add}
+    return Vector{self.x + other.x, self.y + other.y, vector_add}
 }
 let left = Vector{2, 3, vector_add}
 let right = Vector{5, 7, vector_add}
@@ -143,7 +143,7 @@ struct Number {
     value: int
     @@: call(self: Number, other: int) int
 }
-let combine = fn(self: Number, other: int) int { self.value * 10 + other }
+let combine = fn(self: Number, other: int) int { return self.value * 10 + other }
 Number{4, combine} @@ 2
 `)
 	testIntegerObject(t, evaluated, 42)

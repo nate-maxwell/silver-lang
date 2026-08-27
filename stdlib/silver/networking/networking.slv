@@ -15,5 +15,5 @@ let dial = fn(network: Network, address: str) Connection | ConnectionError {
 }
 
 let listen = fn(address: str) Listener | ListenError {
-    _native.listen(address)
+    return _native.listen(address)
 }

@@ -82,7 +82,7 @@ io.println()`)
 func TestClosures(t *testing.T) {
 	input := `
 		let newAdder = fn(x) call {
-			fn(y) int { x + y }
+			return fn(y) int { return x + y }
 		}
 
 		let addTwo = newAdder(2)
@@ -97,12 +97,12 @@ func TestFunctionApplication(t *testing.T) {
 		input    string
 		expected int64
 	}{
-		{"let identity = fn(x) int { x }\nidentity(5)", 5},
 		{"let identity = fn(x) int { return x }\nidentity(5)", 5},
-		{"let double = fn(x) int { x * 2 }\ndouble(5)", 10},
-		{"let add = fn(x, y) int { x + y }\nadd(5, 5)", 10},
-		{"let add = fn(x, y) int { x + y }\nadd(5 + 5, add(5, 5))", 20},
-		{"fn(x) int { x }(5)", 5},
+		{"let identity = fn(x) int { return x }\nidentity(5)", 5},
+		{"let double = fn(x) int { return x * 2 }\ndouble(5)", 10},
+		{"let add = fn(x, y) int { return x + y }\nadd(5, 5)", 10},
+		{"let add = fn(x, y) int { return x + y }\nadd(5 + 5, add(5, 5))", 20},
+		{"fn(x) int { return x }(5)", 5},
 	}
 
 	for _, tt := range tests {
@@ -119,7 +119,7 @@ func TestEnclosingEnvironments(t *testing.T) {
 			let ourFunction = fn(first) int {
 			let second = 20
 
-			first + second + third
+			return first + second + third
 			}
 
 			ourFunction(20) + first + second`

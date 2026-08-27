@@ -6,7 +6,7 @@ let collections = import("collections")
 let core = import("core")
 let io = import("io")
 
-let new_listener_list = fn() array { [] }
+let new_listener_list = fn() array { return [] }
 let subscriptions = collections.defaultmap(new_listener_list)
 
 let subscribe = fn(namespace: str, listener: call) {

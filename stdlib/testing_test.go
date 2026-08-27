@@ -16,7 +16,7 @@ let t = import("testing")
 let strings = import("string")
 let math = import("math")
 
-let add = fn(left: int, right: int) int { left + right }
+let add = fn(left: int, right: int) int { return left + right }
 
 t.run("add function", fn() {
     let result = add(2, 3)

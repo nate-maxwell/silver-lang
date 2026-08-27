@@ -9,9 +9,9 @@ import (
 
 func TestTaskCollectReturnsNamedNonNullResults(t *testing.T) {
 	result := testEval(`
-let double = fn(value: int) int { value * 2 }
-let work_a = fn() int { double(2) }
-let work_b = fn() int { double(5) }
+let double = fn(value: int) int { return value * 2 }
+let work_a = fn() int { return double(2) }
+let work_b = fn() int { return double(5) }
 let io = import("io")
 let work_c = fn() { io.print("side effect") }
 let a = task work_a
@@ -42,7 +42,7 @@ results
 func TestTaskErrorUnwindsWhenCollected(t *testing.T) {
 	result := testEval(`
 struct FileNotFound { message: str }
-let read = fn() str | FileNotFound { FileNotFound{"missing"} }
+let read = fn() str | FileNotFound { return FileNotFound{"missing"} }
 let a = task read
 try {
 	collect a
@@ -55,7 +55,7 @@ try {
 
 func TestTaskInvokesAnonymousFunction(t *testing.T) {
 	result := testEval(`
-let handle = task fn() int { 42 }
+let handle = task fn() int { return 42 }
 let results = collect handle
 results.handle
 `)

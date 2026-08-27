@@ -17,7 +17,7 @@ The target is invoked with no arguments. `task` accepts:
 
 - an identifier, such as `task fetch_user`;
 - a member expression, such as `task service.fetch`;
-- a zero-argument anonymous function, such as `task fn() int { 6 * 7 }`.
+- a zero-argument anonymous function, such as `task fn() int { return 6 * 7 }`.
 
 It does not accept a call expression or parenthesized call syntax:
 

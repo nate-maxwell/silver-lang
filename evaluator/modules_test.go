@@ -21,7 +21,7 @@ func TestEvalFileWithNestedRelativeImport(t *testing.T) {
 	writeSilverFile(t, filepath.Join(libDir, "base.slv"), `let factor = 2`)
 	writeSilverFile(t, filepath.Join(libDir, "math.slv"), `
 let base = import("./base.slv")
-let double = fn(x) int { x * base.factor }
+let double = fn(x) int { return x * base.factor }
 `)
 	mainPath := filepath.Join(dir, "main.slv")
 	writeSilverFile(t, mainPath, `
@@ -228,7 +228,7 @@ foo.make(4) @@ 2
 
 func writePackageOperatorFixture(t *testing.T, directory string) {
 	t.Helper()
-	writeSilverFile(t, filepath.Join(directory, "foo_operators.slv"), `operator @@ fn(left, right) int { 999 }`)
+	writeSilverFile(t, filepath.Join(directory, "foo_operators.slv"), `operator @@ fn(left, right) int { return 999 }`)
 	writeSilverFile(t, filepath.Join(directory, "foo.slv"), `
 export { Foo, make, apply }
 let operators = import("./foo_operators.slv")
@@ -236,9 +236,9 @@ struct Foo {
     value: int
     @@: call(self: Foo, other: int) int
 }
-let overload = fn(self: Foo, other: int) int { self.value * 10 + other }
-let make = fn(value: int) Foo { Foo{value, overload} }
-let apply = fn(left: Foo, right: int) int { left @@ right }
+let overload = fn(self: Foo, other: int) int { return self.value * 10 + other }
+let make = fn(value: int) Foo { return Foo{value, overload} }
+let apply = fn(left: Foo, right: int) int { return left @@ right }
 `)
 	if err := os.WriteFile(filepath.Join(directory, "foo.yaml"), []byte(`
 package: package_foo
@@ -249,12 +249,12 @@ export:
 		t.Fatal(err)
 	}
 
-	writeSilverFile(t, filepath.Join(directory, "bar_operators.slv"), `operator @@ fn(left, right) int { 7 }`)
+	writeSilverFile(t, filepath.Join(directory, "bar_operators.slv"), `operator @@ fn(left, right) int { return 7 }`)
 	writeSilverFile(t, filepath.Join(directory, "bar.slv"), `
 export { apply }
 let operators = import("./bar_operators.slv")
 let foo = import("./foo.slv")
-let apply = fn(left: foo.Foo, right: int) int { left @@ right }
+let apply = fn(left: foo.Foo, right: int) int { return left @@ right }
 `)
 	if err := os.WriteFile(filepath.Join(directory, "bar.yaml"), []byte(`
 package: package_bar
@@ -422,13 +422,13 @@ func TestFunctionDestructuresModuleExports(t *testing.T) {
 	dir := t.TempDir()
 	writeSilverFile(t, filepath.Join(dir, "library.slv"), `
 let message = "loaded"
-let double = fn(value: int) int { value * 2 }
+let double = fn(value: int) int { return value * 2 }
 `)
 	mainPath := filepath.Join(dir, "main.slv")
 	writeSilverFile(t, mainPath, `
 let library = import("./library.slv")
 let process = fn(double: call(int) int, message: str) int {
-	double(21)
+	return double(21)
 }
 process(library)
 `)
@@ -443,7 +443,7 @@ func TestMatchingModuleParameterIsNotDestructured(t *testing.T) {
 	mainPath := filepath.Join(dir, "main.slv")
 	writeSilverFile(t, mainPath, `
 let library = import("./library.slv")
-let read = fn(library: module) int { library.value }
+let read = fn(library: module) int { return library.value }
 read(library)
 `)
 
@@ -457,7 +457,7 @@ func TestDestructuredModuleExportMustMatchParameterType(t *testing.T) {
 	mainPath := filepath.Join(dir, "main.slv")
 	writeSilverFile(t, mainPath, `
 let library = import("./library.slv")
-let read = fn(value: int) int { value }
+let read = fn(value: int) int { return value }
 read(library)
 `)
 

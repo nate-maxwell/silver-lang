@@ -38,7 +38,10 @@ let move = fn(x: float, y: float, z: float) Location {
 }
 
 let location = Location{ 0.0, 0.0, 0.0 }
-location = move(location) # the actor moves diagonally by 5 units
+io.print(move(location)
+```
+```
+>> Location{5.0, 5.0, 5.0}
 ```
 
 `Location` is not a `float`, so it cannot bind directly to `x`. Silver instead offers its fields to the function's

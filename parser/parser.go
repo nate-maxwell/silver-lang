@@ -100,7 +100,7 @@ func NewWithInfixRegistry(l *lexer.Lexer, operators *InfixRegistry) *Parser {
 	p.registerInfix(token.INT_DIV, p.parseInfixExpression)
 	p.registerInfix(token.MODULO, p.parseInfixExpression)
 	p.registerInfix(token.ASTERISK, p.parseInfixExpression)
-	p.registerInfix(token.POWER, p.parsePowerExpression)
+	p.registerInfix(token.POWER, p.parseInfixExpression)
 	p.registerInfix(token.AND, p.parseInfixExpression)
 	p.registerInfix(token.OR, p.parseInfixExpression)
 	p.registerInfix(token.EQ, p.parseInfixExpression)

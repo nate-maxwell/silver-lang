@@ -24,8 +24,9 @@ symbol more than once is an error; operators already supplied by the language ca
 
 ## Precedence
 
-Every user-defined operator has the same precedence: lower than every built-in operator. User-defined operators
-associate to the left. Their precedence cannot be customized.
+Every user-defined operator has the same precedence: lower than every built-in operator. All infix operators,
+including `**`, associate to the left, so their ASTs have the same shape. User-defined operator precedence cannot be
+customized.
 
 Symbols may contain the punctuation characters `!$%&*+-./:;<=>?@^|~`. Existing delimiter spellings such as `::` can
 therefore be declared for ordinary expressions without affecting their established declaration syntax.

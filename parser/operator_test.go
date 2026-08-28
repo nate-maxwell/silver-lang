@@ -33,6 +33,20 @@ first |> second |> third`))
 	}
 }
 
+func TestBuiltinAndCustomOperatorsAssociateLeft(t *testing.T) {
+	p := New(lexer.New(`operator @ = fn(left, right) { return left }
+a @ b @ c
+a ** b ** c`))
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	for index, want := range []string{"((a @ b) @ c)", "((a ** b) ** c)"} {
+		if got := program.Statements[index+1].String(); got != want {
+			t.Fatalf("expression %d is %q, want %q", index, got, want)
+		}
+	}
+}
+
 func TestOperatorUsesLowestInfixPrecedence(t *testing.T) {
 	p := New(lexer.New(`operator @ = fn(left, right) { return left }
 a + b @ c < d`))

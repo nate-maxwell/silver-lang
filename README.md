@@ -110,7 +110,7 @@ Silver allows users to create their own infix operators (operators with a left a
 right expression, like `+`).
 
 ```
-operator .. 65 fn(left: int, right: int) array {
+operator .. fn(left: int, right: int) array {
     return core.range(left, right)
 }
 

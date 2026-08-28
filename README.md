@@ -69,7 +69,7 @@ let move = fn(self: MovableLocation) {
 
 let location = MovableLocation{0.0, 0.0, 0.0, move}
 location.move()
-print(location.x, location.y, location.z)
+io.print(location.x, location.y, location.z)
 ```
 ```
 >> 5.0 5.0 5.0

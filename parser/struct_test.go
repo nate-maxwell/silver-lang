@@ -75,7 +75,7 @@ func TestStructEmbeddedField(t *testing.T) {
 
 func TestStructCustomOperatorField(t *testing.T) {
 	p := New(lexer.New(`
-operator @@ fn(left, right) { left }
+operator @@ = fn(left, right) { left }
 struct Box { value: int, @@: call(self: Box, other: int) int }
 `))
 	program := p.ParseProgram()

@@ -2,7 +2,6 @@ package ast
 
 import (
 	"bytes"
-	"fmt"
 	"silver/token"
 )
 
@@ -203,13 +202,11 @@ Operator declarations
 ---------------------------------------------------------------------------------------------------------- */
 
 // OperatorStatement binds a symbolic infix operator to a two-argument Silver
-// function. BindingPower controls how the Pratt parser groups later uses.
+// function.
 type OperatorStatement struct {
-	Token         token.Token // the 'operator' keyword
-	Symbol        string
-	BindingPower  int
-	ExplicitPower bool
-	Function      *FunctionLiteral
+	Token    token.Token // the 'operator' keyword
+	Symbol   string
+	Function *FunctionLiteral
 }
 
 func (os *OperatorStatement) statementNode()           {}
@@ -221,10 +218,7 @@ func (os *OperatorStatement) String() string {
 	out.WriteString(os.TokenLiteral())
 	out.WriteString(" ")
 	out.WriteString(os.Symbol)
-	if os.ExplicitPower {
-		out.WriteString(" ")
-		out.WriteString(fmt.Sprintf("%d", os.BindingPower))
-	}
+	out.WriteString(" =")
 	if os.Function != nil {
 		out.WriteString(" ")
 		out.WriteString(os.Function.String())

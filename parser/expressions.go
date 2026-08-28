@@ -124,7 +124,7 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
 	for !(p.stopAtBlockBrace && p.peekTokenIs(token.LBRACE)) &&
 		!p.lineBreakBeforePeek() && precedence < p.peekPrecedence() {
 		infix := p.infixParseFns[p.peekToken.Type]
-		if _, custom := p.operators.precedences[p.peekToken.Literal]; custom {
+		if p.operators.Has(p.peekToken.Literal) {
 			infix = p.parseInfixExpression
 		}
 		if infix == nil {

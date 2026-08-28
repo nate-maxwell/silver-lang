@@ -6,13 +6,12 @@ import (
 	"silver/token"
 )
 
-// Pratt binding powers increase from weak logical operators to tight calls,
-// indexing, and member access.
-// Power increases by a factor of 10 for each operator, so user-defined
-// operators can use a higher granularity of binding power.
+// Pratt binding powers increase from user-defined operators through the
+// built-in operators to tight calls, indexing, and member access.
 const (
-	_ int = iota * 10
+	_ int = iota
 	LOWEST
+	CUSTOM      // every user-defined infix operator
 	OR          // ||
 	AND         // &&
 	EQUALS      // ==
@@ -64,7 +63,7 @@ func NewWithInfixRegistry(l *lexer.Lexer, operators *InfixRegistry) *Parser {
 	if operators == nil {
 		operators = NewInfixRegistry()
 	}
-	for symbol := range operators.precedences {
+	for symbol := range operators.definitions {
 		l.RegisterOperator(symbol)
 	}
 	p := &Parser{

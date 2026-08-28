@@ -4,7 +4,7 @@ An `operator` declaration gives a symbolic infix spelling a two-argument functio
 the first argument and the right expression as the second:
 
 ```silver
-operator |> fn(left, right: call) {
+operator |> = fn(left, right: call) {
     return right(left)
 }
 
@@ -22,32 +22,10 @@ the symbol belongs to the interpreter session rather than a lexical scope or mod
 can use it. A declaration executed inside a function or block becomes globally callable afterward. Declaring the same
 symbol more than once is an error; operators already supplied by the language cannot be redefined either.
 
-## Binding power
+## Precedence
 
-An operator uses addition's binding power, 60, by default and associates to the left. Put an integer between the symbol
-and `fn` to customize it:
-
-```silver
-operator @ 55 fn(left, right) any {
-    # ...
-}
-```
-
-The binding power must be greater than 10. Built-in powers are spaced by ten so custom operators can fit between them:
-
-| Power | Syntax               |
-|------:|----------------------|
-|    20 | `\|\|`               |
-|    30 | `&&`                 |
-|    40 | `==`, `!=`           |
-|    50 | `<`, `>`, `<=`, `>=` |
-|    60 | `+`, `-`             |
-|    70 | `*`, `/`, `//`, `%`  |
-|    80 | prefix `-`, `!`      |
-|    90 | `**`                 |
-|   100 | calls                |
-|   110 | indexing             |
-|   120 | member access        |
+Every user-defined operator has the same precedence: lower than every built-in operator. User-defined operators
+associate to the left. Their precedence cannot be customized.
 
 Symbols may contain the punctuation characters `!$%&*+-./:;<=>?@^|~`. Existing delimiter spellings such as `::` can
 therefore be declared for ordinary expressions without affecting their established declaration syntax.
@@ -61,7 +39,7 @@ Silver uses pass-by-copy semantics. Therefore, creating operators that bind, lik
 
 ### Pipeline Operator
 ```silver
-operator |> 55 fn(left, right: call) any {
+operator |> = fn(left, right: call) any {
     return right(left)
 }
 
@@ -87,7 +65,7 @@ io.println( first_function() |> second_function |> third_function )
 
 #### Appending
 ```silver
-operator <> 15 fn(left: array, right: any) array {
+operator <> = fn(left: array, right: any) array {
     return arrays.append(left, right)
 }
 
@@ -100,7 +78,7 @@ io.println( foo <> "new" )
 
 #### Range
 ```silver
-operator .. 60 fn(left: int, right: int) array {
+operator .. = fn(left: int, right: int) array {
     return core.range(left, right)
 }
 
@@ -113,7 +91,7 @@ io.print(2..10)
 #### null Coalescing
 Think `let name = user.name ?? "anonymous"`
 ```silver
-operator ?? fn(left: any, right: any) any {
+operator ?? = fn(left: any, right: any) any {
     if core.type(left) == null {
         return right
     }
@@ -137,7 +115,7 @@ struct Outer {
     v: Vector
 }
 
-operator $ fn(v: Vector, right: int) {
+operator $ = fn(v: Vector, right: int) {
     v.x = v.x + right
     v.y = v.y + right
 }

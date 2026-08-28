@@ -14,7 +14,7 @@ func TestRoundTrip(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "all.slv")
 	source := []byte(`
 export { State, Person, Details, values, choose, module }
-operator @ 55 fn(left: int, right: int) int { left + right }
+operator @ = fn(left: int, right: int) int { left + right }
 enum State { Ready, Waiting }
 struct Person { name: string, age: int }
 struct Details { person :: Person }

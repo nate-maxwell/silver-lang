@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"silver/ast"
 	"silver/token"
-	"strconv"
 	"strings"
 )
 
@@ -40,12 +39,12 @@ func (p *Parser) parseStatement() ast.Statement {
 	}
 }
 
-// parseOperatorStatement parses `operator <symbol> [binding-power] fn(...)`.
-// The optional power defaults to SUM. Registration happens at the declaration,
-// so only expressions read afterward can use the symbol.
+// parseOperatorStatement parses `operator <symbol> = fn(...)`. Registration
+// happens at the declaration, so only expressions read afterward can use the
+// symbol.
 func (p *Parser) parseOperatorStatement() *ast.OperatorStatement {
-	statement := &ast.OperatorStatement{Token: p.curToken, BindingPower: SUM}
-	if p.peekTokenIs(token.FUNCTION) || p.peekTokenIs(token.INT) || p.peekTokenIs(token.EOF) {
+	statement := &ast.OperatorStatement{Token: p.curToken}
+	if p.peekTokenIs(token.FUNCTION) || p.peekTokenIs(token.ASSIGN) || p.peekTokenIs(token.EOF) {
 		p.addError(p.peekToken.Position, "operator declaration requires a symbolic operator")
 		return statement
 	}
@@ -58,29 +57,28 @@ func (p *Parser) parseOperatorStatement() *ast.OperatorStatement {
 			return statement
 		}
 		symbol.WriteString(p.curToken.Literal)
-		if p.peekTokenIs(token.FUNCTION) || p.peekTokenIs(token.INT) {
-			break
+		if p.peekTokenIs(token.ASSIGN) {
+			previousEnd := p.curToken.Position.Offset + len(p.curToken.Literal)
+			p.nextToken()
+			if p.peekTokenIs(token.FUNCTION) {
+				break
+			}
+			if p.curToken.Position.Offset != previousEnd {
+				p.addError(p.curToken.Position, "expected fn after = in operator declaration")
+				return statement
+			}
+			continue
 		}
 		if p.peekTokenIs(token.EOF) || p.lineBreakBeforePeek() ||
 			p.peekToken.Position.Offset != p.curToken.Position.Offset+len(p.curToken.Literal) {
-			p.addError(p.peekToken.Position, "expected fn after operator symbol")
+			p.addError(p.peekToken.Position, "expected = after operator symbol")
 			return statement
 		}
 		p.nextToken()
 	}
 	statement.Symbol = symbol.String()
 
-	if p.peekTokenIs(token.INT) {
-		p.nextToken()
-		statement.ExplicitPower = true
-		power, err := strconv.Atoi(p.curToken.Literal)
-		if err != nil || power <= LOWEST {
-			p.addError(p.curToken.Position, fmt.Sprintf("operator binding power must be greater than %d", LOWEST))
-			return statement
-		}
-		statement.BindingPower = power
-	}
-	if message := p.operators.define(statement.Symbol, statement.BindingPower, statement.Position()); message != "" {
+	if message := p.operators.define(statement.Symbol, statement.Position()); message != "" {
 		p.addError(statement.Position(), message)
 	} else {
 		p.l.RegisterOperator(statement.Symbol)

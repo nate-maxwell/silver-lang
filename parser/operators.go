@@ -4,23 +4,20 @@ import (
 	"fmt"
 	"silver/lexer"
 	"silver/token"
-	"strconv"
 )
 
 // InfixRegistry holds the symbolic operators known to an interpreter or
 // standalone parser session. Evaluators share one registry across files,
 // imports, tasks, and REPL submissions.
 type InfixRegistry struct {
-	precedences map[string]int
 	definitions map[string]token.Position
 }
 
 // OperatorDeclaration is the grammar portion of an operator statement found
 // during a package pre-scan.
 type OperatorDeclaration struct {
-	Symbol       string
-	BindingPower int
-	Position     token.Position
+	Symbol   string
+	Position token.Position
 }
 
 var definedLanguageInfixOperators = map[string]bool{
@@ -33,7 +30,6 @@ var definedLanguageInfixOperators = map[string]bool{
 
 func NewInfixRegistry() *InfixRegistry {
 	return &InfixRegistry{
-		precedences: make(map[string]int),
 		definitions: make(map[string]token.Position),
 	}
 }
@@ -51,7 +47,7 @@ func (r *InfixRegistry) Has(symbol string) bool {
 	return ok
 }
 
-func (r *InfixRegistry) define(symbol string, power int, position token.Position) string {
+func (r *InfixRegistry) define(symbol string, position token.Position) string {
 	if definedLanguageInfixOperators[symbol] {
 		return fmt.Sprintf("operator %q is already defined by the language", symbol)
 	}
@@ -65,7 +61,6 @@ func (r *InfixRegistry) define(symbol string, power int, position token.Position
 		}
 		return message
 	}
-	r.precedences[symbol] = power
 	r.definitions[symbol] = position
 	return ""
 }
@@ -73,7 +68,7 @@ func (r *InfixRegistry) define(symbol string, power int, position token.Position
 // Predefine installs a discovered package operator before full parsing. A
 // later parse of the declaration at the same source position is idempotent.
 func (r *InfixRegistry) Predefine(declaration OperatorDeclaration) string {
-	return r.define(declaration.Symbol, declaration.BindingPower, declaration.Position)
+	return r.define(declaration.Symbol, declaration.Position)
 }
 
 // DiscoverOperatorDeclarations performs a lexical pre-scan without parsing
@@ -97,35 +92,27 @@ func DiscoverOperatorDeclarations(input, source string) []OperatorDeclaration {
 			continue
 		}
 		cursor := index + 1
-		if tokens[cursor].Type == token.FUNCTION || tokens[cursor].Type == token.INT {
+		if tokens[cursor].Type == token.FUNCTION || tokens[cursor].Type == token.ASSIGN {
 			continue
 		}
-		symbol := tokens[cursor].Literal
-		if !isOperatorFragment(symbol) {
-			continue
-		}
-		previous := tokens[cursor]
-		cursor++
-		for cursor < len(tokens) && tokens[cursor].Type != token.FUNCTION && tokens[cursor].Type != token.INT {
+		var symbol string
+		var previous token.Token
+		for cursor < len(tokens) {
 			part := tokens[cursor]
-			if !isOperatorFragment(part.Literal) || part.Position.Source != previous.Position.Source || part.Position.Offset != previous.Position.Offset+len(previous.Literal) {
+			if part.Type == token.ASSIGN && cursor+1 < len(tokens) && tokens[cursor+1].Type == token.FUNCTION {
+				cursor++
+				break
+			}
+			if !isOperatorFragment(part.Literal) || symbol != "" &&
+				(part.Position.Source != previous.Position.Source || part.Position.Offset != previous.Position.Offset+len(previous.Literal)) {
 				break
 			}
 			symbol += part.Literal
 			previous = part
 			cursor++
 		}
-		power := SUM
-		if cursor < len(tokens) && tokens[cursor].Type == token.INT {
-			parsed, err := strconv.Atoi(tokens[cursor].Literal)
-			if err != nil || parsed <= LOWEST {
-				continue
-			}
-			power = parsed
-			cursor++
-		}
-		if cursor < len(tokens) && tokens[cursor].Type == token.FUNCTION {
-			declarations = append(declarations, OperatorDeclaration{Symbol: symbol, BindingPower: power, Position: current.Position})
+		if symbol != "" && cursor < len(tokens) && tokens[cursor].Type == token.FUNCTION {
+			declarations = append(declarations, OperatorDeclaration{Symbol: symbol, Position: current.Position})
 		}
 	}
 	return declarations
@@ -156,10 +143,10 @@ var precedences = map[token.TokenType]int{
 }
 
 // peekPrecedence returns the binding power of the lookahead token.
-// It checks the InfixRegistry first, then the precedences map.
+// User-defined operators always use the language's lowest infix power.
 func (p *Parser) peekPrecedence() int {
-	if precedence, ok := p.operators.precedences[p.peekToken.Literal]; ok {
-		return precedence
+	if p.operators.Has(p.peekToken.Literal) {
+		return CUSTOM
 	}
 	if p, ok := precedences[p.peekToken.Type]; ok {
 		return p
@@ -170,8 +157,8 @@ func (p *Parser) peekPrecedence() int {
 
 // curPrecedence returns the binding power of the current token.
 func (p *Parser) curPrecedence() int {
-	if precedence, ok := p.operators.precedences[p.curToken.Literal]; ok {
-		return precedence
+	if p.operators.Has(p.curToken.Literal) {
+		return CUSTOM
 	}
 	if p, ok := precedences[p.curToken.Type]; ok {
 		return p

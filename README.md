@@ -110,14 +110,14 @@ Silver allows users to create their own infix operators (operators with a left a
 right expression, like `+`).
 
 ```
-operator .. 65 fn(left: int, right: int) array {
+operator .. = fn(left: int, right: int) array {
     return core.range(left, right)
 }
 
 for i in 0..100 { io.println(i) }
 ```
 ```silver
-operator ?? fn(left: any, right: any) any {
+operator ?? = fn(left: any, right: any) any {
     if core.type(left) == null {
         return right
     }

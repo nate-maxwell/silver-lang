@@ -276,7 +276,7 @@ foo.make(4) @@ 2
 
 func writePackageOperatorFixture(t *testing.T, directory string) {
 	t.Helper()
-	writeSilverFile(t, filepath.Join(directory, "foo_operators.slv"), `operator @@ fn(left, right) int { return 999 }`)
+	writeSilverFile(t, filepath.Join(directory, "foo_operators.slv"), `operator @@ = fn(left, right) int { return 999 }`)
 	writeSilverFile(t, filepath.Join(directory, "foo.slv"), `
 export { Foo, make, apply }
 let operators = import("./foo_operators.slv")
@@ -297,7 +297,7 @@ export:
 		t.Fatal(err)
 	}
 
-	writeSilverFile(t, filepath.Join(directory, "bar_operators.slv"), `operator @@ fn(left, right) int { return 7 }`)
+	writeSilverFile(t, filepath.Join(directory, "bar_operators.slv"), `operator @@ = fn(left, right) int { return 7 }`)
 	writeSilverFile(t, filepath.Join(directory, "bar.slv"), `
 export { apply }
 let operators = import("./bar_operators.slv")

@@ -11,7 +11,7 @@ import (
 func TestUserOperatorCanHostBuiltinFunction(t *testing.T) {
 	evaluated := testEval(`
 let arrays = import("array")
-operator ;; fn(left: array, right) array {
+operator ;; = fn(left: array, right) array {
     return arrays.append(left, right)
 }
 [1, 2] ;; 3
@@ -28,7 +28,7 @@ operator ;; fn(left: array, right) array {
 
 func TestUserOperatorCanPipeValuesIntoFunctions(t *testing.T) {
 	evaluated := testEval(`
-operator |> fn(left, right: call) {
+operator |> = fn(left, right: call) {
     return right(left)
 }
 let first_function = fn() int { return 5 }
@@ -41,15 +41,15 @@ first_function() |> second_function |> third_function
 
 func TestDoubleColonCanBeUsedAsUserOperator(t *testing.T) {
 	evaluated := testEval(`
-operator :: fn(left: int, right: int) int { return left + right }
+operator :: = fn(left: int, right: int) int { return left + right }
 20 :: 22
 `)
 	testIntegerObject(t, evaluated, 42)
 }
 
-func TestUserOperatorBindingPowerAffectsEvaluation(t *testing.T) {
+func TestUserOperatorHasLowestPrecedence(t *testing.T) {
 	evaluated := testEval(`
-operator @ 55 fn(left: int, right: int) int { return left * 10 + right }
+operator @ = fn(left: int, right: int) int { return left * 10 + right }
 1 + 2 @ 3 * 4
 `)
 	testIntegerObject(t, evaluated, 42)
@@ -58,7 +58,7 @@ operator @ 55 fn(left: int, right: int) int { return left * 10 + right }
 func TestOperatorDefinedInFunctionIsGloballyAvailableAfterward(t *testing.T) {
 	evaluated := testEval(`
 let install = fn() {
-    operator @ fn(left: int, right: int) int { return left + right }
+	operator @ = fn(left: int, right: int) int { return left + right }
 }
 install()
 20 @ 22
@@ -70,7 +70,7 @@ func TestOperatorIsAvailableToSourcesParsedLater(t *testing.T) {
 	directory := t.TempDir()
 	operatorPath := filepath.Join(directory, "operators.slv")
 	consumerPath := filepath.Join(directory, "consumer.slv")
-	if err := os.WriteFile(operatorPath, []byte(`operator %% 55 fn(left: int, right: int) int { return left + right }`), 0600); err != nil {
+	if err := os.WriteFile(operatorPath, []byte(`operator %% = fn(left: int, right: int) int { return left + right }`), 0600); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(consumerPath, []byte("20 %% 22\n"), 0600); err != nil {
@@ -89,7 +89,7 @@ func TestGlobalOperatorCannotBeRedefinedByLaterSource(t *testing.T) {
 	directory := t.TempDir()
 	for _, name := range []string{"first.slv", "second.slv"} {
 		path := filepath.Join(directory, name)
-		if err := os.WriteFile(path, []byte(`operator @ fn(left, right) { return left }`), 0600); err != nil {
+		if err := os.WriteFile(path, []byte(`operator @ = fn(left, right) { return left }`), 0600); err != nil {
 			t.Fatal(err)
 		}
 	}

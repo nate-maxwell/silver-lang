@@ -113,15 +113,12 @@ func packageCacheContext(declarations []parser.OperatorDeclaration) []byte {
 		return nil
 	}
 	sort.Slice(declarations, func(left, right int) bool {
-		if declarations[left].Symbol != declarations[right].Symbol {
-			return declarations[left].Symbol < declarations[right].Symbol
-		}
-		return declarations[left].BindingPower < declarations[right].BindingPower
+		return declarations[left].Symbol < declarations[right].Symbol
 	})
 	var context strings.Builder
-	context.WriteString("package-operators-v1\n")
+	context.WriteString("package-operators-v2\n")
 	for _, declaration := range declarations {
-		fmt.Fprintf(&context, "%d:%s:%d\n", len(declaration.Symbol), declaration.Symbol, declaration.BindingPower)
+		fmt.Fprintf(&context, "%d:%s\n", len(declaration.Symbol), declaration.Symbol)
 	}
 	return []byte(context.String())
 }

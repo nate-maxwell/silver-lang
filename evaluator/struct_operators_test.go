@@ -138,7 +138,7 @@ if (Empty{}) { 1 } else { 0 }
 
 func TestStructCanOverloadCustomOperatorField(t *testing.T) {
 	evaluated := testEval(`
-operator @@ fn(left, right) { 0 }
+operator @@ = fn(left, right) { 0 }
 struct Number {
     value: int
     @@: call(self: Number, other: int) int

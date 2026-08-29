@@ -6,3 +6,5 @@ that silver primitives cannot produce themselves (like sockets, io streams, etc.
 
 Tests for the standard library, both Go and Silver implementations, are written in Go
 for a consistent output format.
+
+Stub files (.stb) exist for tools to understand Go and Silver implementations.

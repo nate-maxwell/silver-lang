@@ -90,7 +90,7 @@ func TestSystemEnvironmentFunctions(t *testing.T) {
 		t.Fatalf("getenv returned %T (%v), want after", value, value)
 	}
 
-	input := `let maps = import("map")
+	input := `let maps = import("maps")
 maps.get(system.environment(), "` + key + `")`
 	value, ok = testEval(systemImport + input).(*object.String)
 	if !ok || value.Value != "after" {

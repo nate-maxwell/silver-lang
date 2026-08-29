@@ -1,9 +1,9 @@
 # A small blocking HTTP/1.1 server implemented over the networking standard
 # library. Each call to serve_once accepts and handles one connection.
 
-let _arrays = import("array")
+let _arrays = import("arrays")
 let _core = import("core")
-let _maps = import("map")
+let _maps = import("maps")
 let _net = import("networking")
 let _strings = import("string")
 let _http = import("http")

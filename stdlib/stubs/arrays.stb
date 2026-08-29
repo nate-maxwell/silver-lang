@@ -1,4 +1,4 @@
-# Editor stub for import("array").
+# Editor stub for import("arrays").
 #
 # Pure array helpers. Every function here returns a new array (or element)
 # and leaves its input untouched; there is no in-place mutation, so results

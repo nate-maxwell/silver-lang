@@ -11,7 +11,7 @@ import (
 const jsonImport = "let json = import(\"json\")\n"
 
 func TestJSONLoadsBuildsNestedSilverValues(t *testing.T) {
-	input := `let maps = import("map")
+	input := `let maps = import("maps")
 let value = json.loads("{\"project\":{\"name\":\"Silver\",\"active\":true},\"versions\":[1,2.5,null]}")
 let project = maps.get(value, "project")
 let versions = maps.get(value, "versions")
@@ -97,7 +97,7 @@ func TestJSONLoadsRejectsEmptyAndTrailingData(t *testing.T) {
 }
 
 func TestJSONDumpsRoundTripsNestedValues(t *testing.T) {
-	input := `let maps = import("map")
+	input := `let maps = import("maps")
 let source = json.loads("{\"nested\":{\"values\":[1,true,null]}}")
 let encoded = json.dumps(source)
 let decoded = json.loads(encoded)
@@ -179,7 +179,7 @@ func TestJSONLoadAndDumpUseFiles(t *testing.T) {
 	}
 
 	input := `let io = import("io")
-let maps = import("map")
+let maps = import("maps")
 let file = io.open(` + silverString(path) + `)
 json.dump({"nested": {"answer": 42}}, file, 2)
 let value = json.load(file)

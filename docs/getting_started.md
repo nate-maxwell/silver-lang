@@ -112,7 +112,7 @@ io.println(helpers.double(helpers.answer))
 Relative imports resolve from the importing file. A non-relative file import first checks the importing file's directory
 and then the package, source-file, or legacy directory entries in the platform-separated `SILVER_PATH` environment
 variable. A directory containing a `.yaml` or `.yml` manifest exposes the `.slv` paths listed in that manifest. Bare
-standard-library names such as `"io"` and `"array"` resolve to embedded modules.
+standard-library names such as `"io"` and `"arrays"` resolve to embedded modules.
 
 Imports are evaluated once per interpreter session and then cached. Circular imports are reported as errors.
 See [Modules and imports](language_guide/modules.md) for the complete resolution and module-member rules.
@@ -122,7 +122,7 @@ See [Modules and imports](language_guide/modules.md) for the complete resolution
 Standard-library modules are ordinary values returned by `import`:
 
 ```silver
-let arrays = import("array")
+let arrays = import("arrays")
 let print = import("io").print
 
 let values = arrays.sort([3, 1, 2])

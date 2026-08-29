@@ -1,7 +1,7 @@
 # Editor stub for import("collections").
 #
 # Mutable sequence and map types layered on top of array and map. Unlike
-# array.* and map.*, the functions below mutate their first argument in
+# arrays.* and maps.*, the functions below mutate their first argument in
 # place and return null; Deque, Stack, and DefaultMap values also support
 # index syntax (sequence[i], sequence[i] = v) through their get_item and
 # set_item fields.
@@ -76,7 +76,7 @@ let copy = fn(sequence) {
 
 let count = fn(sequence, value) int {
     # Return the number of values in a Deque or Stack equal to value, using
-    # the same equality rules as array.contains (numeric values compare by
+    # the same equality rules as arrays.contains (numeric values compare by
     # value across int and float).
 }
 

@@ -10,7 +10,7 @@ import (
 
 func TestUserOperatorCanHostBuiltinFunction(t *testing.T) {
 	evaluated := testEval(`
-let arrays = import("array")
+let arrays = import("arrays")
 operator ;; = fn(left: array, right) array {
     return arrays.append(left, right)
 }

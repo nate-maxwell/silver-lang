@@ -6,9 +6,9 @@ import (
 	"sort"
 )
 
-// arrayDefinitions groups the native array operations. Keeping this list next
+// arraysDefinitions groups the native array operations. Keeping this list next
 // to their implementations makes their Silver names easy to audit.
-func arrayDefinitions(null *object.Null, trueValue, falseValue *object.Boolean) []definition {
+func arraysDefinitions(null *object.Null, trueValue, falseValue *object.Boolean) []definition {
 	return []definition{
 		{name: "append", fn: builtinAppend},
 		{name: "of", fn: builtinArrayOf, signature: &ast.TypeAnnotation{Parts: []string{"call"}, ParameterNames: []string{"values"}, ParameterTypes: []*ast.TypeAnnotation{nil}, Variadic: true, ReturnType: namedType("array")}},

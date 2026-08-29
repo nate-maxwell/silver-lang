@@ -1,6 +1,6 @@
 # In-memory cookie storage and URL matching for HTTP clients.
 
-let _arrays = import("array")
+let _arrays = import("arrays")
 let _cookies = import("http/cookies")
 let _core = import("core")
 let _strings = import("string")

@@ -59,7 +59,7 @@ io.println(multi_line.eval())
 Text between a single pair of braces is parsed as an ordinary expression:
 
 ````silver
-let maps = import("map")
+let maps = import("maps")
 let template = ```sum={1 + 2}; answer={maps.get({"answer": 42}, "answer")}```
 
 template.eval() # "sum=3; answer=42"

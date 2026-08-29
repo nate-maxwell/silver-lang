@@ -279,7 +279,7 @@ buffer[1] # 99
 return-type checks from those functions propagate normally.
 
 Native arrays and maps implement indexing directly. Array indexes must be in range. Missing map keys raise `KeyError`,
-while [`map.get`](../stdlib/map.md) returns null for absence.
+while [`maps.get`](../stdlib/maps.md) returns null for absence.
 
 ## Modules
 

@@ -20,13 +20,13 @@
 - [`http/server`](stdlib/http_server.md) - blocking HTTP/1.1 servers and handlers.
 
 - [`args`](stdlib/args.md) — command-line argument parsing.
-- [`array`](stdlib/array.md) — non-mutating array transformations and queries.
+- [`arrays`](stdlib/arrays.md) — non-mutating array transformations and queries.
 - [`collections`](stdlib/collections.md) — mutable deques, stacks, and default maps.
 - [`core`](stdlib/core.md) — length, ranges, and first-class type inspection.
 - [`io`](stdlib/io.md) — printing, process streams, and files.
 - [`json`](stdlib/json.md) — JSON encoding and decoding.
 - [`logging`](stdlib/logging.md) — structured loggers and stream, file, rotating-file, TCP, UDP, and null handlers.
-- [`map`](stdlib/map.md) — map queries and non-mutating transformations.
+- [`maps`](stdlib/maps.md) — map queries and non-mutating transformations.
 - [`math`](stdlib/math.md) — numeric functions and constants.
 - [`networking`](stdlib/networking.md) — TCP and UDP connections and TCP listeners.
 - [`path`](stdlib/path.md) — object-oriented filesystem paths.

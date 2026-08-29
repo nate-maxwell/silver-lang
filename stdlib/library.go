@@ -80,11 +80,11 @@ func NewWithStreams(in io.Reader, out, errOut io.Writer, null *object.Null, true
 	}
 
 	return newLibrary(map[string][]definition{
-		"array":       arrayDefinitions(null, trueValue, falseValue),
+		"arrays":      arraysDefinitions(null, trueValue, falseValue),
 		"collections": collectionDefinitions(null),
 		"core":        coreDefinitions(),
 		"io":          ioDefinitions(in, out, errOut, null, trueValue, falseValue),
-		"map":         mapDefinitions(null, trueValue, falseValue),
+		"maps":        mapsDefinitions(null, trueValue, falseValue),
 		"math":        mathDefinitions(),
 		"_networking": networkingDefinitions(null),
 		"random":      randomDefinitions(null),

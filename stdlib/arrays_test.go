@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-const arrayImport = "let arrays = import(\"array\")\n"
+const arrayImport = "let arrays = import(\"arrays\")\n"
 
 func TestArrayModuleFunctions(t *testing.T) {
 	tests := []struct {
@@ -96,7 +96,7 @@ func TestArrayBuiltinBoundaryAndTypeErrors(t *testing.T) {
 func TestArrayFunctionsRequireImport(t *testing.T) {
 	for _, input := range []string{`append([1], 2)`, `[1].append(2)`} {
 		if _, ok := testEval(input).(*object.Error); !ok {
-			t.Fatalf("%s did not require the array module", input)
+			t.Fatalf("%s did not require the arrays module", input)
 		}
 	}
 }

@@ -65,7 +65,7 @@ first + second`
 }
 
 func TestTemplateStringEvalUsesNormalSilverExpressions(t *testing.T) {
-	input := `let maps = import("map")
+	input := `let maps = import("maps")
 let word = "silver"
 let template = ` + templateLiteral(`sum={1 + 2}; value={maps.get({"answer": 42}, "answer")}; text={word}`) + `
 template.eval()`

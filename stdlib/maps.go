@@ -2,8 +2,8 @@ package stdlib
 
 import "silver/object"
 
-// mapDefinitions groups the functions exported by import("map").
-func mapDefinitions(null *object.Null, trueValue, falseValue *object.Boolean) []definition {
+// mapsDefinitions groups the functions exported by import("maps").
+func mapsDefinitions(null *object.Null, trueValue, falseValue *object.Boolean) []definition {
 	return []definition{
 		{name: "get", fn: builtinMapGet(null)},
 		{name: "set", fn: builtinMapSet},

@@ -3,9 +3,9 @@
 # command-line programs, tests, and other hosts without depending on process
 # globals.
 
-let _arrays = import("array")
+let _arrays = import("arrays")
 let _core = import("core")
-let _maps = import("map")
+let _maps = import("maps")
 let _strings = import("string")
 let _append = _arrays.append
 let _len = _core.len

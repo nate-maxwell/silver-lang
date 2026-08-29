@@ -90,7 +90,7 @@ var defaultMapGetTemplate = parseDefaultMapGetTemplate()
 
 func parseDefaultMapGetTemplate() *ast.FunctionLiteral {
 	const source = `fn(self, key) int {
-	let maps = import("map")
+	let maps = import("maps")
 	if maps.contains(self.values, key) {
 		return self.values[key]
 	}

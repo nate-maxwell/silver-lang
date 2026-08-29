@@ -1,4 +1,4 @@
-# Editor stub for import("map").
+# Editor stub for import("maps").
 #
 # Pure map helpers that complement map-literal syntax and index access
 # (mapping[key]). Every function here returns a new map or value and leaves
@@ -25,7 +25,7 @@ let delete = fn(mapping: map, key) map {
 
 let values = fn(mapping: map) array {
     # Return every value in mapping as an array, in unspecified iteration
-    # order. Use it together with array functions such as sort or contains
+    # order. Use it together with functions from arrays, such as sort or contains,
     # when only the values matter, not their keys.
 }
 

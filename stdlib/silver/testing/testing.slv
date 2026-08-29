@@ -4,7 +4,7 @@
 # keeps additions such as stdin, stdout, and stderr from changing how the test
 # runner binds its output function.
 let _io = import("io")
-let _arrays = import("array")
+let _arrays = import("arrays")
 let _print = _io.println
 let _append = _arrays.append
 

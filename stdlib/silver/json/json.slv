@@ -1,7 +1,7 @@
 # JSON parsing and serialization implemented in Silver. The only native work
 # used by load and dump is the read/write operation supplied by the io module.
 
-let _arrays = import("array")
+let _arrays = import("arrays")
 let _core = import("core")
 let _strings = import("string")
 

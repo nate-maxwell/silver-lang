@@ -1,3 +1,6 @@
+// The DefaultMap implementation of the map data structure found in the
+// collections standard library module.
+
 package stdlib
 
 import (

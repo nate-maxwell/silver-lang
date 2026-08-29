@@ -12,6 +12,8 @@ import (
 //
 // The zero value is ready for use, though Refresh must be called before the
 // first call to Resolve.
+//
+// Typical flow is: package.yaml -> ReadManifest -> Index.Refresh -> Index.Resolve -> Evaluator loads module.
 type Index struct {
 	mu          sync.RWMutex
 	initialized bool

@@ -1,3 +1,6 @@
+// Path normalization helpers for handling packages.
+// They keep things like ./nested/file.slv and nested\file.slv comparable.
+
 package packages
 
 import (

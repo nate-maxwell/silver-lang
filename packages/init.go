@@ -1,3 +1,5 @@
+// Primary logic for silver's "init" command, to create a new package.yaml file.
+
 package packages
 
 import (

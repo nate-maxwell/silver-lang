@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 )
 
-// Resolve searches explicit source entries and package exports in search-path
+// Resolve searches for explicit source entries and package exports in search-path
 // order. An exported file may be addressed by its declared path or basename.
 //
 // The returned Manifest is nil for an individual source-file entry or a file

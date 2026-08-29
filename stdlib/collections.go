@@ -1,3 +1,8 @@
+// Unlike most other Go-implemented standard library modules, collections could
+// be done in pure Silver but is written in Go instead.
+// This is mainly for speed, rather than relying on lower-level implementation
+// details.
+
 package stdlib
 
 import (

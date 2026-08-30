@@ -9,33 +9,33 @@ import (
 const operatorStructPrelude = `
 struct Number {
     value: int
-    add: call(self: Number, other: int) int
-    sub: call(self: Number, other: int) int
-	mul: call(self: Number, other: int) int
-	div: call(self: Number, other: int) float
-	mod: call(self: Number, other: int) int
-	int_div: call(self: Number, other: int) int
-    pow: call(self: Number, other: int) int
-    eq: call(self: Number, other: int) bool
-    not_eq: call(self: Number, other: int) bool
-    lt: call(self: Number, other: int) bool
-	gt: call(self: Number, other: int) bool
-	lte: call(self: Number, other: int) bool
-	gte: call(self: Number, other: int) bool
+    +: call(self: Number, other: int) int
+    -: call(self: Number, other: int) int
+	*: call(self: Number, other: int) int
+	/: call(self: Number, other: int) float
+	%: call(self: Number, other: int) int
+	//: call(self: Number, other: int) int
+    **: call(self: Number, other: int) int
+    ==: call(self: Number, other: int) bool
+    !=: call(self: Number, other: int) bool
+    <: call(self: Number, other: int) bool
+	>: call(self: Number, other: int) bool
+	<=: call(self: Number, other: int) bool
+	>=: call(self: Number, other: int) bool
 }
-let add = fn(self: Number, other: int) int { self.value + other }
-let sub = fn(self: Number, other: int) int { self.value - other }
-let mul = fn(self: Number, other: int) int { self.value * other }
-let div = fn(self: Number, other: int) float { self.value / other }
-let mod = fn(self: Number, other: int) int { self.value % other }
-let int_div = fn(self: Number, other: int) int { self.value // other }
-let pow = fn(self: Number, other: int) int { self.value ** other }
-let eq = fn(self: Number, other: int) bool { self.value == other }
-let not_eq = fn(self: Number, other: int) bool { self.value != other }
-let lt = fn(self: Number, other: int) bool { self.value < other }
-let gt = fn(self: Number, other: int) bool { self.value > other }
-let lte = fn(self: Number, other: int) bool { self.value <= other }
-let gte = fn(self: Number, other: int) bool { self.value >= other }
+let add = fn(self: Number, other: int) int { return self.value + other }
+let sub = fn(self: Number, other: int) int { return self.value - other }
+let mul = fn(self: Number, other: int) int { return self.value * other }
+let div = fn(self: Number, other: int) float { return self.value / other }
+let mod = fn(self: Number, other: int) int { return self.value % other }
+let int_div = fn(self: Number, other: int) int { return self.value // other }
+let pow = fn(self: Number, other: int) int { return self.value ** other }
+let eq = fn(self: Number, other: int) bool { return self.value == other }
+let not_eq = fn(self: Number, other: int) bool { return self.value != other }
+let lt = fn(self: Number, other: int) bool { return self.value < other }
+let gt = fn(self: Number, other: int) bool { return self.value > other }
+let lte = fn(self: Number, other: int) bool { return self.value <= other }
+let gte = fn(self: Number, other: int) bool { return self.value >= other }
 let number = Number{10, add, sub, mul, div, mod, int_div, pow, eq, not_eq, lt, gt, lte, gte}
 `
 
@@ -88,10 +88,10 @@ func TestStructOperatorMayReturnStruct(t *testing.T) {
 struct Vector {
     x: int
     y: int
-    add: call(self: Vector, other: Vector) Vector
+    +: call(self: Vector, other: Vector) Vector
 }
 let vector_add = fn(self: Vector, other: Vector) Vector {
-    Vector{self.x + other.x, self.y + other.y, vector_add}
+    return Vector{self.x + other.x, self.y + other.y, vector_add}
 }
 let left = Vector{2, 3, vector_add}
 let right = Vector{5, 7, vector_add}
@@ -110,7 +110,7 @@ Vector{1} + Vector{2}
 	if !ok {
 		t.Fatalf("result is %T, want *object.Error", evaluated)
 	}
-	for _, part := range []string{`operator "+"`, `struct "Vector"`, `method "add"`} {
+	for _, part := range []string{`operator "+"`, `struct "Vector"`, `field "+"`} {
 		if !strings.Contains(err.MessageText(), part) {
 			t.Fatalf("error %q does not contain %q", err.MessageText(), part)
 		}
@@ -119,11 +119,11 @@ Vector{1} + Vector{2}
 
 func TestStructOperatorMethodMustBeCallable(t *testing.T) {
 	evaluated := testEval(`
-struct Invalid { add: int }
+struct Invalid { +: int }
 Invalid{1} + 2
 `)
 	err, ok := evaluated.(*object.Error)
-	if !ok || !strings.Contains(err.MessageText(), `operator method "add" on struct "Invalid" is not callable`) {
+	if !ok || !strings.Contains(err.MessageText(), `operator field "+" on struct "Invalid" is not callable`) {
 		t.Fatalf("result is %#v, want non-callable operator error", evaluated)
 	}
 }
@@ -136,18 +136,15 @@ if (Empty{}) { 1 } else { 0 }
 	testIntegerObject(t, evaluated, 1)
 }
 
-func TestStructOperatorRegistryCoversEveryBinaryOperator(t *testing.T) {
-	want := map[string]string{
-		"+": "add", "-": "sub", "*": "mul", "/": "div", "%": "mod", "//": "int_div", "**": "pow",
-		"==": "eq", "!=": "not_eq", "<": "lt", ">": "gt",
-		"<=": "lte", ">=": "gte",
-	}
-	if len(structInfixOperatorMethods) != len(want) {
-		t.Fatalf("registry has %d entries, want %d", len(structInfixOperatorMethods), len(want))
-	}
-	for operator, method := range want {
-		if structInfixOperatorMethods[operator] != method {
-			t.Fatalf("operator %q maps to %q, want %q", operator, structInfixOperatorMethods[operator], method)
-		}
-	}
+func TestStructCanOverloadCustomOperatorField(t *testing.T) {
+	evaluated := testEval(`
+operator @@ = fn(left, right) { 0 }
+struct Number {
+    value: int
+    @@: call(self: Number, other: int) int
+}
+let combine = fn(self: Number, other: int) int { return self.value * 10 + other }
+Number{4, combine} @@ 2
+`)
+	testIntegerObject(t, evaluated, 42)
 }

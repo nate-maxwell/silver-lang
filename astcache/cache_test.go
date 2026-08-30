@@ -14,7 +14,7 @@ func TestRoundTrip(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "all.slv")
 	source := []byte(`
 export { State, Person, Details, values, choose, module }
-operator @ 55 fn(left: int, right: int) int { left + right }
+operator @ = fn(left: int, right: int) int { left + right }
 enum State { Ready, Waiting }
 struct Person { name: string, age: int }
 struct Details { person :: Person }
@@ -68,6 +68,25 @@ func TestSourceChangeInvalidatesCache(t *testing.T) {
 
 	if _, ok := astcache.Load(path, []byte("let answer = 43")); ok {
 		t.Fatal("cache matched changed source")
+	}
+}
+
+func TestParserContextSeparatesCaches(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "main.slv")
+	source := []byte("let answer = 42")
+	context := []byte("package operators: @@=60")
+	if err := astcache.StoreWithContext(path, source, context, parse(t, path, source)); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, ok := astcache.LoadWithContext(path, source, context); !ok {
+		t.Fatal("cache did not match its parser context")
+	}
+	if _, ok := astcache.LoadWithContext(path, source, []byte("package operators: @@=70")); ok {
+		t.Fatal("cache matched a different parser context")
+	}
+	if _, ok := astcache.Load(path, source); ok {
+		t.Fatal("contextual cache matched a context-free load")
 	}
 }
 

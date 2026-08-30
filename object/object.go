@@ -81,7 +81,7 @@ type Function struct {
 	ErrorTypes []*ast.TypeAnnotation
 	Body       *ast.BlockStatement
 	Env        *Environment
-	Operator   bool // unannotated operator functions preserve their result
+	Operator   bool // unannotated operator functions preserve explicitly returned results
 }
 
 // Type returns the user-defined function runtime tag.

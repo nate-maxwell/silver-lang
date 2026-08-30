@@ -1,0 +1,213 @@
+// Package packages discovers Silver packages, validates their YAML manifests,
+// and resolves the source files they expose through SILVER_PATH.
+//
+// A package manifest supplies a package name and a list of relative .slv files.
+// ReadManifest turns that document into an immutable Manifest. An Index is a
+// concurrency-safe snapshot of a search path and resolves import requests to
+// either manifest exports or legacy, unmanifested search-path entries.
+package packages
+
+import (
+	"bytes"
+	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"go.yaml.in/yaml/v3"
+)
+
+// Manifest describes one validated YAML package manifest.
+//
+// Its path, root, and export paths are absolute and cleaned. Callers cannot
+// modify a Manifest after it has been read.
+type Manifest struct {
+	name    string
+	id      string
+	path    string
+	root    string
+	exports []Export
+}
+
+// Export describes one Silver source file exposed by a Manifest.
+type Export struct {
+	declared string
+	path     string
+}
+
+// Name returns the package name declared in the manifest's package field.
+func (manifest *Manifest) Name() string { return manifest.name }
+
+// ID returns the package's stable runtime identity. The identity is derived
+// from the manifest's canonical path, so packages with the same declared name
+// but different manifests remain distinct.
+func (manifest *Manifest) ID() string { return manifest.id }
+
+// Path returns the absolute manifest path.
+func (manifest *Manifest) Path() string { return manifest.path }
+
+// Root returns the directory containing the manifest.
+func (manifest *Manifest) Root() string { return manifest.root }
+
+// Exports returns a copy of the manifest's exports in declaration order.
+func (manifest *Manifest) Exports() []Export {
+	return append([]Export(nil), manifest.exports...)
+}
+
+// Declared returns the slash-separated, cleaned relative path from the
+// manifest's export list.
+func (export Export) Declared() string { return export.declared }
+
+// Path returns the export's absolute source path.
+func (export Export) Path() string { return export.path }
+
+// ReadManifest reads path as a Silver package manifest.
+//
+// The manifest must contain exactly one YAML document with a valid package
+// name and an export list. Every export must name an existing regular .slv
+// file within the manifest's directory. Returned paths are absolute and
+// cleaned.
+func ReadManifest(path string) (*Manifest, error) {
+	input, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("could not read package file %q: %w", path, err)
+	}
+
+	document, err := decodeManifest(path, input)
+	if err != nil {
+		return nil, err
+	}
+	absolute, err := filepath.Abs(path)
+	if err != nil {
+		return nil, err
+	}
+	absolute = filepath.Clean(absolute)
+	root := filepath.Dir(absolute)
+	manifest := &Manifest{
+		name: document.packageName,
+		id:   "package:" + pathKey(absolute),
+		path: absolute,
+		root: root,
+	}
+
+	seen := make(map[string]bool, len(document.exports))
+	for _, declared := range document.exports {
+		exported, err := validateExport(path, root, declared)
+		if err != nil {
+			return nil, err
+		}
+		key := pathKey(exported)
+		if seen[key] {
+			return nil, fmt.Errorf("invalid package file %q: duplicate export %q", path, declared)
+		}
+		seen[key] = true
+		manifest.exports = append(manifest.exports, Export{
+			declared: cleanImportName(declared),
+			path:     exported,
+		})
+	}
+	return manifest, nil
+}
+
+// manifestDocument mirrors the accepted YAML fields while retaining whether a
+// required field was omitted.
+type manifestDocument struct {
+	Package *manifestString   `yaml:"package"`
+	Export  *[]manifestString `yaml:"export"`
+}
+
+// decodedManifest is the filesystem-independent result of schema validation.
+type decodedManifest struct {
+	packageName string
+	exports     []string
+}
+
+// manifestString is a YAML string that does not accept implicit conversions
+// from booleans, numbers, or other scalar types.
+type manifestString string
+
+// UnmarshalYAML rejects YAML's implicit scalar conversions so manifest names
+// and export paths must be written as strings.
+func (value *manifestString) UnmarshalYAML(node *yaml.Node) error {
+	if node.Kind != yaml.ScalarNode || node.ShortTag() != "!!str" {
+		return fmt.Errorf("must be a string")
+	}
+	*value = manifestString(node.Value)
+	return nil
+}
+
+// decodeManifest decodes and validates the document-level manifest schema.
+// Filesystem validation of individual exports is deferred to ReadManifest.
+func decodeManifest(path string, input []byte) (decodedManifest, error) {
+	decoder := yaml.NewDecoder(bytes.NewReader(input))
+	decoder.KnownFields(true)
+
+	var document manifestDocument
+	if err := decoder.Decode(&document); err != nil {
+		if err == io.EOF {
+			return decodedManifest{}, fmt.Errorf("invalid package file %q: manifest is empty", path)
+		}
+		return decodedManifest{}, fmt.Errorf("invalid package file %q: %w", path, err)
+	}
+	var trailing any
+	if err := decoder.Decode(&trailing); err != io.EOF {
+		if err != nil {
+			return decodedManifest{}, fmt.Errorf("invalid package file %q: %w", path, err)
+		}
+		return decodedManifest{}, fmt.Errorf("invalid package file %q: multiple YAML documents are not allowed", path)
+	}
+	if document.Package == nil {
+		return decodedManifest{}, fmt.Errorf("invalid package file %q: missing required field %q", path, "package")
+	}
+	packageName := string(*document.Package)
+	if !validPackageName(packageName) {
+		return decodedManifest{}, fmt.Errorf("invalid package file %q: package name %q is invalid", path, packageName)
+	}
+	if document.Export == nil {
+		return decodedManifest{}, fmt.Errorf("invalid package file %q: missing required field %q", path, "export")
+	}
+	exports := make([]string, len(*document.Export))
+	for index, declared := range *document.Export {
+		exports[index] = string(declared)
+	}
+	return decodedManifest{packageName: packageName, exports: exports}, nil
+}
+
+// validateExport resolves one declared export relative to root and ensures it
+// is an existing regular Silver source file contained by that root.
+func validateExport(manifestPath, root, declared string) (string, error) {
+	if filepath.IsAbs(declared) {
+		return "", fmt.Errorf("invalid package file %q: export %q must be relative", manifestPath, declared)
+	}
+	exported := filepath.Clean(filepath.Join(root, filepath.FromSlash(declared)))
+	relative, err := filepath.Rel(root, exported)
+	if err != nil || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+		return "", fmt.Errorf("invalid package file %q: export %q leaves the package root", manifestPath, declared)
+	}
+	info, err := os.Stat(exported)
+	if err != nil {
+		return "", fmt.Errorf("invalid package file %q: could not access export %q: %w", manifestPath, declared, err)
+	}
+	if !info.Mode().IsRegular() {
+		return "", fmt.Errorf("invalid package file %q: export %q is not a regular file", manifestPath, declared)
+	}
+	if !strings.EqualFold(filepath.Ext(exported), ".slv") {
+		return "", fmt.Errorf("invalid package file %q: export %q is not a .slv file", manifestPath, declared)
+	}
+	return exported, nil
+}
+
+// validPackageName reports whether name is a nonempty ASCII identifier.
+func validPackageName(name string) bool {
+	for index, ch := range name {
+		if ch == '_' || ch >= 'A' && ch <= 'Z' || ch >= 'a' && ch <= 'z' {
+			continue
+		}
+		if index > 0 && ch >= '0' && ch <= '9' {
+			continue
+		}
+		return false
+	}
+	return name != ""
+}

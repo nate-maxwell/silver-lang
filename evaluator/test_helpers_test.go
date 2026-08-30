@@ -8,7 +8,7 @@ import (
 )
 
 const coreImport = "let core = import(\"core\")\n"
-const arrayImport = "let arrays = import(\"array\")\n"
+const arrayImport = "let arrays = import(\"arrays\")\n"
 
 func testNullObject(t *testing.T, obj object.Object) {
 	if obj != NULL {

@@ -2,12 +2,14 @@ package evaluator
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"path/filepath"
 	"silver/ast"
 	"silver/astcache"
 	"silver/lexer"
 	"silver/object"
+	"silver/packages"
 	"silver/parser"
 	"strings"
 )
@@ -22,13 +24,20 @@ func (e *Evaluator) EvalFile(path string, env *object.Environment) object.Object
 		return newError(object.RuntimeErrorKindValue, "could not resolve file %q: %s", path, err)
 	}
 	absolutePath = filepath.Clean(absolutePath)
+	if err := e.refreshPackageIndex(); err != nil {
+		return newError(object.RuntimeErrorKindImport, "could not load SILVER_PATH: %s", err)
+	}
+	manifest := e.packages.ManifestFor(absolutePath)
 
-	program, parseError := e.parseFile(absolutePath)
+	program, parseError := e.parseFile(absolutePath, manifest)
 	if parseError != nil {
 		return parseError
 	}
 
 	env.SetSourceDir(filepath.Dir(absolutePath))
+	if manifest != nil {
+		env.SetPackageID(manifest.ID())
+	}
 	return e.Eval(program, env)
 }
 
@@ -48,7 +57,7 @@ func (e *Evaluator) importModule(path string, env *object.Environment) object.Ob
 		return e.importSourceModule(path, sourceName, source, cache)
 	}
 
-	absolutePath, err := resolveImportPath(path, env.SourceDir())
+	absolutePath, manifest, err := e.resolveImportPath(path, env.SourceDir())
 	if err != nil {
 		return newError(object.RuntimeErrorKindImport, "could not resolve import %q: %s", path, err)
 	}
@@ -63,13 +72,16 @@ func (e *Evaluator) importModule(path string, env *object.Environment) object.Ob
 	e.loading[absolutePath] = true
 	defer delete(e.loading, absolutePath)
 
-	program, parseError := e.parseFile(absolutePath)
+	program, parseError := e.parseFile(absolutePath, manifest)
 	if parseError != nil {
 		return parseError
 	}
 
 	moduleEnv := object.NewEnvironment()
 	moduleEnv.SetSourceDir(filepath.Dir(absolutePath))
+	if manifest != nil {
+		moduleEnv.SetPackageID(manifest.ID())
+	}
 	e.pushContext("<module>")
 	defer e.popContext()
 	result := e.Eval(program, moduleEnv)
@@ -103,18 +115,21 @@ func (e *Evaluator) importSourceModule(name, sourceName, source string, cache []
 
 	sourceBytes := []byte(source)
 	program, cached := astcache.LoadBytes(sourceName, sourceBytes, cache)
-	if e.operators.HasUserOperators() || bytes.Contains(sourceBytes, []byte("operator")) {
+	packageID := "stdlib"
+	registry := e.operatorScope(packageID).registry
+	if registry.HasUserOperators() || bytes.Contains(sourceBytes, []byte("operator")) {
 		cached = false
 	}
 	if !cached {
 		var parseError *object.Error
-		program, parseError = parseSourceWithRegistry(sourceName, sourceBytes, e.operators)
+		program, parseError = parseSourceWithRegistry(sourceName, sourceBytes, registry)
 		if parseError != nil {
 			return parseError
 		}
 	}
 
 	moduleEnv := object.NewEnvironment()
+	moduleEnv.SetPackageID(packageID)
 	e.pushContext("<module>")
 	defer e.popContext()
 	result := e.Eval(program, moduleEnv)
@@ -159,48 +174,38 @@ func (e *Evaluator) moduleExports(program *ast.Program, env *object.Environment)
 	return exports, nil
 }
 
-// resolveImportPath first resolves path relative to sourceDir, falling back to
-// the process working directory for in-memory evaluation. If that file does
-// not exist, each directory in SILVER_PATH is searched in order. SILVER_PATH
-// uses the platform's native path-list separator.
-func resolveImportPath(path, sourceDir string) (string, error) {
-	if filepath.IsAbs(path) {
-		return filepath.Clean(path), nil
+// resolveImportPath checks the importer directory first, then package
+// manifests, explicit source files, and legacy directory entries in
+// SILVER_PATH.
+func (e *Evaluator) resolveImportPath(path, sourceDir string) (string, *packages.Manifest, error) {
+	if err := e.refreshPackageIndex(); err != nil {
+		return "", nil, fmt.Errorf("could not load SILVER_PATH: %w", err)
 	}
-
+	if filepath.IsAbs(path) {
+		absolute := filepath.Clean(path)
+		return absolute, e.packages.ManifestFor(absolute), nil
+	}
 	if sourceDir == "" {
 		var err error
 		sourceDir, err = os.Getwd()
 		if err != nil {
-			return "", err
+			return "", nil, err
 		}
 	}
 	localPath, err := filepath.Abs(filepath.Join(sourceDir, path))
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 	localPath = filepath.Clean(localPath)
 	if importCandidateExists(localPath) {
-		return localPath, nil
+		return localPath, e.packages.ManifestFor(localPath), nil
 	}
-
-	for _, searchDir := range filepath.SplitList(os.Getenv(importPathEnvironment)) {
-		if searchDir == "" {
-			continue
-		}
-		candidate, err := filepath.Abs(filepath.Join(searchDir, path))
-		if err != nil {
-			return "", err
-		}
-		candidate = filepath.Clean(candidate)
-		if importCandidateExists(candidate) {
-			return candidate, nil
-		}
+	if exposed, manifest, ok, err := e.packages.Resolve(path); err != nil {
+		return "", nil, err
+	} else if ok {
+		return exposed, manifest, nil
 	}
-
-	// Preserve the previous failure behavior: parseFile reports the read error
-	// against the path beside the importer when no search candidate exists.
-	return localPath, nil
+	return localPath, nil, nil
 }
 
 // importCandidateExists treats errors other than non-existence as a match so
@@ -216,21 +221,31 @@ func importCandidateExists(path string) bool {
 
 // parseFile reads a source file and parses it with its absolute path attached
 // to every token for diagnostics and tracebacks.
-func (e *Evaluator) parseFile(path string) (*ast.Program, *object.Error) {
+func (e *Evaluator) parseFile(path string, manifest *packages.Manifest) (*ast.Program, *object.Error) {
+	if manifest != nil {
+		state, parseError := e.preparePackage(manifest)
+		if parseError != nil {
+			return nil, parseError
+		}
+		if program := state.programs[packagePathKey(path)]; program != nil {
+			return program, nil
+		}
+	}
 	input, err := os.ReadFile(path)
 	if err != nil {
 		return nil, newError(object.RuntimeErrorKindImport, "could not read %q: %s", path, err)
 	}
-	if program, ok := astcache.Load(path, input); ok && !e.operators.HasUserOperators() && !bytes.Contains(input, []byte("operator")) {
+	registry := e.operatorScope("").registry
+	if program, ok := astcache.Load(path, input); ok && !registry.HasUserOperators() && !bytes.Contains(input, []byte("operator")) {
 		return program, nil
 	}
-	program, parseError := parseSourceWithRegistry(path, input, e.operators)
+	program, parseError := parseSourceWithRegistry(path, input, registry)
 	if parseError != nil {
 		return nil, parseError
 	}
 	// A cache is an optimization only. Read-only directories and other cache
 	// write failures must not prevent valid source from running.
-	if !e.operators.HasUserOperators() {
+	if !registry.HasUserOperators() {
 		_ = astcache.Store(path, input, program)
 	}
 	return program, nil

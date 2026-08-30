@@ -107,7 +107,7 @@ counting, or other cases where every key should start with a predictable value.
 Create one with `defaultmap(factory)`. The factory must be a zero-argument Silver function:
 
 ```silver
-let make_count = fn() int { 0 }
+let make_count = fn() int { return 0 }
 let counts = collections.defaultmap(make_count)
 counts["silver"] = 1
 

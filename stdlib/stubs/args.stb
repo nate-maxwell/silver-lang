@@ -79,7 +79,7 @@ let option = fn(name: str, short: str, help: str) Argument {
     # Declare an optional string-valued option with no default, read with
     # --name or -short on the command line. Its parsed value is absent from
     # ParsedArgs.values when the option was not supplied, so check with
-    # map.contains before indexing. Pass "" for short to omit the
+    # maps.contains before indexing. Pass "" for short to omit the
     # single-character alias.
 }
 

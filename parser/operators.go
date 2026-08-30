@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	"silver/lexer"
 	"silver/token"
 )
 
@@ -9,8 +10,14 @@ import (
 // standalone parser session. Evaluators share one registry across files,
 // imports, tasks, and REPL submissions.
 type InfixRegistry struct {
-	precedences map[string]int
 	definitions map[string]token.Position
+}
+
+// OperatorDeclaration is the grammar portion of an operator statement found
+// during a package pre-scan.
+type OperatorDeclaration struct {
+	Symbol   string
+	Position token.Position
 }
 
 var definedLanguageInfixOperators = map[string]bool{
@@ -23,7 +30,6 @@ var definedLanguageInfixOperators = map[string]bool{
 
 func NewInfixRegistry() *InfixRegistry {
 	return &InfixRegistry{
-		precedences: make(map[string]int),
 		definitions: make(map[string]token.Position),
 	}
 }
@@ -33,20 +39,83 @@ func (r *InfixRegistry) HasUserOperators() bool {
 	return len(r.definitions) != 0
 }
 
-func (r *InfixRegistry) define(symbol string, power int, position token.Position) string {
+// Has reports whether symbol is a user-defined operator in this registry.
+// Evaluators use this to distinguish package-local operator identities from
+// the operators built into the language.
+func (r *InfixRegistry) Has(symbol string) bool {
+	_, ok := r.definitions[symbol]
+	return ok
+}
+
+func (r *InfixRegistry) define(symbol string, position token.Position) string {
 	if definedLanguageInfixOperators[symbol] {
 		return fmt.Sprintf("operator %q is already defined by the language", symbol)
 	}
 	if previous, exists := r.definitions[symbol]; exists {
+		if previous.Source == position.Source && previous.Offset == position.Offset {
+			return ""
+		}
 		message := fmt.Sprintf("operator %q is already defined", symbol)
 		if previous.IsValid() {
 			message += fmt.Sprintf(" at %s:%d:%d", previous.Source, previous.Line, previous.Column)
 		}
 		return message
 	}
-	r.precedences[symbol] = power
 	r.definitions[symbol] = position
 	return ""
+}
+
+// Predefine installs a discovered package operator before full parsing. A
+// later parse of the declaration at the same source position is idempotent.
+func (r *InfixRegistry) Predefine(declaration OperatorDeclaration) string {
+	return r.define(declaration.Symbol, declaration.Position)
+}
+
+// DiscoverOperatorDeclarations performs a lexical pre-scan without parsing
+// expressions. It lets every file in a package see every package operator,
+// independent of manifest ordering, while strings, comments, and template
+// text remain opaque to discovery.
+func DiscoverOperatorDeclarations(input, source string) []OperatorDeclaration {
+	l := lexer.NewWithSource(input, source)
+	var tokens []token.Token
+	for {
+		current := l.NextToken()
+		tokens = append(tokens, current)
+		if current.Type == token.EOF {
+			break
+		}
+	}
+
+	var declarations []OperatorDeclaration
+	for index, current := range tokens {
+		if current.Type != token.OPERATOR || index+1 >= len(tokens) {
+			continue
+		}
+		cursor := index + 1
+		if tokens[cursor].Type == token.FUNCTION || tokens[cursor].Type == token.ASSIGN {
+			continue
+		}
+		var symbol string
+		var previous token.Token
+		for cursor < len(tokens) {
+			part := tokens[cursor]
+			if part.Type == token.ASSIGN && cursor+1 < len(tokens) && tokens[cursor+1].Type == token.FUNCTION {
+				cursor++
+				break
+			}
+			if !isOperatorFragment(part.Literal) || symbol != "" &&
+				(part.Position.Source != previous.Position.Source || part.Position.Offset != previous.Position.Offset+len(previous.Literal)) {
+				break
+			}
+			symbol += part.Literal
+			previous = part
+			cursor++
+		}
+		if symbol != "" && cursor < len(tokens) && tokens[cursor].Type == token.FUNCTION {
+			declarations = append(declarations, OperatorDeclaration{Symbol: symbol, Position: current.Position})
+		}
+	}
+	return declarations
 }
 
 // precedences assigns binding power to infix token types. Tokens absent from
@@ -74,10 +143,10 @@ var precedences = map[token.TokenType]int{
 }
 
 // peekPrecedence returns the binding power of the lookahead token.
-// It checks the InfixRegistry first, then the precedences map.
+// User-defined operators always use the language's lowest infix power.
 func (p *Parser) peekPrecedence() int {
-	if precedence, ok := p.operators.precedences[p.peekToken.Literal]; ok {
-		return precedence
+	if p.operators.Has(p.peekToken.Literal) {
+		return CUSTOM
 	}
 	if p, ok := precedences[p.peekToken.Type]; ok {
 		return p
@@ -88,8 +157,8 @@ func (p *Parser) peekPrecedence() int {
 
 // curPrecedence returns the binding power of the current token.
 func (p *Parser) curPrecedence() int {
-	if precedence, ok := p.operators.precedences[p.curToken.Literal]; ok {
-		return precedence
+	if p.operators.Has(p.curToken.Literal) {
+		return CUSTOM
 	}
 	if p, ok := precedences[p.curToken.Type]; ok {
 		return p

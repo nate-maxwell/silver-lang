@@ -9,6 +9,7 @@ import (
 // Struct is the constructor and field layout bound by a struct declaration.
 type Struct struct {
 	Name           string
+	PackageID      string
 	Fields         []string
 	FieldTypes     []*ast.TypeAnnotation
 	EmbeddedFields []bool

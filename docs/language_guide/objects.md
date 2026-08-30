@@ -136,7 +136,7 @@ An argument that already satisfies its parameter is kept intact:
 
 ```silver
 let move_by = fn(location: Location, amount: float) Location {
-    Location{
+    return Location{
         location.x + amount,
         location.y + amount,
         location.z + amount
@@ -221,23 +221,8 @@ methods because their structs carry callables that close over native state.
 
 ## Operator protocols
 
-A struct opts into an infix operator by storing a callable in the corresponding field:
-
-| Operator | Field     |
-| -------- |-----------|
-| `+`      | `add`     |
-| `*`      | `mul`     |
-| `%`      | `mod`     |
-| `**`     | `pow`     |
-| `==`     | `eq`      |
-| `<`      | `lt`      |
-| `<=`     | `lte`     |
-| `-`      | `sub`     |
-| `/`      | `div`     |
-| `//`     | `int_div` |
-| `!=`     | `not_eq`  |
-| `>`      | `gt`      |
-| `>=`     | `gte`     |
+A struct opts into an infix operator by storing a callable in a field whose name is the exact operator symbol. This
+works for built-in and user-defined operators alike.
 
 The left operand provides the method; the right operand becomes its explicit argument:
 
@@ -245,7 +230,7 @@ The left operand provides the method; the right operand becomes its explicit arg
 struct Vector {
     x: int
     y: int
-    add: call(self: Vector, other: Vector) Vector
+    +: call(self: Vector, other: Vector) Vector
 }
 
 let add = fn(self: Vector, other: Vector) Vector {
@@ -257,9 +242,14 @@ let right = Vector{5, 8, add}
 let sum = left + right
 ```
 
-The operator method may return any value allowed by its declared signature. If the required field is absent or not
-callable, the operation raises `TypeError`. Struct truthiness does not invoke an operator method; every struct instance
-is truthy.
+The operator field may return any value allowed by its declared signature. If the required field is absent or not
+callable, the operation raises an error. Struct truthiness does not invoke an operator field; every struct instance is
+truthy.
+
+Custom operators belong to the YAML package that declares them. A package can use its custom operator fields on its
+own structs, but importing that package does not add the operator spelling to the importer's grammar. If two packages
+declare the same spelling, their operators remain distinct. Calling an exported package function still evaluates its
+body in its package of origin, so an imported struct uses its originating package's overload there.
 
 ## Indexing protocols
 
@@ -289,7 +279,7 @@ buffer[1] # 99
 return-type checks from those functions propagate normally.
 
 Native arrays and maps implement indexing directly. Array indexes must be in range. Missing map keys raise `KeyError`,
-while [`map.get`](../stdlib/map.md) returns null for absence.
+while [`maps.get`](../stdlib/maps.md) returns null for absence.
 
 ## Modules
 

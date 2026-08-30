@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-const mapImport = "let maps = import(\"map\")\n"
+const mapImport = "let maps = import(\"maps\")\n"
 
 func TestMapModuleFunctions(t *testing.T) {
 	tests := []struct {
@@ -132,7 +132,7 @@ func TestMapBuiltinErrors(t *testing.T) {
 func TestMapFunctionsRequireImport(t *testing.T) {
 	for _, input := range []string{`get({}, "key")`, `{}.get("key")`} {
 		if _, ok := testEval(input).(*object.Error); !ok {
-			t.Fatalf("%s did not require the map module", input)
+			t.Fatalf("%s did not require the maps module", input)
 		}
 	}
 }

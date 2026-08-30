@@ -8,7 +8,7 @@ import (
 )
 
 func TestOperatorDeclarationAndUse(t *testing.T) {
-	p := New(lexer.New(`operator |> fn(left, right: call) | PossibleError {
+	p := New(lexer.New(`operator |> = fn(left, right: call) | PossibleError {
     return right(left)
 }
 first |> second |> third`))
@@ -19,8 +19,8 @@ first |> second |> third`))
 	if !ok {
 		t.Fatalf("first statement is %T, want *ast.OperatorStatement", program.Statements[0])
 	}
-	if declaration.Symbol != "|>" || declaration.BindingPower != SUM {
-		t.Fatalf("operator is %q at %d, want |> at %d", declaration.Symbol, declaration.BindingPower, SUM)
+	if declaration.Symbol != "|>" {
+		t.Fatalf("operator is %q, want |>", declaration.Symbol)
 	}
 	if len(declaration.Function.Parameters) != 2 {
 		t.Fatalf("operator has %d parameters, want 2", len(declaration.Function.Parameters))
@@ -33,19 +33,33 @@ first |> second |> third`))
 	}
 }
 
-func TestOperatorBindingPowerUsesGranularPrecedence(t *testing.T) {
-	p := New(lexer.New(`operator @ 55 fn(left, right) { return left }
+func TestBuiltinAndCustomOperatorsAssociateLeft(t *testing.T) {
+	p := New(lexer.New(`operator @ = fn(left, right) { return left }
+a @ b @ c
+a ** b ** c`))
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	for index, want := range []string{"((a @ b) @ c)", "((a ** b) ** c)"} {
+		if got := program.Statements[index+1].String(); got != want {
+			t.Fatalf("expression %d is %q, want %q", index, got, want)
+		}
+	}
+}
+
+func TestOperatorUsesLowestInfixPrecedence(t *testing.T) {
+	p := New(lexer.New(`operator @ = fn(left, right) { return left }
 a + b @ c < d`))
 	program := p.ParseProgram()
 	checkParserErrors(t, p)
 
-	if got, want := program.Statements[1].String(), "(((a + b) @ c) < d)"; got != want {
+	if got, want := program.Statements[1].String(), "((a + b) @ (c < d))"; got != want {
 		t.Fatalf("precedence expression is %q, want %q", got, want)
 	}
 }
 
 func TestExistingDelimiterCanBeDeclaredAsOperator(t *testing.T) {
-	p := New(lexer.New(`operator :: fn(left, right) { return left }
+	p := New(lexer.New(`operator :: = fn(left, right) { return left }
 left :: right`))
 	program := p.ParseProgram()
 	checkParserErrors(t, p)
@@ -55,7 +69,7 @@ left :: right`))
 }
 
 func TestOperatorFunctionRequiresTwoParameters(t *testing.T) {
-	p := New(lexer.New(`operator ;; fn(value) { value }`))
+	p := New(lexer.New(`operator ;; = fn(value) { value }`))
 	p.ParseProgram()
 	if got := strings.Join(p.Errors(), "\n"); !strings.Contains(got, "exactly two non-variadic parameters") {
 		t.Fatalf("errors are %q, want operator arity diagnostic", got)
@@ -64,7 +78,7 @@ func TestOperatorFunctionRequiresTwoParameters(t *testing.T) {
 
 func TestOperatorMustBeDeclaredBeforeUse(t *testing.T) {
 	p := New(lexer.New(`left |> right
-operator |> fn(left, right) { return left }`))
+operator |> = fn(left, right) { return left }`))
 	p.ParseProgram()
 	if len(p.Errors()) == 0 {
 		t.Fatal("parser accepted an operator before its declaration")
@@ -72,8 +86,8 @@ operator |> fn(left, right) { return left }`))
 }
 
 func TestOperatorCannotBeRedefined(t *testing.T) {
-	p := New(lexer.New(`operator @ fn(left, right) { return left }
-operator @ 55 fn(left, right) { return right }`))
+	p := New(lexer.New(`operator @ = fn(left, right) { return left }
+operator @ = fn(left, right) { return right }`))
 	p.ParseProgram()
 	if got := strings.Join(p.Errors(), "\n"); !strings.Contains(got, `operator "@" is already defined`) {
 		t.Fatalf("errors are %q, want duplicate-operator diagnostic", got)
@@ -81,9 +95,27 @@ operator @ 55 fn(left, right) { return right }`))
 }
 
 func TestLanguageOperatorCannotBeRedefined(t *testing.T) {
-	p := New(lexer.New(`operator + fn(left, right) { return left }`))
+	p := New(lexer.New(`operator + = fn(left, right) { return left }`))
 	p.ParseProgram()
 	if got := strings.Join(p.Errors(), "\n"); !strings.Contains(got, `operator "+" is already defined by the language`) {
 		t.Fatalf("errors are %q, want language-operator diagnostic", got)
+	}
+}
+
+func TestOperatorBindingPowerCannotBeSpecified(t *testing.T) {
+	p := New(lexer.New(`operator @ 5 = fn(left, right) { return left }`))
+	p.ParseProgram()
+	if len(p.Errors()) == 0 {
+		t.Fatal("parser accepted a user-specified operator precedence")
+	}
+}
+
+func TestOperatorSpellingCanEndWithEquals(t *testing.T) {
+	p := New(lexer.New(`operator ??= = fn(left, right) { return left }
+left ??= right`))
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+	if got, want := program.Statements[1].String(), "(left ??= right)"; got != want {
+		t.Fatalf("expression is %q, want %q", got, want)
 	}
 }

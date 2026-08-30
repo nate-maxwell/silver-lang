@@ -108,7 +108,7 @@ alias[0] = 99
 values[0] # 99
 ```
 
-The [`array`](../stdlib/array.md) module provides copy-producing transformations. The
+The [`arrays`](../stdlib/arrays.md) module provides copy-producing transformations. The
 [`collections`](../stdlib/collections.md) module provides intentionally mutable sequence operations and struct-backed
 deques/stacks.
 
@@ -126,10 +126,10 @@ record["stable"] = False
 ```
 
 Integers, floats, booleans, strings, and enum values are hashable keys. Numerically equal integer and integral-float
-keys address the same entry. Reading a missing key with brackets raises `KeyError`; [`map.get`](../stdlib/map.md)
+keys address the same entry. Reading a missing key with brackets raises `KeyError`; [`maps.get`](../stdlib/maps.md)
 returns null instead.
 
-Maps are mutable reference values. Iteration order and the order returned by `map.values` are unspecified.
+Maps are mutable reference values. Iteration order and the order returned by `maps.values` are unspecified.
 
 ## Enums
 

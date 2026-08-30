@@ -48,10 +48,10 @@ func TestSwitchReevaluatesReachedCasesEveryTime(t *testing.T) {
 	input := `let calls = 0
 let candidate = fn(value: int) int {
     calls = calls + 1
-    value
+    return value
 }
 let classify = fn(value: int) str {
-    switch value {
+    return switch value {
     case candidate(1):
         "one"
     case candidate(2):
@@ -70,7 +70,7 @@ func TestSwitchEvaluatesSubjectOnce(t *testing.T) {
 	input := `let calls = 0
 let subject = fn() int {
     calls = calls + 1
-    2
+    return 2
 }
 switch subject() {
 case 1:
@@ -86,7 +86,7 @@ func TestSwitchSkipsLaterCaseExpressionsAfterMatch(t *testing.T) {
 	input := `let calls = 0
 let candidate = fn(value: int) int {
     calls = calls + 1
-    value
+    return value
 }
 switch 1 {
 case candidate(1):

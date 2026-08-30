@@ -51,7 +51,7 @@ func TestRegexMatchObject(t *testing.T) {
 		})
 	}
 
-	groupMap := `let maps = import("map")
+	groupMap := `let maps = import("maps")
 ` + input + `maps.get(match.groupmap(), "label")`
 	if got := testEval(regexImport + groupMap).Inspect(); got != "id" {
 		t.Fatalf("named group is %q, want id", got)

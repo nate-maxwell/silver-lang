@@ -1,7 +1,7 @@
 # JSON parsing and serialization implemented in Silver. The only native work
 # used by load and dump is the read/write operation supplied by the io module.
 
-let _arrays = import("array")
+let _arrays = import("arrays")
 let _core = import("core")
 let _strings = import("string")
 
@@ -37,7 +37,7 @@ let _type_name = fn(value) str {
     if value == kind {
         return "TYPE"
     }
-    switch kind {
+    return switch kind {
         case int: "INTEGER"
         case float: "FLOAT"
         case bool: "BOOLEAN"
@@ -90,7 +90,7 @@ let _unexpected_value = fn(parser: _Parser) JSONDecodeError {
 }
 
 let _is_whitespace = fn(character: str) bool {
-    character == " " || character == "\t" || character == "\n" || character == "\r"
+    return character == " " || character == "\t" || character == "\n" || character == "\r"
 }
 
 let _skip_whitespace = fn(parser: _Parser) {
@@ -100,11 +100,11 @@ let _skip_whitespace = fn(parser: _Parser) {
 }
 
 let _is_digit = fn(character: str) bool {
-    _strings.contains("0123456789", character)
+    return _strings.contains("0123456789", character)
 }
 
 let _hex_value = fn(character: str) int {
-    _strings.find("0123456789abcdef", _strings.lower(character))
+    return _strings.find("0123456789abcdef", _strings.lower(character))
 }
 
 let _parse_hex4 = fn(parser: _Parser) int | JSONDecodeError {
@@ -126,7 +126,7 @@ let _parse_hex4 = fn(parser: _Parser) int | JSONDecodeError {
 }
 
 let _replacement_character = fn() str {
-    _strings.from_codepoint(65533)
+    return _strings.from_codepoint(65533)
 }
 
 let _parse_string = fn(parser: _Parser) str | JSONDecodeError {
@@ -405,7 +405,7 @@ let load = fn(arguments...) any | JSONDecodeError | TypeError | ValueError | IOE
 
 let _hex_digit = fn(value: int) str {
     if value < 10 { return _strings.from_int(value) }
-    switch value {
+    return switch value {
         case 10: "a"
         case 11: "b"
         case 12: "c"
@@ -416,7 +416,7 @@ let _hex_digit = fn(value: int) str {
 }
 
 let _hex4 = fn(value: int) str {
-    "\\u" + _hex_digit((value // 4096) % 16) +
+    return "\\u" + _hex_digit((value // 4096) % 16) +
     _hex_digit((value // 256) % 16) +
     _hex_digit((value // 16) % 16) +
     _hex_digit(value % 16)
@@ -453,7 +453,7 @@ let _quote = fn(value: str) str {
 }
 
 let _line_indent = fn(options: _EncodeOptions, level: int) str {
-    "\n" + _strings.repeat(options.indentation, level)
+    return "\n" + _strings.repeat(options.indentation, level)
 }
 
 let _encode = fn(value, options: _EncodeOptions, level: int, active: array) str | TypeError | ValueError {

@@ -71,7 +71,7 @@ let label = switch value {
 
 Silver evaluates the switch value once. It then evaluates case expressions in source order as they are reached. Each
 comparison has exactly the semantics of `switchValue == caseValue`: switch does not define another form of equality,
-and a struct switch value therefore uses its existing `eq` operator method. Case expressions are not cached; evaluating
+and a struct switch value therefore uses its existing `==` operator field. Case expressions are not cached; evaluating
 the same switch again reevaluates every case expression reached during that evaluation.
 
 Only the first matching case body runs. There is no fallthrough and no switch-specific `break`; `break` remains loop

@@ -9,7 +9,7 @@ import (
 func TestCatchBindsCaughtStructToDeclaredVariable(t *testing.T) {
 	evaluated := testEval(`
 struct Missing { message: str, path: str }
-let read = fn() str | Missing { Missing{"not found", "/tmp/data"} }
+let read = fn() str | Missing { return Missing{"not found", "/tmp/data"} }
 try {
 	read()
 } catch Missing err {
@@ -26,7 +26,7 @@ func TestCatchClausesMatchByNominalStructType(t *testing.T) {
 	testBooleanObject(t, testEval(`
 struct Missing { message: str }
 struct Denied { message: str }
-let read = fn() str | Denied { Denied{"no"} }
+let read = fn() str | Denied { return Denied{"no"} }
 try {
 	read()
 } catch Missing err {
@@ -41,7 +41,7 @@ func TestUnmatchedErrorPropagatesToOuterCatch(t *testing.T) {
 	testBooleanObject(t, testEval(`
 struct Missing { message: str }
 struct Denied { message: str }
-let read = fn() str | Denied { Denied{"no"} }
+let read = fn() str | Denied { return Denied{"no"} }
 try {
 	try {
 		read()
@@ -57,12 +57,12 @@ try {
 func TestCaughtErrorDoesNotEscapeFunction(t *testing.T) {
 	value := testEval(`
 struct Missing { message: str }
-let read = fn() str | Missing { Missing{"not found"} }
+let read = fn() str | Missing { return Missing{"not found"} }
 let recover = fn() str {
 	try {
 		read()
 	} catch Missing err {
-		err.message
+		return err.message
 	}
 }
 recover()
@@ -76,7 +76,7 @@ recover()
 func TestFunctionMustDeclarePropagatedError(t *testing.T) {
 	result := testEval(`
 struct Missing { message: str }
-let read = fn() str | Missing { Missing{"not found"} }
+let read = fn() str | Missing { return Missing{"not found"} }
 let caller = fn() str { read() }
 caller()
 `)

@@ -37,7 +37,7 @@ func TestStandardErrorUsesREPLOutput(t *testing.T) {
 }
 
 func TestOperatorDeclarationPersistsAcrossREPLLines(t *testing.T) {
-	input := "operator @ fn(left, right) int { left + right }\n20 @ 22\n"
+	input := "operator @ = fn(left, right) int { return left + right }\n20 @ 22\n"
 	var output bytes.Buffer
 	Start(strings.NewReader(input), &output)
 

@@ -8,9 +8,9 @@ import (
 func TestVariadicParameterForwardsIndividualArguments(t *testing.T) {
 	evaluated := testEval(`
 let concatenate = fn(first: str, second: str, third: str) str {
-	first + second + third
+	return first + second + third
 }
-let forward = fn(parts: str...) str { concatenate(parts) }
+let forward = fn(parts: str...) str { return concatenate(parts) }
 forward("one", "two", "three")
 `)
 	testStringObject(t, evaluated, "onetwothree")
@@ -18,8 +18,8 @@ forward("one", "two", "three")
 
 func TestVariadicParameterAcceptsNoArguments(t *testing.T) {
 	evaluated := testEval(`
-let answer = fn() int { 42 }
-let forward = fn(parts: str...) int { answer(parts) }
+let answer = fn() int { return 42 }
+let forward = fn(parts: str...) int { return answer(parts) }
 forward()
 `)
 	testIntegerObject(t, evaluated, 42)
@@ -55,9 +55,9 @@ gather()
 
 func TestVariadicCallSignatureCompatibility(t *testing.T) {
 	evaluated := testEval(`
-let concatenate = fn(first: str, second: str) str { first + second }
+let concatenate = fn(first: str, second: str) str { return first + second }
 let gather: call(parts: str...) str = fn(parts: str...) str {
-	concatenate(parts)
+	return concatenate(parts)
 }
 gather("one", "two")
 `)

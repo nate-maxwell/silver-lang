@@ -99,12 +99,12 @@ func TestSourceFormatsEmbeddedStructField(t *testing.T) {
 }
 
 func TestSourceKeepsUserOperatorsTogether(t *testing.T) {
-	source := []byte("operator |> fn(left,right:call){ return right(left) }\nlet result=first()|>second\n")
+	source := []byte("operator |> =fn(left,right:call){ return right(left) }\nlet result=first()|>second\n")
 	formatted, err := Source("operators.slv", source)
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := "operator |> fn(left, right: call) { return right(left) }\nlet result = first() |> second\n"
+	want := "operator |> = fn(left, right: call) { return right(left) }\nlet result = first() |> second\n"
 	if got := string(formatted); got != want {
 		t.Fatalf("formatted source is %q, want %q", got, want)
 	}

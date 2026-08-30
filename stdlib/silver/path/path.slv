@@ -1,10 +1,10 @@
 # Platform-native paths implemented in Silver. Only host filesystem access is
 # delegated to low-level operations in io.
 
-let _arrays = import("array")
+let _arrays = import("arrays")
 let _core = import("core")
 let _io = import("io")
-let _maps = import("map")
+let _maps = import("maps")
 let _strings = import("string")
 
 let _append = _arrays.append
@@ -77,7 +77,7 @@ struct _ClassResult {
 }
 
 let _type_name = fn(value) str {
-    switch _type(value) {
+    return switch _type(value) {
         case int: "INTEGER"
         case float: "FLOAT"
         case bool: "BOOLEAN"
@@ -133,7 +133,7 @@ let _volume_name = fn(value: str) str {
 
 let _rooted = fn(value: str) bool {
     let remainder = _strings.removeprefix(_normalize_separators(value), _volume_name(value))
-    _strings.startswith(remainder, _separator)
+    return _strings.startswith(remainder, _separator)
 }
 
 let _is_absolute_text = fn(value: str) bool {
@@ -243,7 +243,7 @@ let _suffix = fn(value: str) str {
 }
 
 let _stem = fn(value: str) str {
-    _strings.removesuffix(_name(value), _suffix(value))
+    return _strings.removesuffix(_name(value), _suffix(value))
 }
 
 let _suffixes = fn(value: str) array {
@@ -296,7 +296,7 @@ let _operation_error = fn(operation: str, value: str, message: str) ValueError {
     return ValueError{operation + " failed for \"" + value + "\": " + message}
 }
 
-let _parent = fn(self: Path) Path { new(_parent_text(self.path)) }
+let _parent = fn(self: Path) Path { return new(_parent_text(self.path)) }
 
 let _parents = fn(self: Path) array {
     let result = []
@@ -329,7 +329,7 @@ let _as_posix = fn(self: Path) str {
 
 let _hex_digit = fn(value: int) str {
     if value < 10 { return _strings.from_int(value) }
-    switch value {
+    return switch value {
         case 10: "A"
         case 11: "B"
         case 12: "C"
@@ -408,14 +408,14 @@ let _info_predicate = fn(self: Path, property: str, symlink: bool) bool {
     }
 }
 
-let _is_absolute = fn(self: Path) bool { _is_absolute_text(self.path) }
-let _is_block_device = fn(self: Path) bool { _info_predicate(self, "is_block_device", False) }
-let _is_char_device = fn(self: Path) bool { _info_predicate(self, "is_char_device", False) }
-let _is_dir = fn(self: Path) bool { _info_predicate(self, "is_dir", False) }
-let _is_fifo = fn(self: Path) bool { _info_predicate(self, "is_fifo", False) }
-let _is_file = fn(self: Path) bool { _info_predicate(self, "is_file", False) }
-let _is_socket = fn(self: Path) bool { _info_predicate(self, "is_socket", False) }
-let _is_symlink = fn(self: Path) bool { _info_predicate(self, "is_symlink", True) }
+let _is_absolute = fn(self: Path) bool { return _is_absolute_text(self.path) }
+let _is_block_device = fn(self: Path) bool { return _info_predicate(self, "is_block_device", False) }
+let _is_char_device = fn(self: Path) bool { return _info_predicate(self, "is_char_device", False) }
+let _is_dir = fn(self: Path) bool { return _info_predicate(self, "is_dir", False) }
+let _is_fifo = fn(self: Path) bool { return _info_predicate(self, "is_fifo", False) }
+let _is_file = fn(self: Path) bool { return _info_predicate(self, "is_file", False) }
+let _is_socket = fn(self: Path) bool { return _info_predicate(self, "is_socket", False) }
+let _is_symlink = fn(self: Path) bool { return _info_predicate(self, "is_symlink", True) }
 
 let _is_mount = fn(self: Path) bool {
     let absolute = self
@@ -508,8 +508,8 @@ let _stat_value = fn(self: Path, symlink: bool, operation: str) map | ValueError
     return result
 }
 
-let _lstat = fn(self: Path) map | ValueError { _stat_value(self, True, "lstat") }
-let _stat = fn(self: Path) map | ValueError { _stat_value(self, False, "stat") }
+let _lstat = fn(self: Path) map | ValueError { return _stat_value(self, True, "lstat") }
+let _stat = fn(self: Path) map | ValueError { return _stat_value(self, False, "stat") }
 
 let _class = fn(pattern: array, start: int, character: str) _ClassResult | ValueError {
     let index = start
@@ -571,7 +571,7 @@ let _match_at = fn(pattern: array, pattern_index: int, value: array, value_index
 }
 
 let _matches = fn(pattern: str, value: str) bool | ValueError {
-    _match_at(_strings.chars(pattern), 0, _strings.chars(value), 0)
+    return _match_at(_strings.chars(pattern), 0, _strings.chars(value), 0)
 }
 
 let _match = fn(self: Path, pattern: str) bool | ValueError {
@@ -642,7 +642,7 @@ let _mkdir = fn(self: Path, options: any...) | TypeError | ValueError {
 }
 
 let _open = fn(self: Path) File | FileNotFound | PermissionDenied {
-    _io.open(self.path)
+    return _io.open(self.path)
 }
 
 let _read = fn(self: Path, operation: str) str | ValueError {
@@ -655,8 +655,8 @@ let _read = fn(self: Path, operation: str) str | ValueError {
     return result
 }
 
-let _read_bytes = fn(self: Path) str | ValueError { _read(self, "read_bytes") }
-let _read_text = fn(self: Path) str | ValueError { _read(self, "read_text") }
+let _read_bytes = fn(self: Path) str | ValueError { return _read(self, "read_bytes") }
+let _read_text = fn(self: Path) str | ValueError { return _read(self, "read_text") }
 
 let _readlink = fn(self: Path) Path | ValueError {
     let target = ""
@@ -685,11 +685,11 @@ let _rename_value = fn(self: Path, target, operation: str) Path | TypeError | Va
 }
 
 let _rename = fn(self: Path, target) Path | TypeError | ValueError {
-    _rename_value(self, target, "rename")
+    return _rename_value(self, target, "rename")
 }
 
 let _replace = fn(self: Path, target) Path | TypeError | ValueError {
-    _rename_value(self, target, "replace")
+    return _rename_value(self, target, "replace")
 }
 
 let _resolve = fn(self: Path) Path | ValueError {
@@ -722,7 +722,7 @@ let _rglob_visit = fn(base: Path, current: Path, pattern: str, qualified: bool) 
 }
 
 let _rglob = fn(self: Path, pattern: str) array | ValueError {
-    _rglob_visit(self, self, pattern, _strings.contains(pattern, "/"))
+    return _rglob_visit(self, self, pattern, _strings.contains(pattern, "/"))
 }
 
 let _rmdir = fn(self: Path) | ValueError {
@@ -816,7 +816,7 @@ let _walk_visit = fn(current: Path) array | ValueError {
     return result
 }
 
-let _walk = fn(self: Path) array | ValueError { _walk_visit(self) }
+let _walk = fn(self: Path) array | ValueError { return _walk_visit(self) }
 
 let _with_name = fn(self: Path, name: str) Path | ValueError {
     if name == "" || _name(name) != name || name == "." || name == ".." {
@@ -851,11 +851,11 @@ let _write = fn(self: Path, contents: str, operation: str) int | ValueError {
 }
 
 let _write_bytes = fn(self: Path, contents: str) int | ValueError {
-    _write(self, contents, "write_bytes")
+    return _write(self, contents, "write_bytes")
 }
 
 let _write_text = fn(self: Path, contents: str) int | ValueError {
-    _write(self, contents, "write_text")
+    return _write(self, contents, "write_text")
 }
 
 let new = fn(value) Path | TypeError {

@@ -124,7 +124,7 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
 	for !(p.stopAtBlockBrace && p.peekTokenIs(token.LBRACE)) &&
 		!p.lineBreakBeforePeek() && precedence < p.peekPrecedence() {
 		infix := p.infixParseFns[p.peekToken.Type]
-		if _, custom := p.operators.precedences[p.peekToken.Literal]; custom {
+		if p.operators.Has(p.peekToken.Literal) {
 			infix = p.parseInfixExpression
 		}
 		if infix == nil {
@@ -201,22 +201,6 @@ func (p *Parser) parseInfixExpression(left ast.Expression) ast.Expression {
 	precedence := p.curPrecedence()
 	p.nextToken()
 	expression.Right = p.parseExpression(precedence)
-
-	return expression
-}
-
-// parsePowerExpression parses exponentiation one level below its own binding
-// power on the right, making chains right-associative: a ** b ** c is
-// interpreted as a ** (b ** c).
-func (p *Parser) parsePowerExpression(left ast.Expression) ast.Expression {
-	expression := &ast.InfixExpression{
-		Token:    p.curToken,
-		Operator: p.curToken.Literal,
-		Left:     left,
-	}
-
-	p.nextToken()
-	expression.Right = p.parseExpression(POWER - 1)
 
 	return expression
 }

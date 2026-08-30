@@ -21,7 +21,7 @@ func TestEvalFileWithNestedRelativeImport(t *testing.T) {
 	writeSilverFile(t, filepath.Join(libDir, "base.slv"), `let factor = 2`)
 	writeSilverFile(t, filepath.Join(libDir, "math.slv"), `
 let base = import("./base.slv")
-let double = fn(x) int { x * base.factor }
+let double = fn(x) int { return x * base.factor }
 `)
 	mainPath := filepath.Join(dir, "main.slv")
 	writeSilverFile(t, mainPath, `
@@ -125,6 +125,193 @@ func TestImportSearchesSilverPath(t *testing.T) {
 	env.SetSourceDir(sourceDir)
 	result := evalInput(t, New(), env, `import("library.slv").value`)
 	assertInteger(t, result, 42)
+}
+
+func TestSilverPathPackageExposesManifestFiles(t *testing.T) {
+	sourceDir := t.TempDir()
+	packageDir := t.TempDir()
+	if err := os.Mkdir(filepath.Join(packageDir, "nested"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	writeSilverFile(t, filepath.Join(packageDir, "nested", "library.slv"), `let value = 42`)
+	writeSilverFile(t, filepath.Join(packageDir, "hidden.slv"), `let value = 99`)
+	if err := os.WriteFile(filepath.Join(packageDir, "example.yaml"), []byte(`
+package: example
+export:
+  - ./nested/library.slv
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv(importPathEnvironment, packageDir)
+
+	env := object.NewEnvironment()
+	env.SetSourceDir(sourceDir)
+	engine := New()
+	assertInteger(t, evalInput(t, engine, env, `import("nested/library.slv").value`), 42)
+	assertInteger(t, evalInput(t, engine, env, `import("library.slv").value`), 42)
+
+	result := evalInput(t, engine, env, `import("hidden.slv")`)
+	if failure, ok := result.(*object.Error); !ok || !strings.Contains(failure.MessageText(), "could not read") {
+		t.Fatalf("hidden import is %#v, want package-interface import error", result)
+	}
+}
+
+func TestSilverPathPackageUsesAndCreatesASTCaches(t *testing.T) {
+	sourceDir := t.TempDir()
+	packageDir := t.TempDir()
+	cachedPath := filepath.Join(packageDir, "cached.slv")
+	uncachedPath := filepath.Join(packageDir, "uncached.slv")
+	cachedSource := []byte("let value = 1")
+	uncachedSource := []byte("let value = 42")
+	writeSilverFile(t, cachedPath, string(cachedSource))
+	writeSilverFile(t, uncachedPath, string(uncachedSource))
+
+	// Store an AST whose source hash matches cached.slv but whose value makes
+	// cache use observable. A package import should load this program instead
+	// of reparsing the source.
+	cachedProgram, parseError := ParseSource(cachedPath, []byte("let value = 41"))
+	if parseError != nil {
+		t.Fatal(parseError)
+	}
+	if err := astcache.Store(cachedPath, cachedSource, cachedProgram); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(packageDir, "package.yaml"), []byte(`
+package: example
+export:
+  - cached.slv
+  - uncached.slv
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv(importPathEnvironment, packageDir)
+
+	env := object.NewEnvironment()
+	env.SetSourceDir(sourceDir)
+	assertInteger(t, evalInput(t, New(), env, `import("cached.slv").value`), 41)
+	if _, ok := astcache.Load(uncachedPath, uncachedSource); !ok {
+		t.Fatal("package import did not create an AST cache for an uncached export")
+	}
+}
+
+func TestSilverPathAcceptsExplicitSourceFile(t *testing.T) {
+	sourceDir := t.TempDir()
+	fileDir := t.TempDir()
+	path := filepath.Join(fileDir, "single.slv")
+	writeSilverFile(t, path, `let value = 42`)
+	t.Setenv(importPathEnvironment, path)
+
+	env := object.NewEnvironment()
+	env.SetSourceDir(sourceDir)
+	result := evalInput(t, New(), env, `import("single.slv").value`)
+	assertInteger(t, result, 42)
+}
+
+func TestSilverPathRefreshesAfterEnvironmentChange(t *testing.T) {
+	sourceDir := t.TempDir()
+	packageDir := t.TempDir()
+	writeSilverFile(t, filepath.Join(packageDir, "library.slv"), `let value = 42`)
+	if err := os.WriteFile(filepath.Join(packageDir, "example.yaml"), []byte(`
+package: example
+export:
+  - ./library.slv
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv(importPathEnvironment, "")
+
+	engine := New()
+	env := object.NewEnvironment()
+	env.SetSourceDir(sourceDir)
+	if result := evalInput(t, engine, env, `import("missing.slv")`); !isError(result) {
+		t.Fatalf("initial import is %#v, want an error", result)
+	}
+	if err := os.Setenv(importPathEnvironment, packageDir); err != nil {
+		t.Fatal(err)
+	}
+	assertInteger(t, evalInput(t, engine, env, `import("library.slv").value`), 42)
+}
+
+func TestPackageOperatorsAreScopedByManifest(t *testing.T) {
+	packageDir := t.TempDir()
+	writePackageOperatorFixture(t, packageDir)
+	t.Setenv(importPathEnvironment, packageDir)
+
+	mainPath := filepath.Join(t.TempDir(), "main.slv")
+	writeSilverFile(t, mainPath, `
+let foo = import("foo.slv")
+let bar = import("bar.slv")
+foo.apply(foo.make(4), 2) * 10 + bar.apply(foo.make(4), 2)
+`)
+	result := New().EvalFile(mainPath, object.NewEnvironment())
+	assertInteger(t, result, 427)
+	for _, name := range []string{"foo.slv", "foo_operators.slv", "bar.slv", "bar_operators.slv"} {
+		if _, err := os.Stat(astcache.Path(filepath.Join(packageDir, name))); err != nil {
+			t.Fatalf("package operator cache for %s was not created: %v", name, err)
+		}
+	}
+
+	// A fresh evaluator prepares both packages again and consumes their
+	// context-tagged caches without leaking either operator grammar.
+	result = New().EvalFile(mainPath, object.NewEnvironment())
+	assertInteger(t, result, 427)
+}
+
+func TestImportedPackageOperatorIsNotVisibleToImporter(t *testing.T) {
+	packageDir := t.TempDir()
+	writePackageOperatorFixture(t, packageDir)
+	t.Setenv(importPathEnvironment, packageDir)
+
+	mainPath := filepath.Join(t.TempDir(), "main.slv")
+	writeSilverFile(t, mainPath, `
+let foo = import("foo.slv")
+foo.make(4) @@ 2
+`)
+	result := New().EvalFile(mainPath, object.NewEnvironment())
+	failure, ok := result.(*object.Error)
+	if !ok || !strings.Contains(failure.MessageText(), "could not parse") {
+		t.Fatalf("result is %#v, want syntax error for package-local operator", result)
+	}
+}
+
+func writePackageOperatorFixture(t *testing.T, directory string) {
+	t.Helper()
+	writeSilverFile(t, filepath.Join(directory, "foo_operators.slv"), `operator @@ = fn(left, right) int { return 999 }`)
+	writeSilverFile(t, filepath.Join(directory, "foo.slv"), `
+export { Foo, make, apply }
+let operators = import("./foo_operators.slv")
+struct Foo {
+    value: int
+    @@: call(self: Foo, other: int) int
+}
+let overload = fn(self: Foo, other: int) int { return self.value * 10 + other }
+let make = fn(value: int) Foo { return Foo{value, overload} }
+let apply = fn(left: Foo, right: int) int { return left @@ right }
+`)
+	if err := os.WriteFile(filepath.Join(directory, "foo.yaml"), []byte(`
+package: package_foo
+export:
+  - ./foo.slv
+  - ./foo_operators.slv
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	writeSilverFile(t, filepath.Join(directory, "bar_operators.slv"), `operator @@ = fn(left, right) int { return 7 }`)
+	writeSilverFile(t, filepath.Join(directory, "bar.slv"), `
+export { apply }
+let operators = import("./bar_operators.slv")
+let foo = import("./foo.slv")
+let apply = fn(left: foo.Foo, right: int) int { return left @@ right }
+`)
+	if err := os.WriteFile(filepath.Join(directory, "bar.yaml"), []byte(`
+package: package_bar
+export:
+  - ./bar.slv
+  - ./bar_operators.slv
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestImportPrefersImporterDirectoryOverSilverPath(t *testing.T) {
@@ -283,13 +470,13 @@ func TestFunctionDestructuresModuleExports(t *testing.T) {
 	dir := t.TempDir()
 	writeSilverFile(t, filepath.Join(dir, "library.slv"), `
 let message = "loaded"
-let double = fn(value: int) int { value * 2 }
+let double = fn(value: int) int { return value * 2 }
 `)
 	mainPath := filepath.Join(dir, "main.slv")
 	writeSilverFile(t, mainPath, `
 let library = import("./library.slv")
 let process = fn(double: call(int) int, message: str) int {
-	double(21)
+	return double(21)
 }
 process(library)
 `)
@@ -304,7 +491,7 @@ func TestMatchingModuleParameterIsNotDestructured(t *testing.T) {
 	mainPath := filepath.Join(dir, "main.slv")
 	writeSilverFile(t, mainPath, `
 let library = import("./library.slv")
-let read = fn(library: module) int { library.value }
+let read = fn(library: module) int { return library.value }
 read(library)
 `)
 
@@ -318,7 +505,7 @@ func TestDestructuredModuleExportMustMatchParameterType(t *testing.T) {
 	mainPath := filepath.Join(dir, "main.slv")
 	writeSilverFile(t, mainPath, `
 let library = import("./library.slv")
-let read = fn(value: int) int { value }
+let read = fn(value: int) int { return value }
 read(library)
 `)
 

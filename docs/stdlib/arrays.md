@@ -1,10 +1,10 @@
-# `array`
+# `arrays`
 
-`array` provides non-mutating operations over native arrays. Except for the values already contained in an array,
+`arrays` provides non-mutating operations over native arrays. Except for the values already contained in an array,
 returned arrays are fresh copies.
 
 ```silver
-let arrays = import("array")
+let arrays = import("arrays")
 let values = [3, 1, 2]
 
 arrays.append(values, 4) # [3, 1, 2, 4]

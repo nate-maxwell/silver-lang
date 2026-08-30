@@ -8,7 +8,7 @@ import (
 
 func TestArgsParsesOptionsFlagsCountsAndPositionals(t *testing.T) {
 	input := `let args = import("args")
-let maps = import("map")
+let maps = import("maps")
 let parser = args.new("build", "Build a project")
 parser.add(args.positional("source", "Source file"))
 parser.add(args.optional_positional("output", "Output file", "app.exe"))

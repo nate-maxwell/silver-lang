@@ -16,11 +16,14 @@ go build -o silver .
 On Windows the output is `silver.exe`; on macOS and Linux it is `silver`. You can also skip the build while developing
 and replace `./silver` in the examples below with `go run .`.
 
-The command accepts either no arguments or one source path:
+Running Silver without arguments starts the REPL; passing one source path runs that file:
 
 ```text
 silver [file]
 ```
+
+Silver also provides formatting, cache generation, package initialization, and version commands. See the
+[command-line interface reference](cli.md) for the complete list.
 
 To parse source without running it and explicitly generate AST caches, use `astgen` with a source file or directory:
 
@@ -29,6 +32,12 @@ silver astgen <path>
 ```
 
 When given a directory, `astgen` recursively generates a sibling `.astc` file for every `.slv` file below it.
+
+Initialize a `package.yaml` manifest in the current directory with a package name and an empty export list:
+
+```text
+silver package init <package_name>
+```
 
 ## Use the REPL
 
@@ -42,7 +51,7 @@ Then evaluate expressions and statements one line at a time:
 
 ```silver
 let io = import("io")
-let square = fn(value: int) int { value * value }
+let square = fn(value: int) int { return value * value }
 io.println(square(9))
 ```
 
@@ -62,7 +71,7 @@ struct Person {
 }
 
 let greet = fn(self: Person) str {
-    "Hello, " + self.name + "!"
+    return "Hello, " + self.name + "!"
 }
 
 let person = Person{"Silver", greet}
@@ -87,7 +96,7 @@ programs.
 Every source file is a module. Suppose `math_helpers.slv` contains:
 
 ```silver
-let double = fn(value: int) int { value * 2 }
+let double = fn(value: int) int { return value * 2 }
 let answer = 42
 ```
 
@@ -101,8 +110,9 @@ io.println(helpers.double(helpers.answer))
 ```
 
 Relative imports resolve from the importing file. A non-relative file import first checks the importing file's directory
-and then each directory in the platform-separated `SILVER_PATH` environment variable. Bare standard-library names such as
-`"io"` and `"array"` resolve to embedded modules.
+and then the package, source-file, or legacy directory entries in the platform-separated `SILVER_PATH` environment
+variable. A directory containing a `.yaml` or `.yml` manifest exposes the `.slv` paths listed in that manifest. Bare
+standard-library names such as `"io"` and `"arrays"` resolve to embedded modules.
 
 Imports are evaluated once per interpreter session and then cached. Circular imports are reported as errors.
 See [Modules and imports](language_guide/modules.md) for the complete resolution and module-member rules.
@@ -112,7 +122,7 @@ See [Modules and imports](language_guide/modules.md) for the complete resolution
 Standard-library modules are ordinary values returned by `import`:
 
 ```silver
-let arrays = import("array")
+let arrays = import("arrays")
 let print = import("io").print
 
 let values = arrays.sort([3, 1, 2])

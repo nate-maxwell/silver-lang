@@ -16,6 +16,21 @@ func TestEmbeddedSilverModuleCacheIsCurrent(t *testing.T) {
 	}
 }
 
+func TestCollectionModuleNamesArePlural(t *testing.T) {
+	library := New(io.Discard, &object.Null{}, &object.Boolean{Value: true}, &object.Boolean{Value: false})
+	for _, name := range []string{"arrays", "maps"} {
+		module, ok := library.LookupModule(name)
+		if !ok || module.Path != name {
+			t.Errorf("LookupModule(%q) = %#v, %t", name, module, ok)
+		}
+	}
+	for _, name := range []string{"array", "map"} {
+		if module, ok := library.LookupModule(name); ok {
+			t.Errorf("singular module %q is still registered as %#v", name, module)
+		}
+	}
+}
+
 func TestJSONIsSilverAuthoredModule(t *testing.T) {
 	library := New(io.Discard, &object.Null{}, &object.Boolean{Value: true}, &object.Boolean{Value: false})
 	if _, native := library.modules["json"]; native {

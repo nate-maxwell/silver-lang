@@ -130,7 +130,7 @@ func (e *Evaluator) evalSwitchExpression(se *ast.SwitchExpression, env *object.E
 			Operator: "==",
 			Right:    switchCase.Value,
 		}
-		matched := e.evalInfixExpression(comparison, value, caseValue)
+		matched := e.evalInfixExpression(comparison, value, caseValue, env)
 		if isError(matched) {
 			return matched
 		}

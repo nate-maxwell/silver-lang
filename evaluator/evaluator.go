@@ -6,6 +6,7 @@ import (
 	"os"
 	"silver/ast"
 	"silver/object"
+	"silver/packages"
 	"silver/parser"
 	stdlibpkg "silver/stdlib"
 	"sync"
@@ -28,8 +29,19 @@ type Evaluator struct {
 	// nextEnumValueID gives every evaluated enum member a session-unique hash
 	// identity, even when separate modules declare enums with the same names.
 	nextEnumValueID *atomic.Uint64
-	infix           *infixDefinitions
-	operators       *parser.InfixRegistry
+	operatorScopes  *operatorScopeSet
+	packages        *packages.Index
+	packageStates   *packageStateSet
+}
+
+type operatorScopeSet struct {
+	mu     sync.Mutex
+	values map[string]*operatorScope
+}
+
+type operatorScope struct {
+	registry *parser.InfixRegistry
+	infix    *infixDefinitions
 }
 
 type infixDefinitions struct {
@@ -91,7 +103,21 @@ func New() *Evaluator {
 // InfixRegistry returns the parser registry for this interpreter session.
 // Interactive and embedding frontends should use it for every parsed source.
 func (e *Evaluator) InfixRegistry() *parser.InfixRegistry {
-	return e.operators
+	return e.operatorScope("").registry
+}
+
+func (e *Evaluator) operatorScope(packageID string) *operatorScope {
+	e.operatorScopes.mu.Lock()
+	defer e.operatorScopes.mu.Unlock()
+	if scope := e.operatorScopes.values[packageID]; scope != nil {
+		return scope
+	}
+	scope := &operatorScope{
+		registry: parser.NewInfixRegistry(),
+		infix:    &infixDefinitions{values: make(map[string]*infixDefinition)},
+	}
+	e.operatorScopes.values[packageID] = scope
+	return scope
 }
 
 // NewWithOutput constructs an evaluator with an explicit destination for
@@ -144,8 +170,9 @@ func newEvaluator(in io.Reader, out, errOut, warnings io.Writer) *Evaluator {
 		contexts:        make([]string, 0),
 		warnings:        warnings,
 		nextEnumValueID: &atomic.Uint64{},
-		infix:           &infixDefinitions{values: make(map[string]*infixDefinition)},
-		operators:       parser.NewInfixRegistry(),
+		operatorScopes:  &operatorScopeSet{values: make(map[string]*operatorScope)},
+		packages:        packages.NewIndex(),
+		packageStates:   newPackageStateSet(),
 	}
 }
 
@@ -165,8 +192,9 @@ func (e *Evaluator) fork() *Evaluator {
 		contexts:        append([]string(nil), e.contexts...),
 		warnings:        e.warnings,
 		nextEnumValueID: e.nextEnumValueID,
-		infix:           e.infix,
-		operators:       e.operators,
+		operatorScopes:  e.operatorScopes,
+		packages:        e.packages,
+		packageStates:   e.packageStates,
 	}
 }
 
@@ -351,7 +379,12 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 		if node.Operator == "&&" || node.Operator == "||" {
 			return nativeBoolToBooleanObject(isTruthy(right))
 		}
-		if callable, failure := e.infixCallable(node.Operator); failure != nil {
+		if instance, ok := left.(*object.StructInstance); ok && e.structOperatorVisible(node.Operator, instance, env) {
+			if _, exists := instance.Get(node.Operator); exists {
+				return e.evalStructInfixExpression(node, instance, right)
+			}
+		}
+		if callable, failure := e.infixCallable(node.Operator, env.PackageID()); failure != nil {
 			return failure
 		} else if callable != nil {
 			result := e.applyFunction(callable, []object.Object{left, right})
@@ -359,7 +392,7 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 			return result
 		}
 
-		return e.evalInfixExpression(node, left, right)
+		return e.evalInfixExpression(node, left, right, env)
 
 	case *ast.IntegerLiteral:
 		return e.constants.integer(node.Value)
@@ -461,19 +494,21 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 }
 
 func (e *Evaluator) registerInfix(node *ast.OperatorStatement, env *object.Environment) object.Object {
-	e.infix.mu.Lock()
-	defer e.infix.mu.Unlock()
-	if _, exists := e.infix.values[node.Symbol]; exists {
+	infix := e.operatorScope(env.PackageID()).infix
+	infix.mu.Lock()
+	defer infix.mu.Unlock()
+	if _, exists := infix.values[node.Symbol]; exists {
 		return newError(object.RuntimeErrorKindName, "operator %q is already defined", node.Symbol)
 	}
-	e.infix.values[node.Symbol] = &infixDefinition{node: node, env: env}
+	infix.values[node.Symbol] = &infixDefinition{node: node, env: env}
 	return NULL
 }
 
-func (e *Evaluator) infixCallable(symbol string) (*object.Function, *object.Error) {
-	e.infix.mu.Lock()
-	defer e.infix.mu.Unlock()
-	definition := e.infix.values[symbol]
+func (e *Evaluator) infixCallable(symbol, packageID string) (*object.Function, *object.Error) {
+	infix := e.operatorScope(packageID).infix
+	infix.mu.Lock()
+	defer infix.mu.Unlock()
+	definition := infix.values[symbol]
 	if definition == nil {
 		return nil, nil
 	}

@@ -1,6 +1,6 @@
 # Parsing and serialization for HTTP Cookie and Set-Cookie header values.
 
-let _arrays = import("array")
+let _arrays = import("arrays")
 let _core = import("core")
 let _strings = import("string")
 
@@ -35,7 +35,7 @@ struct _Pair {
 let new = fn(name: str, value: str) Cookie | CookieError {
     _validate_name(name)
     _validate_value(value)
-    Cookie{name, value, "", "", "", 0, False, False, SameSite.Default}
+    return Cookie{name, value, "", "", "", 0, False, False, SameSite.Default}
 }
 
 let _validate_name = fn(name: str) | CookieError {

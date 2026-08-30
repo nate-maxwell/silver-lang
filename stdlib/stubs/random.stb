@@ -35,6 +35,6 @@ let randkey = fn(mapping: map) {
 
 let shuffle = fn(values: array) {
     # Shuffle the elements of values in place, using an unbiased
-    # Fisher-Yates shuffle, and return null. Unlike most array.* functions,
+    # Fisher-Yates shuffle, and return null. Unlike most arrays.* functions,
     # this mutates values directly rather than returning a new array.
 }

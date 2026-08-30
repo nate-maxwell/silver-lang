@@ -15,7 +15,8 @@ Silver exists to maximize code reuse without the drawbacks of inheritance, while
 - structs can overload builtin and custom operators.
 
 The implementation is written in Go and includes a REPL, source modules, cached ASTs, tracebacks, and a standard
-library implemented in both Go and Silver. Silver is currently a young language: it is a good place to experiment and learn, but its syntax and APIs may still evolve.
+library implemented in both Go and Silver. Silver is currently a young language: it is a good place to experiment
+and learn, but its syntax and APIs may still evolve.
 
 Read the [documentation table of contents](docs/table_of_contents.md), start with
 [Getting Started](docs/getting_started.md), browse the [CLI reference](docs/cli.md), or dive into the
@@ -41,7 +42,7 @@ let location = Location{ 0.0, 0.0, 0.0 }
 io.print(move(location)
 ```
 ```
->> Location{5.0, 5.0, 5.0}
+>> Location{ 5.0, 5.0, 5.0 }
 ```
 
 `Location` is not a `float`, so it cannot bind directly to `x`. Silver instead offers its fields to the function's
@@ -70,7 +71,7 @@ let move = fn(self: MovableLocation) {
     self.z = self.z + 5
 }
 
-let location = MovableLocation{0.0, 0.0, 0.0, move}
+let location = MovableLocation{ 0.0, 0.0, 0.0, move }
 location.move()
 io.print(location.x, location.y, location.z)
 ```
@@ -159,7 +160,73 @@ The same mechanism works for both built-in and custom infix operators.
 Structs overload operators defined in their package of origin. This prevents dependent
 packages from consuming all possible operator spellings.
 
-## Get started
+## Errors as Signatures
+
+Silver does not have a `throw` or `raise` keyword. Instead, when a function returns an error, it is automatically
+"raised", but Silver does implement a `try`+`catch` for error handling.
+
+Errors are detected in signatures as `| ErrorType`. The first value is the good value, or omitted for `none`.
+All values following, preceded by a `|` are considered returnable errors.
+
+```silver
+struct MissingUser     { message: str, id: int }
+struct DeactivatedUser { message: str, id: int }
+
+let find_user = fn(id: int) str | MissingUser | DeactivatedUser {
+    if id == 7 {
+        return "Ada"
+    } else if id == 1001 {
+        return DeactivatedUser{"user is deactivated", id}
+    } else {
+        return MissingUser{"user not found", id}
+    }
+}
+
+let result = try {
+    find_user(42)
+} catch MissingUser err {
+    err.message
+} catch DeactivatedUser err {
+    err.message
+}
+```
+Errors are structs and can benefit from all struct features.
+
+Runtime failures use the same path, so errors such as `TypeError`, `KeyError`, and `AssertionError` are catchable
+too. A list of runtime errors can be found in the documentation.
+
+## Lazy Templates and Structured Concurrency
+
+Triple-backtick templates capture their lexical scope and evaluate only when asked:
+```silver
+let name = "Silver"
+let greeting: TemplateString = ```Hello, {name}!```
+name = "world"
+greeting.eval()
+```
+```
+>> "Hello, world!"
+```
+
+Tasks run zero-argument callables concurrently. `collect` joins each non-null value as a struct with fields named
+after each handle.
+```silver
+let answer = fn() int { return 6 * 7 }
+let greeting = fn() str { return "hello" }
+
+let calculation = task answer
+let message = task greeting
+let results = collect calculation, message
+
+io.print(results.calculation) 
+io.print(results.message)     
+```
+```
+>> 42
+>> "hello"
+```
+
+## Get Started
 
 Silver currently builds from source and requires Go 1.25.2 or newer:
 

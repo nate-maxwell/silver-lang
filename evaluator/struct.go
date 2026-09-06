@@ -36,12 +36,17 @@ func (e *Evaluator) evalStructStatement(node *ast.StructStatement, env *object.E
 			return err
 		}
 		if embeddedFields[index] {
+			resolvedField, fieldEnv, resolutionError := expandTypeAlias(fieldType, env)
+			if resolutionError != "" {
+				return newError(object.RuntimeErrorKindName, "%s", resolutionError)
+			}
+			fieldType = resolvedField
 			if len(fieldType.Parts) == 1 {
-				if _, isPrimitive := object.TypeDefinitionByName(fieldType.String()); isPrimitive {
+				if _, isPrimitive := object.TypeDefinitionByName(fieldType.Parts[0]); isPrimitive {
 					return newError(object.RuntimeErrorKindType, "embedded field %q must have a struct type", node.Name.Value+"."+fields[index])
 				}
 			}
-			fieldTypeValue, resolutionError := resolveNamedType(fieldType, env)
+			fieldTypeValue, resolutionError := resolveNamedType(fieldType, fieldEnv)
 			if resolutionError != "" {
 				return newError(object.RuntimeErrorKindName, "%s", resolutionError)
 			}

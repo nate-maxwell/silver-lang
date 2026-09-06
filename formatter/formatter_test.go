@@ -40,6 +40,44 @@ func TestSourceFormatsVariadicParameter(t *testing.T) {
 	}
 }
 
+func TestSourceFormatsTypeAliasesAndArrays(t *testing.T) {
+	source := []byte(`let Lex=<call(str)array[models.Token]>
+let Nested = < array[ array[int] ] >
+let Read=<
+call() array[str]
+>
+let use=fn(l:Lex,values:array[str])array[str]{
+return values
+}
+let less=1<2
+let greater=2>1
+let types=[<int>,<call()>]
+`)
+	want := `let Lex = <call(str) array[models.Token]>
+let Nested = <array[array[int]]>
+let Read = <
+    call() array[str]
+>
+let use = fn(l: Lex, values: array[str]) array[str] {
+    return values
+}
+let less = 1 < 2
+let greater = 2 > 1
+let types = [<int>, <call()>]
+`
+	formatted, err := Source("aliases.slv", source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(formatted) != want {
+		t.Fatalf("formatted source:\n%s\nwant:\n%s", formatted, want)
+	}
+	again, err := Source("aliases.slv", formatted)
+	if err != nil || string(again) != want {
+		t.Fatalf("formatting is not stable: %s, %v", again, err)
+	}
+}
+
 func TestSourcePreservesLiteralContents(t *testing.T) {
 	source := []byte("let text=\"# not a comment\"\nlet template=```keep  spacing {text}```\n")
 	formatted, err := Source("test.slv", source)

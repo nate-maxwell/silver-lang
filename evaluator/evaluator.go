@@ -320,6 +320,9 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 	case *ast.Identifier:
 		return e.evalIdentifier(node, env)
 
+	case *ast.TypeAliasLiteral:
+		return e.evalTypeAlias(node, env)
+
 	case *ast.ImportExpression:
 		pathValue := e.Eval(node.Path, env)
 		if isError(pathValue) {

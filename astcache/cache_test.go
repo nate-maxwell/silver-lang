@@ -71,6 +71,26 @@ func TestSourceChangeInvalidatesCache(t *testing.T) {
 	}
 }
 
+func TestTypeAliasRoundTrip(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "aliases.slv")
+	source := []byte(`let Read = <call() array[array[int]]>`)
+	program := parse(t, path, source)
+	if err := astcache.Store(path, source, program); err != nil {
+		t.Fatal(err)
+	}
+	loaded, ok := astcache.Load(path, source)
+	if !ok {
+		t.Fatal("type alias cache was not loaded")
+	}
+	alias := loaded.Statements[0].(*ast.LetStatement).Value.(*ast.TypeAliasLiteral)
+	if !alias.Annotation.IsCallSignature() || len(alias.Annotation.ParameterTypes) != 0 {
+		t.Fatal("cache lost zero-argument call signature")
+	}
+	if got, want := alias.String(), "<call() array[array[int]]>"; got != want {
+		t.Fatalf("loaded alias = %q, want %q", got, want)
+	}
+}
+
 func TestParserContextSeparatesCaches(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "main.slv")
 	source := []byte("let answer = 42")

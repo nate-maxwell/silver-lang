@@ -22,6 +22,8 @@ const (
 	symbolElement
 	commentElement
 	newlineElement
+	typeOpenElement
+	typeCloseElement
 )
 
 type element struct {
@@ -155,7 +157,27 @@ func scan(source string, operators []string) []element {
 			index++
 		}
 	}
+	markTypeDelimiters(elements)
 	return elements
+}
+
+// Only prefix < opens a type literal. Mark its delimiters separately so
+// comparison operators keep their spaces and multiline aliases indent normally.
+func markTypeDelimiters(elements []element) {
+	inType := false
+	for index := range elements {
+		item := &elements[index]
+		if item.kind != symbolElement {
+			continue
+		}
+		if inType && item.value == ">" {
+			item.kind = typeCloseElement
+			inType = false
+		} else if item.value == "<" && (unaryAt(elements, index) || index > 0 && elements[index-1].kind == newlineElement) {
+			item.kind = typeOpenElement
+			inType = true
+		}
+	}
 }
 
 func matchingOperator(source string, operators []string) string {
@@ -188,7 +210,7 @@ func render(elements []element) []byte {
 		}
 
 		leadingClosers := 0
-		for leadingClosers < len(line) && line[leadingClosers].kind == symbolElement && isClosing(line[leadingClosers].value) {
+		for leadingClosers < len(line) && (line[leadingClosers].kind == typeCloseElement || line[leadingClosers].kind == symbolElement && isClosing(line[leadingClosers].value)) {
 			leadingClosers++
 		}
 		lineDepth := depth - leadingClosers
@@ -209,6 +231,14 @@ func render(elements []element) []byte {
 		wroteLine = true
 
 		for _, item := range line {
+			if item.kind == typeOpenElement {
+				depth++
+				continue
+			}
+			if item.kind == typeCloseElement {
+				depth--
+				continue
+			}
 			if item.kind != symbolElement {
 				continue
 			}
@@ -261,6 +291,9 @@ func needsSpace(line []element, index int, blockBraces map[int]bool) bool {
 		return true
 	}
 	if previous.kind == commentElement {
+		return false
+	}
+	if previous.kind == typeOpenElement || current.kind == typeCloseElement {
 		return false
 	}
 	if current.kind == symbolElement {

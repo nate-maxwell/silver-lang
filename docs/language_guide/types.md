@@ -99,6 +99,22 @@ let values = [1, "two", True]
 values[1] = "TWO"
 ```
 
+Use `array[T]` to require every element to satisfy a type annotation. The element type may be a primitive, nominal
+type, alias, callable signature, or another array type:
+
+```silver
+let names: array[str] = ["Ada", "Grace"]
+let rows: array[array[int]] = [[1, 2], [3, 4]]
+let callbacks: array[call(str)] = [fn(message: str) {}]
+```
+
+Empty arrays satisfy any `array[T]` contract. Bare `array` continues to accept mixed elements. Element checks run when
+an array enters an annotated binding, parameter, field, or return value, including reassignment of a binding or field.
+These contracts do not attach a permanent element type to the array: indexed writes and collection mutations remain
+ordinary mutations, and a later annotated boundary checks the current contents again.
+
+This syntax applies only to arrays. Maps remain heterogeneous records; `map[T]` is not supported.
+
 Arrays are mutable reference values. Indexes are zero-based integers and must be in range; negative indexes are not
 supported by native bracket access. An alias observes indexed mutations:
 
@@ -191,6 +207,28 @@ let working_directory: paths.Path = paths.cwd()
 
 An unknown type name raises `NameError` when the contract is resolved.
 
+## Type aliases
+
+Wrap an annotation in `<` and `>` to create a reusable type value:
+
+```silver
+let Names = <array[str]>
+let Announce = <call(str)>
+
+let names: Names = ["Ada", "Grace"]
+let announce = fn(shout: Announce, message: str) {
+    shout(message)
+}
+```
+
+An alias works anywhere an annotation accepts a type name, including parameters, returns, struct fields, array element
+types, and other aliases. It preserves the underlying contract and nominal identities rather than creating a new
+nominal type. Callable aliases preserve parameter names, variadic parameters, return types, and error alternatives.
+
+Alias literals resolve their type dependencies when evaluated and retain those definitions if the original names are
+later rebound or shadowed. Dependencies must already exist; forward references and recursive aliases are not supported.
+Aliases can be exported from modules and used through qualified names such as `contracts.Announce`.
+
 ## Functions and errors
 
 Parameter, return, and detailed `call(...)` contracts are covered in [Functions](functions.md). Error alternatives and
@@ -225,7 +263,7 @@ struct User { name: str }
 core.type(User{"Ada"}) == User
 ```
 
-Calling `core.type` on a struct or enum definition returns that same definition. Imported modules report the `module`
+Calling `core.type` on a struct, enum definition, or type alias returns that same type value. Imported modules report the `module`
 type, and callables report `call`.
 
 ## Type strictness

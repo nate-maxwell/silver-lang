@@ -168,6 +168,27 @@ struct Counter {
 Callable error contracts are compatible by possibility: a function that produces fewer error types can satisfy a
 contract that permits more, but not the reverse. See [Callable error contracts](errors.md#callable-error-contracts).
 
+Use [type aliases](types.md#type-aliases) to give long signatures a reusable name. Array contracts can specify their
+element type with `array[T]`:
+
+```silver
+struct Token { text: str }
+struct Node { value: int }
+
+let Lex = <call(str) array[Token]>
+let Parse = <call(array[Token]) array[Node]>
+let Eval = <call(array[Node]) int>
+
+let parse_program = fn(l: Lex, p: Parse, e: Eval, source: str) int {
+    return e(p(l(source)))
+}
+```
+
+Named signatures use the same compatibility checks as inline signatures. Parameter types are contravariant and
+return types are covariant: a supplied function may accept broader inputs and promise narrower results. Array element
+types follow that relationship, so `array[int]` can satisfy an `array[any]` result, while a bare `array` result cannot
+promise `array[int]` contents.
+
 ## Functions and other language features
 
 - [`return`](control_flow.md#returns-and-errors) can leave loops and nested conditional blocks inside a function.

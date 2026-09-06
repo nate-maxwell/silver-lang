@@ -132,6 +132,11 @@ func (e *Evaluator) evalMember(value object.Object, member string) object.Object
 		}
 		if fieldIndex >= 0 {
 			fieldType := owner.Struct.FieldTypes[fieldIndex]
+			var resolutionError string
+			fieldType, _, resolutionError = expandTypeAlias(fieldType, owner.Struct.Env)
+			if resolutionError != "" {
+				return newError(object.RuntimeErrorKindName, "%s", resolutionError)
+			}
 			if fieldType == nil || !fieldType.IsCallSignature() {
 				return field
 			}

@@ -1,5 +1,17 @@
 package object
 
+import "silver/ast"
+
+// TypeAlias is a reusable contract. Env contains the type bindings captured
+// when the literal was evaluated, so later shadowing cannot change its meaning.
+type TypeAlias struct {
+	Annotation *ast.TypeAnnotation
+	Env        *Environment
+}
+
+func (t *TypeAlias) Type() ObjectType { return TYPE_OBJ }
+func (t *TypeAlias) Inspect() string  { return "<" + t.Annotation.String() + ">" }
+
 // TypeDefinition is a first-class primitive type value. Definitions are
 // singletons so ordinary Silver identity equality can compare type() results
 // directly with names such as int, str, and array.
@@ -79,6 +91,8 @@ func RuntimeTypeName(objectType ObjectType) (string, bool) {
 // return the exact definition object from which they were created.
 func TypeOf(value Object) Object {
 	switch value := value.(type) {
+	case *TypeAlias:
+		return value
 	case *TypeDefinition:
 		return value
 	case *Struct:

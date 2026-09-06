@@ -6,6 +6,56 @@ import (
 	"testing"
 )
 
+func TestTypeAliasLiterals(t *testing.T) {
+	for _, contract := range []string{
+		"int", "models.Token", "array[str]", "array[array[int]]",
+		"array[call(str) array[models.Token]]", "call()", "call(array[int]) array[str]",
+		"call(values: array[Token]...) array[Node] | ParseError", "EarlierAlias",
+	} {
+		t.Run(contract, func(t *testing.T) {
+			p := New(lexer.New("let signature = <" + contract + ">"))
+			program := p.ParseProgram()
+			checkParserErrors(t, p)
+			literal := program.Statements[0].(*ast.LetStatement).Value.(*ast.TypeAliasLiteral)
+			if got := literal.Annotation.String(); got != contract {
+				t.Fatalf("contract = %q, want %q", got, contract)
+			}
+			if got := literal.String(); got != "<"+contract+">" {
+				t.Fatalf("literal = %q", got)
+			}
+		})
+	}
+}
+
+func TestArrayTypeAnnotations(t *testing.T) {
+	p := New(lexer.New(`fn(values: array[array[str]]) array[call(int) bool] {}`))
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+	function := program.Statements[0].(*ast.ExpressionStatement).Expression.(*ast.FunctionLiteral)
+	if got := function.Parameters[0].Type.ElementType.ElementType.String(); got != "str" {
+		t.Fatalf("nested element type = %q", got)
+	}
+	if !function.ReturnType.ElementType.IsCallSignature() {
+		t.Fatal("return array element is not a callable signature")
+	}
+}
+
+func TestMalformedTypeAliasesAndArrayTypes(t *testing.T) {
+	for _, input := range []string{
+		"let T = <>", "let T = <int", "let T = <array[]>", "let T = <array[int, str]>",
+		"let T = <array[int>", "let T = <map[str]>", "let T = <call(str) array[]>",
+		"let values: array[] = []", "let values: map[str] = {}", "let T = <int + str>",
+	} {
+		t.Run(input, func(t *testing.T) {
+			p := New(lexer.New(input))
+			p.ParseProgram()
+			if len(p.Errors()) == 0 {
+				t.Fatal("invalid type syntax was accepted")
+			}
+		})
+	}
+}
+
 func TestTypedLetStatement(t *testing.T) {
 	p := New(lexer.New(`let age: int = 36`))
 	program := p.ParseProgram()

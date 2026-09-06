@@ -7,6 +7,63 @@ import (
 	"strings"
 )
 
+func (e *Evaluator) evalTypeAlias(literal *ast.TypeAliasLiteral, env *object.Environment) object.Object {
+	if err := e.validateTypeAnnotation(literal.Annotation, env); err != nil {
+		return err
+	}
+	captured := object.NewEnvironment()
+	captureTypeBindings(literal.Annotation, env, captured)
+	return &object.TypeAlias{Annotation: literal.Annotation, Env: captured}
+}
+
+// Capture only dependencies of this contract, retaining the exact nominal
+// definitions and earlier aliases rather than the mutable declaring scope.
+func captureTypeBindings(annotation *ast.TypeAnnotation, env, captured *object.Environment) {
+	if annotation == nil {
+		return
+	}
+	if len(annotation.Parts) > 0 {
+		name := annotation.Parts[0]
+		if value, ok := env.Get(name); ok {
+			captured.Set(name, value)
+		}
+	}
+	captureTypeBindings(annotation.ElementType, env, captured)
+	for _, parameter := range annotation.ParameterTypes {
+		captureTypeBindings(parameter, env, captured)
+	}
+	captureTypeBindings(annotation.ReturnType, env, captured)
+	for _, failure := range annotation.ErrorTypes {
+		captureTypeBindings(failure, env, captured)
+	}
+}
+
+// expandTypeAlias follows named contracts in their captured environments.
+// Alias literals are validated before being bound and capture earlier values,
+// so alias chains cannot introduce recursive type definitions.
+func expandTypeAlias(annotation *ast.TypeAnnotation, env *object.Environment) (*ast.TypeAnnotation, *object.Environment, string) {
+	for annotation != nil && !annotation.IsCallSignature() && annotation.ElementType == nil {
+		if len(annotation.Parts) == 1 {
+			if _, primitive := object.TypeDefinitionByName(annotation.Parts[0]); primitive {
+				break
+			}
+		}
+		value, err := resolveNamedType(annotation, env)
+		if err != "" {
+			return nil, env, err
+		}
+		switch value := value.(type) {
+		case *object.TypeAlias:
+			annotation, env = value.Annotation, value.Env
+		case *object.TypeDefinition:
+			return &ast.TypeAnnotation{Token: annotation.Token, Parts: []string{value.Name}}, env, ""
+		default:
+			return annotation, env, ""
+		}
+	}
+	return annotation, env, ""
+}
+
 // requireType enforces an explicit annotation. Unannotated declarations accept
 // any runtime value.
 func (e *Evaluator) requireType(annotation *ast.TypeAnnotation, value object.Object, env *object.Environment, subject string) *object.Error {
@@ -29,6 +86,9 @@ func (e *Evaluator) requireType(annotation *ast.TypeAnnotation, value object.Obj
 func (e *Evaluator) validateTypeAnnotation(annotation *ast.TypeAnnotation, env *object.Environment) *object.Error {
 	if annotation == nil {
 		return nil
+	}
+	if annotation.ElementType != nil {
+		return e.validateTypeAnnotation(annotation.ElementType, env)
 	}
 	if annotation.IsCallSignature() {
 		for _, parameterType := range annotation.ParameterTypes {
@@ -58,7 +118,7 @@ func (e *Evaluator) validateTypeAnnotation(annotation *ast.TypeAnnotation, env *
 		return newError(object.RuntimeErrorKindName, "%s", resolutionError)
 	}
 	switch value.(type) {
-	case *object.Struct, *object.Enum:
+	case *object.Struct, *object.Enum, *object.TypeAlias, *object.TypeDefinition:
 		return nil
 	default:
 		return newError(object.RuntimeErrorKindType, "%q does not name a value type", annotation.String())
@@ -75,8 +135,13 @@ func (e *Evaluator) validateErrorTypeAnnotation(annotation *ast.TypeAnnotation, 
 	if err := e.validateTypeAnnotation(annotation, env); err != nil {
 		return err
 	}
+	var resolutionError string
+	annotation, env, resolutionError = expandTypeAlias(annotation, env)
+	if resolutionError != "" {
+		return newError(object.RuntimeErrorKindName, "%s", resolutionError)
+	}
 	_, primitive := object.TypeDefinitionByName(annotation.String())
-	if annotation.IsCallSignature() || len(annotation.Parts) == 1 && primitive {
+	if annotation.IsCallSignature() || annotation.ElementType != nil || len(annotation.Parts) == 1 && primitive {
 		return newError(object.RuntimeErrorKindType, "error return type %q must be a struct", annotation.String())
 	}
 	value, resolutionError := resolveNamedType(annotation, env)
@@ -165,9 +230,27 @@ func returnTypesString(success *ast.TypeAnnotation, errorTypes []*ast.TypeAnnota
 	return strings.Join(parts, " | ")
 }
 
-// typeMatches handles primitive aliases directly and resolves all other names
-// as nominal struct or enum types in the declaration's lexical environment.
+// typeMatches resolves aliases in their captured scopes, checks array elements,
+// and matches primitive, callable, and nominal contracts.
 func typeMatches(annotation *ast.TypeAnnotation, value object.Object, env *object.Environment) (bool, string) {
+	var resolutionError string
+	annotation, env, resolutionError = expandTypeAlias(annotation, env)
+	if resolutionError != "" {
+		return false, resolutionError
+	}
+	if annotation.ElementType != nil {
+		array, ok := value.(*object.Array)
+		if !ok {
+			return false, ""
+		}
+		for _, element := range array.Elements {
+			matches, err := typeMatches(annotation.ElementType, element, env)
+			if err != "" || !matches {
+				return matches, err
+			}
+		}
+		return true, ""
+	}
 	if annotation.IsCallSignature() {
 		switch value := value.(type) {
 		case *object.Function:
@@ -244,17 +327,35 @@ func runtimeFunctionMatches(expected *ast.TypeAnnotation, actual *object.Functio
 
 // annotationAssignable reports whether every value described by source is
 // accepted by target. Function parameters are contravariant and returns are
-// covariant; any accepts every source type and other Silver types require
-// nominal equality.
+// covariant, including array element contracts. any accepts every source type;
+// struct and enum types require nominal equality.
 func annotationAssignable(target, source *ast.TypeAnnotation, targetEnv, sourceEnv *object.Environment) (bool, string) {
 	if target == nil || source == nil {
 		return false, ""
+	}
+	var err string
+	target, targetEnv, err = expandTypeAlias(target, targetEnv)
+	if err != "" {
+		return false, err
+	}
+	source, sourceEnv, err = expandTypeAlias(source, sourceEnv)
+	if err != "" {
+		return false, err
 	}
 	if isPrimitiveAnnotation(target, "any") {
 		return true, ""
 	}
 	if isPrimitiveAnnotation(source, "any") {
 		return false, ""
+	}
+	if target.ElementType != nil {
+		if source.ElementType == nil {
+			return false, ""
+		}
+		return annotationAssignable(target.ElementType, source.ElementType, targetEnv, sourceEnv)
+	}
+	if source.ElementType != nil {
+		return isPrimitiveAnnotation(target, "array"), ""
 	}
 	if target.IsCallSignature() {
 		if !source.IsCallSignature() || target.Variadic != source.Variadic || len(target.ParameterTypes) != len(source.ParameterTypes) {
@@ -314,6 +415,15 @@ func annotationAssignable(target, source *ast.TypeAnnotation, targetEnv, sourceE
 // callReturnAssignable treats an omitted call-signature or function return as
 // null while preserving ordinary annotation assignability for explicit types.
 func callReturnAssignable(target, source *ast.TypeAnnotation, targetEnv, sourceEnv *object.Environment) (bool, string) {
+	var err string
+	target, targetEnv, err = expandTypeAlias(target, targetEnv)
+	if err != "" {
+		return false, err
+	}
+	source, sourceEnv, err = expandTypeAlias(source, sourceEnv)
+	if err != "" {
+		return false, err
+	}
 	if target == nil && source == nil {
 		return true, ""
 	}
@@ -354,7 +464,7 @@ func callReturnsAssignable(targetSuccess *ast.TypeAnnotation, targetErrors []*as
 }
 
 func isPrimitiveAnnotation(annotation *ast.TypeAnnotation, name string) bool {
-	return annotation != nil && !annotation.IsCallSignature() && len(annotation.Parts) == 1 && annotation.Parts[0] == name
+	return annotation != nil && !annotation.IsCallSignature() && annotation.ElementType == nil && len(annotation.Parts) == 1 && annotation.Parts[0] == name
 }
 
 // resolveNamedType follows module members in a qualified annotation and

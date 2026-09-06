@@ -5,6 +5,17 @@ import (
 	"silver/token"
 )
 
+// parseTypeAliasLiteral parses <Type> in expression position. Infix < and >
+// retain their ordinary comparison meaning.
+func (p *Parser) parseTypeAliasLiteral() ast.Expression {
+	literal := &ast.TypeAliasLiteral{Token: p.curToken}
+	literal.Annotation = p.parseTypeAnnotation()
+	if literal.Annotation == nil || !p.expectPeek(token.GT) {
+		return nil
+	}
+	return literal
+}
+
 // parseDeclarationIdentifier parses the optional : type suffix on the
 // current identifier. It leaves the final type component as the current token.
 func (p *Parser) parseDeclarationIdentifier() *ast.Identifier {
@@ -17,7 +28,7 @@ func (p *Parser) parseDeclarationIdentifier() *ast.Identifier {
 }
 
 // parseTypeAnnotation parses the identifier following the current token and
-// any dot-qualified components. A call type may additionally declare a
+// any dot-qualified components or array element annotation. A call type may additionally declare a
 // signature using call([name:] parameterType, ...) [returnType].
 func (p *Parser) parseTypeAnnotation() *ast.TypeAnnotation {
 	if !p.expectPeek(token.IDENT) {
@@ -41,7 +52,15 @@ func (p *Parser) parseTypeAnnotationFromCurrent() *ast.TypeAnnotation {
 		}
 		annotation.Parts = append(annotation.Parts, p.curToken.Literal)
 	}
+	if len(annotation.Parts) == 1 && annotation.Parts[0] == "array" && p.peekTokenIs(token.LBRACKET) {
+		p.nextToken()
+		annotation.ElementType = p.parseTypeAnnotation()
+		if annotation.ElementType == nil || !p.expectPeek(token.RBRACKET) {
+			return nil
+		}
+	}
 	if len(annotation.Parts) == 1 && annotation.Parts[0] == "call" && p.peekTokenIs(token.LPAREN) {
+		annotation.HasSignature = true
 		annotation.ParameterTypes = make([]*ast.TypeAnnotation, 0)
 		annotation.ParameterNames = make([]string, 0)
 		p.nextToken()

@@ -199,7 +199,7 @@ func TestFileDoesNotRewriteInvalidSource(t *testing.T) {
 }
 
 func TestRepositorySourcesFormatIdempotently(t *testing.T) {
-	for _, root := range []string{"../examples", "../stdlib/silver"} {
+	for _, root := range []string{"../docs/examples", "../stdlib/silver"} {
 		err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
 			if walkErr != nil || entry.IsDir() || filepath.Ext(path) != ".slv" {
 				return walkErr

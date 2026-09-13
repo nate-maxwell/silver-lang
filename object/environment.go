@@ -10,7 +10,7 @@ import (
 type Environment struct {
 	mu        sync.RWMutex
 	store     map[string]Object // bindings defined directly in this scope
-	types     map[string]*ast.TypeAnnotation
+	types     map[string]*Contract
 	outer     *Environment // enclosing lexical scope, if any
 	sourceDir string       // directory of the source file being evaluated
 	packageID string       // manifest identity owning this source, if any
@@ -29,7 +29,7 @@ type DeferredCall struct {
 func NewEnvironment() *Environment {
 	return &Environment{
 		store: make(map[string]Object),
-		types: make(map[string]*ast.TypeAnnotation),
+		types: make(map[string]*Contract),
 	}
 }
 
@@ -54,33 +54,33 @@ func (e *Environment) Set(name string, val Object) {
 	delete(e.types, name)
 }
 
-// SetTyped creates or replaces a binding and records its explicit type, if
+// SetTyped creates or replaces a binding and records its resolved contract, if
 // any, for later assignment checks.
-func (e *Environment) SetTyped(name string, val Object, annotation *ast.TypeAnnotation) {
+func (e *Environment) SetTyped(name string, val Object, contract *Contract) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	e.store[name] = val
-	if annotation == nil {
+	if contract == nil {
 		delete(e.types, name)
 	} else {
-		e.types[name] = annotation
+		e.types[name] = contract
 	}
 }
 
 // AssignmentTarget finds the nearest lexical binding and its declared type.
-func (e *Environment) AssignmentTarget(name string) (*ast.TypeAnnotation, *Environment, bool) {
+func (e *Environment) AssignmentTarget(name string) (*Contract, bool) {
 	e.mu.RLock()
 	if _, ok := e.store[name]; ok {
-		annotation := e.types[name]
+		contract := e.types[name]
 		e.mu.RUnlock()
-		return annotation, e, true
+		return contract, true
 	}
 	outer := e.outer
 	e.mu.RUnlock()
 	if outer != nil {
 		return outer.AssignmentTarget(name)
 	}
-	return nil, nil, false
+	return nil, false
 }
 
 // Assign replaces the nearest existing lexical binding. Callers resolve the

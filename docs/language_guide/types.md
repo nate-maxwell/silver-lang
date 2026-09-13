@@ -197,6 +197,24 @@ let age: int = 36
 # age = "unknown" # TypeError
 ```
 
+Contracts resolve their type names when declarations execute and retain those exact definitions. Rebinding or
+shadowing a type name does not change an existing contract:
+
+```silver
+type A = struct { x: int }
+type B = struct { x: int }
+let T = A
+let value: T = A{1}
+T = B
+value = A{2}   # Still accepted
+# value = B{2} # TypeError
+```
+
+Binding annotations resolve before the initializer runs. Parameter, return, and error contracts resolve when the
+function is created; field contracts resolve when the struct is declared. This also captures types inside arrays,
+callable signatures, aliases, and qualified names. Type definitions remain ordinary first-class values, and function
+bodies continue to read their current lexical bindings.
+
 Annotations can name primitive types, structs, enums, built-in nominal types, or qualified definitions belonging to
 modules:
 
@@ -205,7 +223,7 @@ let paths = import("path")
 let working_directory: paths.Path = paths.cwd()
 ```
 
-An unknown type name raises `NameError` when the contract is resolved.
+An unknown type name raises `NameError` when the declaration executes, even if the function or struct is never used.
 
 ## Type declarations
 

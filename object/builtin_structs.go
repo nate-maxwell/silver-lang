@@ -40,90 +40,79 @@ var runtimeErrorStructNames = map[RuntimeErrorKind]string{
 var builtinStructDefinitions map[string]*Struct
 
 func init() {
-	environment := NewEnvironment()
 	builtinStructDefinitions = map[string]*Struct{
-		"IOError":          errorStructDefinition("IOError", environment),
-		"FileNotFound":     errorStructDefinition("FileNotFound", environment),
-		"PermissionDenied": errorStructDefinition("PermissionDenied", environment),
-		"ConnectionError":  errorStructDefinition("ConnectionError", environment),
-		"ListenError":      errorStructDefinition("ListenError", environment),
-		"ReadError":        errorStructDefinition("ReadError", environment),
-		"WriteError":       errorStructDefinition("WriteError", environment),
+		"IOError":          errorStructDefinition("IOError"),
+		"FileNotFound":     errorStructDefinition("FileNotFound"),
+		"PermissionDenied": errorStructDefinition("PermissionDenied"),
+		"ConnectionError":  errorStructDefinition("ConnectionError"),
+		"ListenError":      errorStructDefinition("ListenError"),
+		"ReadError":        errorStructDefinition("ReadError"),
+		"WriteError":       errorStructDefinition("WriteError"),
 	}
 	for _, name := range runtimeErrorStructNames {
-		builtinStructDefinitions[name] = errorStructDefinition(name, environment)
+		builtinStructDefinitions[name] = errorStructDefinition(name)
 	}
 	builtinStructDefinitions["File"] = &Struct{
 		Name:   "File",
 		Fields: []string{"path", "read", "write", "close"},
-		FieldTypes: []*ast.TypeAnnotation{
-			namedAnnotation("str"),
-			callAnnotation(nil, nil, namedAnnotation("str"), "IOError"),
-			callAnnotation([]string{"contents"}, []*ast.TypeAnnotation{namedAnnotation("str")}, nil, "IOError"),
-			callAnnotation(nil, nil, nil, "IOError"),
+		FieldTypes: []*Contract{
+			MustResolveContract(namedAnnotation("str")),
+			MustResolveContract(callAnnotation(nil, nil, namedAnnotation("str"), "IOError")),
+			MustResolveContract(callAnnotation([]string{"contents"}, []*ast.TypeAnnotation{namedAnnotation("str")}, nil, "IOError")),
+			MustResolveContract(callAnnotation(nil, nil, nil, "IOError")),
 		},
-		Env: environment,
 	}
 	builtinStructDefinitions["IOStream"] = &Struct{
 		Name:   "IOStream",
 		Fields: []string{"name", "read", "read_line", "write"},
-		FieldTypes: []*ast.TypeAnnotation{
-			namedAnnotation("str"),
-			callAnnotation(nil, nil, namedAnnotation("str"), "IOError"),
-			callAnnotation(nil, nil, namedAnnotation("str"), "IOError"),
-			callAnnotation([]string{"data"}, []*ast.TypeAnnotation{namedAnnotation("str")}, nil, "IOError"),
+		FieldTypes: []*Contract{
+			MustResolveContract(namedAnnotation("str")),
+			MustResolveContract(callAnnotation(nil, nil, namedAnnotation("str"), "IOError")),
+			MustResolveContract(callAnnotation(nil, nil, namedAnnotation("str"), "IOError")),
+			MustResolveContract(callAnnotation([]string{"data"}, []*ast.TypeAnnotation{namedAnnotation("str")}, nil, "IOError")),
 		},
-		Env: environment,
 	}
 	builtinStructDefinitions["ReadFromResult"] = &Struct{
 		Name:   "ReadFromResult",
 		Fields: []string{"data", "address"},
-		FieldTypes: []*ast.TypeAnnotation{
-			namedAnnotation("str"),
-			namedAnnotation("str"),
+		FieldTypes: []*Contract{
+			MustResolveContract(namedAnnotation("str")),
+			MustResolveContract(namedAnnotation("str")),
 		},
-		Env: environment,
 	}
 	builtinStructDefinitions["Connection"] = &Struct{
 		Name:   "Connection",
 		Fields: []string{"address", "read", "write", "write_to", "read_from", "close"},
-		FieldTypes: []*ast.TypeAnnotation{
-			namedAnnotation("str"),
-			callAnnotation([]string{"bytes"}, []*ast.TypeAnnotation{namedAnnotation("int")}, namedAnnotation("str"), "ReadError"),
-			callAnnotation([]string{"data"}, []*ast.TypeAnnotation{namedAnnotation("str")}, nil, "WriteError"),
-			callAnnotation([]string{"data", "address"}, []*ast.TypeAnnotation{namedAnnotation("str"), namedAnnotation("str")}, nil, "WriteError"),
-			callAnnotation([]string{"bytes"}, []*ast.TypeAnnotation{namedAnnotation("int")}, namedAnnotation("ReadFromResult"), "ReadError"),
-			callAnnotation(nil, nil, nil, "ConnectionError"),
+		FieldTypes: []*Contract{
+			MustResolveContract(namedAnnotation("str")),
+			MustResolveContract(callAnnotation([]string{"bytes"}, []*ast.TypeAnnotation{namedAnnotation("int")}, namedAnnotation("str"), "ReadError")),
+			MustResolveContract(callAnnotation([]string{"data"}, []*ast.TypeAnnotation{namedAnnotation("str")}, nil, "WriteError")),
+			MustResolveContract(callAnnotation([]string{"data", "address"}, []*ast.TypeAnnotation{namedAnnotation("str"), namedAnnotation("str")}, nil, "WriteError")),
+			MustResolveContract(callAnnotation([]string{"bytes"}, []*ast.TypeAnnotation{namedAnnotation("int")}, namedAnnotation("ReadFromResult"), "ReadError")),
+			MustResolveContract(callAnnotation(nil, nil, nil, "ConnectionError")),
 		},
-		Env: environment,
 	}
 	builtinStructDefinitions["Listener"] = &Struct{
 		Name:   "Listener",
 		Fields: []string{"address", "accept", "close"},
-		FieldTypes: []*ast.TypeAnnotation{
-			namedAnnotation("str"),
-			callAnnotation(nil, nil, namedAnnotation("Connection"), "ConnectionError"),
-			callAnnotation(nil, nil, nil, "ConnectionError"),
+		FieldTypes: []*Contract{
+			MustResolveContract(namedAnnotation("str")),
+			MustResolveContract(callAnnotation(nil, nil, namedAnnotation("Connection"), "ConnectionError")),
+			MustResolveContract(callAnnotation(nil, nil, nil, "ConnectionError")),
 		},
-		Env: environment,
 	}
 	builtinStructDefinitions["TemplateString"] = &Struct{
 		Name:       "TemplateString",
 		Fields:     []string{"eval"},
-		FieldTypes: []*ast.TypeAnnotation{callAnnotation(nil, nil, namedAnnotation("str"))},
-		Env:        environment,
-	}
-	for name, definition := range builtinStructDefinitions {
-		environment.Set(name, definition)
+		FieldTypes: []*Contract{MustResolveContract(callAnnotation(nil, nil, namedAnnotation("str")))},
 	}
 }
 
-func errorStructDefinition(name string, environment *Environment) *Struct {
+func errorStructDefinition(name string) *Struct {
 	return &Struct{
 		Name:       name,
 		Fields:     []string{"message"},
-		FieldTypes: []*ast.TypeAnnotation{namedAnnotation("str")},
-		Env:        environment,
+		FieldTypes: []*Contract{MustResolveContract(namedAnnotation("str"))},
 	}
 }
 

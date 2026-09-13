@@ -35,26 +35,24 @@ func timeDefinitions(null *object.Null, trueValue, falseValue *object.Boolean) [
 }
 
 func newTimeStructDefinitions() (*object.Struct, *object.Struct) {
-	environment := object.NewEnvironment()
+	intContract := object.MustResolveContract(namedType("int"))
+	floatContract := object.MustResolveContract(namedType("float"))
+	strContract := object.MustResolveContract(namedType("str"))
 	timeType := &object.Struct{
 		Name:   "Time",
 		Fields: []string{"year", "month", "day", "hour", "minute", "second", "nanosecond", "timezone"},
-		FieldTypes: []*ast.TypeAnnotation{
-			namedType("int"), namedType("int"), namedType("int"), namedType("int"),
-			namedType("int"), namedType("int"), namedType("int"), namedType("str"),
+		FieldTypes: []*object.Contract{
+			intContract, intContract, intContract, intContract,
+			intContract, intContract, intContract, strContract,
 		},
-		Env: environment,
 	}
 	durationType := &object.Struct{
 		Name:   "Duration",
 		Fields: []string{"hours", "minutes", "seconds", "milliseconds", "nanoseconds"},
-		FieldTypes: []*ast.TypeAnnotation{
-			namedType("float"), namedType("float"), namedType("float"), namedType("float"), namedType("int"),
+		FieldTypes: []*object.Contract{
+			floatContract, floatContract, floatContract, floatContract, intContract,
 		},
-		Env: environment,
 	}
-	environment.Set("Time", timeType)
-	environment.Set("Duration", durationType)
 	return timeType, durationType
 }
 

@@ -1,16 +1,12 @@
 package object
 
-import "silver/ast"
-
-// TypeAlias is a reusable contract. Env contains the type bindings captured
-// when the type was declared, so later shadowing cannot change its meaning.
+// TypeAlias is a first-class reusable contract resolved when declared.
 type TypeAlias struct {
-	Annotation *ast.TypeAnnotation
-	Env        *Environment
+	Contract *Contract
 }
 
 func (t *TypeAlias) Type() ObjectType { return TYPE_OBJ }
-func (t *TypeAlias) Inspect() string  { return t.Annotation.String() }
+func (t *TypeAlias) Inspect() string  { return t.Contract.String() }
 
 // TypeDefinition is a first-class primitive type value. Definitions are
 // singletons so ordinary Silver identity equality can compare type() results

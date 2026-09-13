@@ -1,7 +1,6 @@
 package object
 
 import (
-	"silver/ast"
 	"strings"
 	"sync"
 )
@@ -11,9 +10,8 @@ type Struct struct {
 	Name           string
 	PackageID      string
 	Fields         []string
-	FieldTypes     []*ast.TypeAnnotation
+	FieldTypes     []*Contract
 	EmbeddedFields []bool
-	Env            *Environment
 }
 
 // Type returns the struct-constructor runtime tag.

@@ -37,7 +37,7 @@ func (e *Evaluator) evalTemplateStringLiteral(node *ast.TemplateStringLiteral, e
 	return &object.StructInstance{
 		Struct: definition,
 		Values: map[string]object.Object{
-			"eval": &object.Builtin{Fn: evaluate, Signature: templateStringEvalSignature()},
+			"eval": &object.Builtin{Fn: evaluate, Signature: object.MustResolveContract(templateStringEvalSignature())},
 		},
 	}
 }

@@ -9,7 +9,7 @@ import (
 // evalAssignment replaces the nearest existing lexical binding. Explicit type
 // annotations from the original declaration remain enforced.
 func (e *Evaluator) evalAssignment(node *ast.AssignmentStatement, env *object.Environment) object.Object {
-	annotation, declarationEnv, ok := env.AssignmentTarget(node.Name.Value)
+	contract, ok := env.AssignmentTarget(node.Name.Value)
 	if !ok {
 		return newError(object.RuntimeErrorKindName, "identifier not found: %s", node.Name.Value)
 	}
@@ -18,7 +18,7 @@ func (e *Evaluator) evalAssignment(node *ast.AssignmentStatement, env *object.En
 	if isError(value) {
 		return value
 	}
-	if err := e.requireType(annotation, value, declarationEnv, fmt.Sprintf("binding %q", node.Name.Value)); err != nil {
+	if err := e.requireType(contract, value, fmt.Sprintf("binding %q", node.Name.Value)); err != nil {
 		return err
 	}
 	env.Assign(node.Name.Value, value)
@@ -47,7 +47,7 @@ func (e *Evaluator) evalMemberAssignment(node *ast.MemberAssignmentStatement, en
 	if isError(value) {
 		return value
 	}
-	if err := e.requireType(owner.Struct.FieldTypes[fieldIndex], value, owner.Struct.Env, fmt.Sprintf("field %q", owner.Struct.Name+"."+member)); err != nil {
+	if err := e.requireType(owner.Struct.FieldTypes[fieldIndex], value, fmt.Sprintf("field %q", owner.Struct.Name+"."+member)); err != nil {
 		return err
 	}
 	owner.Set(member, value)
@@ -132,11 +132,6 @@ func (e *Evaluator) evalMember(value object.Object, member string) object.Object
 		}
 		if fieldIndex >= 0 {
 			fieldType := owner.Struct.FieldTypes[fieldIndex]
-			var resolutionError string
-			fieldType, _, resolutionError = expandTypeAlias(fieldType, owner.Struct.Env)
-			if resolutionError != "" {
-				return newError(object.RuntimeErrorKindName, "%s", resolutionError)
-			}
 			if fieldType == nil || !fieldType.IsCallSignature() {
 				return field
 			}

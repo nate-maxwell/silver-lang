@@ -116,6 +116,12 @@ func newLibrary(definitions map[string][]definition, sourceDefinitions []sourceD
 	modules := make(map[string]*object.Module, len(definitions))
 	for name, moduleDefinitions := range definitions {
 		exports := make(map[string]object.Object, len(moduleDefinitions))
+		environment := object.NewEnvironment()
+		for _, definition := range moduleDefinitions {
+			if definition.value != nil {
+				environment.Set(definition.name, definition.value)
+			}
+		}
 		for _, definition := range moduleDefinitions {
 			if _, exists := exports[definition.name]; exists {
 				panic(fmt.Sprintf("standard library module %q exports %q more than once", name, definition.name))
@@ -124,7 +130,11 @@ func newLibrary(definitions map[string][]definition, sourceDefinitions []sourceD
 				exports[definition.name] = definition.value
 				continue
 			}
-			exports[definition.name] = &object.Builtin{Fn: definition.fn, Signature: definition.signature}
+			signature, err := object.ResolveContract(definition.signature, environment)
+			if err != nil {
+				panic(fmt.Sprintf("standard library %s.%s: %s", name, definition.name, err.Inspect()))
+			}
+			exports[definition.name] = &object.Builtin{Fn: definition.fn, Signature: signature}
 		}
 		modules[name] = &object.Module{Path: name, Exports: exports}
 	}

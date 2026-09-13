@@ -215,14 +215,15 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 		return e.evalTypeStatement(node, env)
 
 	case *ast.LetStatement:
-		if err := e.validateTypeAnnotation(node.Name.Type, env); err != nil {
+		contract, err := object.ResolveContract(node.Name.Type, env)
+		if err != nil {
 			return err
 		}
 		val := e.evalValue(node.Value, env)
 		if isError(val) {
 			return val
 		}
-		if err := e.requireType(node.Name.Type, val, env, fmt.Sprintf("binding %q", node.Name.Value)); err != nil {
+		if err := e.requireType(contract, val, fmt.Sprintf("binding %q", node.Name.Value)); err != nil {
 			return err
 		}
 		if function, ok := val.(*object.Function); ok {
@@ -230,7 +231,7 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 				function.Name = node.Name.Value
 			}
 		}
-		env.SetTyped(node.Name.Value, val, node.Name.Type)
+		env.SetTyped(node.Name.Value, val, contract)
 
 	case *ast.AssignmentStatement:
 		return e.evalAssignment(node, env)
@@ -334,27 +335,33 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 		return nativeBoolToBooleanObject(node.Value)
 
 	case *ast.FunctionLiteral:
-		for _, parameter := range node.Parameters {
-			if err := e.validateTypeAnnotation(parameter.Type, env); err != nil {
+		parameterTypes := make([]*object.Contract, len(node.Parameters))
+		for index, parameter := range node.Parameters {
+			contract, err := object.ResolveContract(parameter.Type, env)
+			if err != nil {
 				return err
 			}
+			parameterTypes[index] = contract
 		}
-		if err := e.validateTypeAnnotation(node.ReturnType, env); err != nil {
+		returnType, err := object.ResolveContract(node.ReturnType, env)
+		if err != nil {
 			return err
 		}
-		for _, errorType := range node.ErrorTypes {
-			if err := e.validateErrorTypeAnnotation(errorType, env); err != nil {
+		errorTypes := make([]*object.Contract, len(node.ErrorTypes))
+		for index, errorType := range node.ErrorTypes {
+			contract, err := object.ResolveErrorContract(errorType, env)
+			if err != nil {
 				return err
 			}
+			errorTypes[index] = contract
 		}
-		params := node.Parameters
-		body := node.Body
 		return &object.Function{
-			Parameters: params,
-			ReturnType: node.ReturnType,
-			ErrorTypes: node.ErrorTypes,
-			Env:        env,
-			Body:       body,
+			Parameters:     node.Parameters,
+			ParameterTypes: parameterTypes,
+			ReturnType:     returnType,
+			ErrorTypes:     errorTypes,
+			Env:            env,
+			Body:           node.Body,
 		}
 
 	case *ast.CallExpression:

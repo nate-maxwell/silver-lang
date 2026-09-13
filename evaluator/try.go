@@ -8,10 +8,13 @@ import (
 // evalTryExpression handles every error by matching the nominal struct it
 // carries, including the built-in Error struct used for runtime faults.
 func (e *Evaluator) evalTryExpression(expression *ast.TryExpression, env *object.Environment) object.Object {
-	for _, clause := range expression.Catches {
-		if err := e.validateErrorTypeAnnotation(clause.ErrorType, env); err != nil {
+	contracts := make([]*object.Contract, len(expression.Catches))
+	for index, clause := range expression.Catches {
+		contract, err := object.ResolveErrorContract(clause.ErrorType, env)
+		if err != nil {
 			return err
 		}
+		contracts[index] = contract
 	}
 
 	result := e.Eval(expression.Body, env)
@@ -20,17 +23,13 @@ func (e *Evaluator) evalTryExpression(expression *ast.TryExpression, env *object
 		return result
 	}
 
-	for _, clause := range expression.Catches {
-		matches, resolutionError := typeMatches(clause.ErrorType, error.Value, env)
-		if resolutionError != "" {
-			return newError(object.RuntimeErrorKindName, "%s", resolutionError)
-		}
-		if !matches {
+	for index, clause := range expression.Catches {
+		if !typeMatches(contracts[index], error.Value) {
 			continue
 		}
 
 		catchEnv := object.NewEnclosedEnvironment(env)
-		catchEnv.SetTyped(clause.Binding.Value, error.Value, clause.ErrorType)
+		catchEnv.SetTyped(clause.Binding.Value, error.Value, contracts[index])
 		return e.Eval(clause.Body, catchEnv)
 	}
 

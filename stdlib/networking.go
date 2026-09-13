@@ -127,8 +127,8 @@ func builtinListen(null *object.Null) object.BuiltinFunction {
 			Struct: definition,
 			Values: map[string]object.Object{
 				"address": &object.String{Value: listener.Addr().String()},
-				"accept":  &object.Builtin{Fn: state.accept, Signature: listenerAcceptSignature()},
-				"close":   &object.Builtin{Fn: state.close, Signature: connectionCloseSignature()},
+				"accept":  &object.Builtin{Fn: state.accept, Signature: object.MustResolveContract(listenerAcceptSignature())},
+				"close":   &object.Builtin{Fn: state.close, Signature: object.MustResolveContract(connectionCloseSignature())},
 			},
 		}
 	}
@@ -180,11 +180,11 @@ func (connection *nativeConnection) value(address string) *object.StructInstance
 		Struct: definition,
 		Values: map[string]object.Object{
 			"address":   &object.String{Value: address},
-			"read":      &object.Builtin{Fn: connection.read, Signature: connectionReadSignature()},
-			"write":     &object.Builtin{Fn: connection.write, Signature: connectionWriteSignature()},
-			"write_to":  &object.Builtin{Fn: connection.writeTo, Signature: connectionWriteToSignature()},
-			"read_from": &object.Builtin{Fn: connection.readFrom, Signature: connectionReadFromSignature()},
-			"close":     &object.Builtin{Fn: connection.close, Signature: connectionCloseSignature()},
+			"read":      &object.Builtin{Fn: connection.read, Signature: object.MustResolveContract(connectionReadSignature())},
+			"write":     &object.Builtin{Fn: connection.write, Signature: object.MustResolveContract(connectionWriteSignature())},
+			"write_to":  &object.Builtin{Fn: connection.writeTo, Signature: object.MustResolveContract(connectionWriteToSignature())},
+			"read_from": &object.Builtin{Fn: connection.readFrom, Signature: object.MustResolveContract(connectionReadFromSignature())},
+			"close":     &object.Builtin{Fn: connection.close, Signature: object.MustResolveContract(connectionCloseSignature())},
 		},
 	}
 }

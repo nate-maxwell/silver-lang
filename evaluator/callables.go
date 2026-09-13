@@ -2,7 +2,6 @@ package evaluator
 
 import (
 	"fmt"
-	"silver/ast"
 	"silver/object"
 )
 
@@ -24,7 +23,7 @@ func (e *Evaluator) applyFunction(fn object.Object, args []object.Object) object
 		if isError(result) || fn.Signature == nil || len(fn.Signature.ErrorTypes) == 0 {
 			return result
 		}
-		if matchesBuiltinDeclaredError(fn.Signature.ErrorTypes, result) {
+		if matchesDeclaredError(fn.Signature.ErrorTypes, result) {
 			return &object.Error{Value: result.(*object.StructInstance)}
 		}
 		return result
@@ -43,7 +42,7 @@ func (e *Evaluator) applyStruct(definition *object.Struct, values []object.Objec
 	}
 	fields := make(map[string]object.Object, len(definition.Fields))
 	for index, field := range definition.Fields {
-		if err := e.requireType(definition.FieldTypes[index], values[index], definition.Env, fmt.Sprintf("field %q", definition.Name+"."+field)); err != nil {
+		if err := e.requireType(definition.FieldTypes[index], values[index], fmt.Sprintf("field %q", definition.Name+"."+field)); err != nil {
 			return err
 		}
 		fields[field] = values[index]
@@ -69,11 +68,7 @@ func (e *Evaluator) applyUserFunction(fn *object.Function, args []object.Object,
 		if error.IsRuntimeError() {
 			return error
 		}
-		matches, matchError := matchesDeclaredError(fn.ErrorTypes, error.Value, fn.Env)
-		if matchError != nil {
-			return matchError
-		}
-		if !matches {
+		if !matchesDeclaredError(fn.ErrorTypes, error.Value) {
 			return newError(
 				object.RuntimeErrorKindRuntime,
 				"error %s escaped %q but is not declared in its return union",
@@ -98,13 +93,11 @@ func (e *Evaluator) applyUserFunction(fn *object.Function, args []object.Object,
 		return NULL
 	}
 	if !fn.Operator || fn.ReturnType != nil {
-		if err := e.requireReturnType(fn.ReturnType, fn.ErrorTypes, evaluated, fn.Env, fmt.Sprintf("return value of %q", contextName)); err != nil {
+		if err := e.requireReturnType(fn.ReturnType, fn.ErrorTypes, evaluated, fmt.Sprintf("return value of %q", contextName)); err != nil {
 			return err
 		}
 	}
-	if matches, err := matchesDeclaredError(fn.ErrorTypes, evaluated, fn.Env); err != nil {
-		return err
-	} else if matches {
+	if matchesDeclaredError(fn.ErrorTypes, evaluated) {
 		error := &object.Error{Value: evaluated.(*object.StructInstance)}
 		error.SetOrigin(e.traceFrame(fn.Body))
 		return error
@@ -137,22 +130,15 @@ func (e *Evaluator) bindFunctionArguments(fn *object.Function, args []object.Obj
 		}
 
 		parameter := fn.Parameters[parameterIndex]
+		contract := fn.ParameterTypes[parameterIndex]
 		if parameter.Variadic {
-			matches, resolutionError := parameterTypeMatches(parameter, argument, fn.Env)
-			if resolutionError != "" {
-				return nil, newError(object.RuntimeErrorKindName, "%s", resolutionError)
-			}
-			if !matches {
-				return nil, e.parameterTypeError(parameter, argument, fn.Env)
+			if !typeMatches(contract, argument) {
+				return nil, e.requireType(contract, argument, fmt.Sprintf("parameter %q", parameter.Value))
 			}
 			variadicArguments = append(variadicArguments, argument)
 			continue
 		}
-		matches, resolutionError := parameterTypeMatches(parameter, argument, fn.Env)
-		if resolutionError != "" {
-			return nil, newError(object.RuntimeErrorKindName, "%s", resolutionError)
-		}
-		if matches {
+		if typeMatches(contract, argument) {
 			bound[parameterIndex] = argument
 			assigned[parameterIndex] = true
 			boundCount++
@@ -161,7 +147,7 @@ func (e *Evaluator) bindFunctionArguments(fn *object.Function, args []object.Obj
 
 		destructurable, ok := argument.(object.Destructurable)
 		if !ok {
-			return nil, e.parameterTypeError(parameter, argument, fn.Env)
+			return nil, e.requireType(contract, argument, fmt.Sprintf("parameter %q", parameter.Value))
 		}
 
 		extracted := 0
@@ -177,7 +163,7 @@ func (e *Evaluator) bindFunctionArguments(fn *object.Function, args []object.Obj
 			if !ok {
 				continue
 			}
-			if err := e.requireType(candidate.Type, fieldValue, fn.Env, fmt.Sprintf("parameter %q", candidate.Value)); err != nil {
+			if err := e.requireType(fn.ParameterTypes[index], fieldValue, fmt.Sprintf("parameter %q", candidate.Value)); err != nil {
 				return nil, err
 			}
 			bound[index] = fieldValue
@@ -186,7 +172,7 @@ func (e *Evaluator) bindFunctionArguments(fn *object.Function, args []object.Obj
 			extracted++
 		}
 		if extracted == 0 {
-			return nil, e.parameterTypeError(parameter, argument, fn.Env)
+			return nil, e.requireType(contract, argument, fmt.Sprintf("parameter %q", parameter.Value))
 		}
 	}
 
@@ -217,30 +203,19 @@ func nextUnassignedParameter(assigned []bool) int {
 	return len(assigned)
 }
 
-func parameterTypeMatches(parameter *ast.Identifier, argument object.Object, env *object.Environment) (bool, string) {
-	if parameter.Type == nil {
-		return true, ""
-	}
-	return typeMatches(parameter.Type, argument, env)
-}
-
-func (e *Evaluator) parameterTypeError(parameter *ast.Identifier, argument object.Object, env *object.Environment) *object.Error {
-	return e.requireType(parameter.Type, argument, env, fmt.Sprintf("parameter %q", parameter.Value))
-}
-
 // extendFunctionEnv binds evaluated arguments to parameters in a child of the
 // function's captured lexical environment. Arity is validated by applyFunction.
 func extendFunctionEnv(fn *object.Function, args []object.Object) *object.Environment {
 	env := object.NewEnclosedEnvironment(fn.Env)
 
 	for i, param := range fn.Parameters {
-		annotation := param.Type
+		contract := fn.ParameterTypes[i]
 		if param.Variadic {
 			// The annotation constrains each incoming argument, not the bound
 			// argument pack itself.
-			annotation = nil
+			contract = nil
 		}
-		env.SetTyped(param.Value, args[i], annotation)
+		env.SetTyped(param.Value, args[i], contract)
 	}
 
 	return env

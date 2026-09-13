@@ -5,10 +5,7 @@
 
 package stdlib
 
-import (
-	"silver/ast"
-	"silver/object"
-)
+import "silver/object"
 
 // collectionDefinitions provides mutable deque and stack operations over
 // arrays.
@@ -38,14 +35,11 @@ func collectionDefinitions(null *object.Null) []definition {
 }
 
 func newSequenceStructDefinition(name string) *object.Struct {
-	environment := object.NewEnvironment()
 	definition := &object.Struct{
 		Name:       name,
 		Fields:     []string{"values"},
-		FieldTypes: []*ast.TypeAnnotation{namedType("array")},
-		Env:        environment,
+		FieldTypes: []*object.Contract{object.MustResolveContract(namedType("array"))},
 	}
-	environment.Set(name, definition)
 	return definition
 }
 

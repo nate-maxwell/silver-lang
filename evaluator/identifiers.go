@@ -14,7 +14,7 @@ func (e *Evaluator) evalAssignment(node *ast.AssignmentStatement, env *object.En
 		return newError(object.RuntimeErrorKindName, "identifier not found: %s", node.Name.Value)
 	}
 
-	value := e.Eval(node.Value, env)
+	value := e.evalValue(node.Value, env)
 	if isError(value) {
 		return value
 	}
@@ -28,7 +28,7 @@ func (e *Evaluator) evalAssignment(node *ast.AssignmentStatement, env *object.En
 // evalMemberAssignment mutates one field on an existing struct instance after
 // enforcing the field's declared type.
 func (e *Evaluator) evalMemberAssignment(node *ast.MemberAssignmentStatement, env *object.Environment) object.Object {
-	target := e.Eval(node.Target.Object, env)
+	target := e.evalValue(node.Target.Object, env)
 	if isError(target) {
 		return target
 	}
@@ -43,7 +43,7 @@ func (e *Evaluator) evalMemberAssignment(node *ast.MemberAssignmentStatement, en
 		return newError(object.RuntimeErrorKindAttribute, "struct %q has no field %q", instance.Struct.Name, member)
 	}
 
-	value := e.Eval(node.Value, env)
+	value := e.evalValue(node.Value, env)
 	if isError(value) {
 		return value
 	}
@@ -57,7 +57,7 @@ func (e *Evaluator) evalMemberAssignment(node *ast.MemberAssignmentStatement, en
 // evalIndexAssignment mutates native arrays/maps directly or invokes set_item
 // on structs. Native collection mutations are visible through aliases.
 func (e *Evaluator) evalIndexAssignment(node *ast.IndexAssignmentStatement, env *object.Environment) object.Object {
-	target := e.Eval(node.Target.Left, env)
+	target := e.evalValue(node.Target.Left, env)
 	if isError(target) {
 		return target
 	}
@@ -67,7 +67,7 @@ func (e *Evaluator) evalIndexAssignment(node *ast.IndexAssignmentStatement, env 
 		return newError(object.RuntimeErrorKindType, "index assignment not supported on %s", runtimeTypeName(target))
 	}
 
-	key := e.Eval(node.Target.Index, env)
+	key := e.evalValue(node.Target.Index, env)
 	if isError(key) {
 		return key
 	}
@@ -88,7 +88,7 @@ func (e *Evaluator) evalIndexAssignment(node *ast.IndexAssignmentStatement, env 
 		}
 	}
 
-	value := e.Eval(node.Value, env)
+	value := e.evalValue(node.Value, env)
 	if isError(value) {
 		return value
 	}

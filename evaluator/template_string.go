@@ -25,12 +25,9 @@ func (e *Evaluator) evalTemplateStringLiteral(node *ast.TemplateStringLiteral, e
 				result.WriteString(part.Text)
 				continue
 			}
-			value := invocationEvaluator.Eval(part.Expression, env)
+			value := invocationEvaluator.evalValue(part.Expression, env)
 			if isError(value) {
 				return value
-			}
-			if value == nil {
-				return newError(object.RuntimeErrorKindRuntime, "template interpolation produced no value")
 			}
 			result.WriteString(value.Inspect())
 		}

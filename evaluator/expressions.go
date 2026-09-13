@@ -6,13 +6,36 @@ import (
 	"silver/token"
 )
 
+// evalValue evaluates an operand without allowing statement control flow to
+// escape into its consumer. Functions and loops inside the expression still
+// consume their own control-flow signals; errors propagate unchanged.
+func (e *Evaluator) evalValue(expression ast.Expression, env *object.Environment) object.Object {
+	result := e.Eval(expression, env)
+	var control string
+	switch result.(type) {
+	case nil:
+		return NULL
+	case *object.ReturnValue:
+		control = "return"
+	case *object.Break:
+		control = "break"
+	case *object.Continue:
+		control = "continue"
+	default:
+		return result
+	}
+	failure := newError(object.RuntimeErrorKindRuntime, "%s cannot escape a value expression", control)
+	failure.SetOrigin(e.traceFrame(expression))
+	return failure
+}
+
 // evalExpressions evaluates expressions from left to right. On failure it
 // returns a one-element slice containing the error so callers can propagate it.
 func (e *Evaluator) evalExpressions(exps []ast.Expression, env *object.Environment) []object.Object {
 	var result []object.Object
 
 	for _, expression := range exps {
-		evaluated := e.Eval(expression, env)
+		evaluated := e.evalValue(expression, env)
 		if isError(evaluated) {
 			return []object.Object{evaluated}
 		}
@@ -28,7 +51,7 @@ func (e *Evaluator) evalCallArguments(exps []ast.Expression, env *object.Environ
 	var result []object.Object
 
 	for _, expression := range exps {
-		evaluated := e.Eval(expression, env)
+		evaluated := e.evalValue(expression, env)
 		if isError(evaluated) {
 			return []object.Object{evaluated}
 		}
@@ -96,7 +119,7 @@ func (e *Evaluator) evalIndexExpression(node *ast.IndexExpression, left, index o
 
 // evalIfExpression evaluates only the selected branch.
 func (e *Evaluator) evalIfExpression(ie *ast.IfExpression, env *object.Environment) object.Object {
-	condition := e.Eval(ie.Condition, env)
+	condition := e.evalValue(ie.Condition, env)
 	if isError(condition) {
 		return condition
 	}
@@ -114,13 +137,13 @@ func (e *Evaluator) evalIfExpression(ie *ast.IfExpression, env *object.Environme
 // only when reached. Comparisons use the same evaluator path as source-level
 // == expressions, including struct operator methods.
 func (e *Evaluator) evalSwitchExpression(se *ast.SwitchExpression, env *object.Environment) object.Object {
-	value := e.Eval(se.Value, env)
+	value := e.evalValue(se.Value, env)
 	if isError(value) {
 		return value
 	}
 
 	for _, switchCase := range se.Cases {
-		caseValue := e.Eval(switchCase.Value, env)
+		caseValue := e.evalValue(switchCase.Value, env)
 		if isError(caseValue) {
 			return caseValue
 		}

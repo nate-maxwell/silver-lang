@@ -6,7 +6,7 @@ import (
 )
 
 func (e *Evaluator) evalForStatement(statement *ast.ForStatement, env *object.Environment) object.Object {
-	iterable := e.Eval(statement.Iterable, env)
+	iterable := e.evalValue(statement.Iterable, env)
 	if isError(iterable) {
 		return iterable
 	}
@@ -54,7 +54,7 @@ func (e *Evaluator) evalForStatement(statement *ast.ForStatement, env *object.En
 
 func (e *Evaluator) evalWhileStatement(statement *ast.WhileStatement, env *object.Environment) object.Object {
 	for {
-		condition := e.Eval(statement.Condition, env)
+		condition := e.evalValue(statement.Condition, env)
 		if isError(condition) {
 			return condition
 		}

@@ -33,6 +33,14 @@ let label = if score >= 90 {
 ```
 
 Only the selected branch runs. When an `if` expression has no `else` and its condition is falsey, its value is null.
+An empty selected block, or one ending in a declaration without a value, also produces null. This applies to `switch`
+and `try`/`catch` blocks as well.
+
+When a block expression supplies a value (for example, a binding initializer, argument, operand, or condition),
+`return`, `break`, and `continue` cannot escape it to an enclosing function or loop. An attempted escape raises a
+catchable `RuntimeError`. Functions called and loops executed inside the expression can still use their own control
+flow, and errors propagate normally. A standalone `if`, `switch`, or `try` statement can return from its enclosing
+function or control its enclosing loop.
 
 Additional conditions may be chained with `else if`:
 

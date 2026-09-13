@@ -161,7 +161,7 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 		if node.ReturnValue == nil {
 			return &object.ReturnValue{Value: NULL}
 		}
-		val := e.Eval(node.ReturnValue, env)
+		val := e.evalValue(node.ReturnValue, env)
 		if isError(val) {
 			return val
 		}
@@ -174,7 +174,7 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 		return &object.Continue{}
 
 	case *ast.AssertStatement:
-		condition := e.Eval(node.Condition, env)
+		condition := e.evalValue(node.Condition, env)
 		if isError(condition) {
 			return condition
 		}
@@ -183,7 +183,7 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 		}
 		message := ""
 		if node.Message != nil {
-			value := e.Eval(node.Message, env)
+			value := e.evalValue(node.Message, env)
 			if isError(value) {
 				return value
 			}
@@ -192,7 +192,7 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 		return newError(object.RuntimeErrorKindAssertion, "%s", message)
 
 	case *ast.DeferStatement:
-		function := e.Eval(node.Call.Function, env)
+		function := e.evalValue(node.Call.Function, env)
 		if isError(function) {
 			return function
 		}
@@ -218,7 +218,7 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 		if err := e.validateTypeAnnotation(node.Name.Type, env); err != nil {
 			return err
 		}
-		val := e.Eval(node.Value, env)
+		val := e.evalValue(node.Value, env)
 		if isError(val) {
 			return val
 		}
@@ -251,7 +251,7 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 		return e.evalIdentifier(node, env)
 
 	case *ast.ImportExpression:
-		pathValue := e.Eval(node.Path, env)
+		pathValue := e.evalValue(node.Path, env)
 		if isError(pathValue) {
 			return pathValue
 		}
@@ -264,7 +264,7 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 		return result
 
 	case *ast.MemberExpression:
-		value := e.Eval(node.Object, env)
+		value := e.evalValue(node.Object, env)
 		if isError(value) {
 			return value
 		}
@@ -284,14 +284,14 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 		return e.Eval(node.Expression, env)
 
 	case *ast.PrefixExpression:
-		right := e.Eval(node.Right, env)
+		right := e.evalValue(node.Right, env)
 		if isError(right) {
 			return right
 		}
 		return evalPrefixExpression(node.Operator, right)
 
 	case *ast.InfixExpression:
-		left := e.Eval(node.Left, env)
+		left := e.evalValue(node.Left, env)
 		if isError(left) {
 			return left
 		}
@@ -302,7 +302,7 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 			return TRUE
 		}
 
-		right := e.Eval(node.Right, env)
+		right := e.evalValue(node.Right, env)
 		if isError(right) {
 			return right
 		}
@@ -358,7 +358,7 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 		}
 
 	case *ast.CallExpression:
-		function := e.Eval(node.Function, env)
+		function := e.evalValue(node.Function, env)
 		if isError(function) {
 			return function
 		}
@@ -372,7 +372,7 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 		return result
 
 	case *ast.StructLiteral:
-		structType := e.Eval(node.StructType, env)
+		structType := e.evalValue(node.StructType, env)
 		if isError(structType) {
 			return structType
 		}
@@ -400,11 +400,11 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 		return &object.Array{Elements: elements}
 
 	case *ast.IndexExpression:
-		left := e.Eval(node.Left, env)
+		left := e.evalValue(node.Left, env)
 		if isError(left) {
 			return left
 		}
-		index := e.Eval(node.Index, env)
+		index := e.evalValue(node.Index, env)
 		if isError(index) {
 			return index
 		}
@@ -439,7 +439,7 @@ func (e *Evaluator) infixCallable(symbol, packageID string) (*object.Function, *
 	if definition.callable != nil {
 		return definition.callable, nil
 	}
-	callable := e.Eval(definition.node.Function, definition.env)
+	callable := e.evalValue(definition.node.Function, definition.env)
 	if failure, ok := callable.(*object.Error); ok {
 		return nil, failure
 	}

@@ -137,8 +137,22 @@ for key, value in entries {
 Map iteration order is unspecified. The iterable is evaluated before iteration, and its shape is checked at runtime.
 Array iteration requires one loop variable; map iteration requires two.
 
-Loop variables live in the loop's execution scope. Assignment inside a loop can update bindings from an enclosing scope,
-as the `total` examples do.
+Each iteration creates a new lexical scope for the loop variables and declarations in its body. Loop variables shadow
+enclosing bindings without changing their values or type annotations, and are not visible after the loop. Closures
+created in the body capture that iteration's bindings, including any assignments made to them during the iteration.
+Assignment to other names can still update bindings from an enclosing scope, as the `total` examples do.
+
+```silver
+let n: int = 1
+for n in ["oops"] {
+    # This n is a separate, untyped binding.
+    n = False
+}
+n # 1
+# n = False # TypeError: the outer n still requires int
+```
+
+Deferred calls registered inside a loop still run at the end of the surrounding function, module, or script.
 
 ## `while` loops
 

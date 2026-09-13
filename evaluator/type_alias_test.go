@@ -9,11 +9,11 @@ import (
 
 func TestTypeAliasPipeline(t *testing.T) {
 	testIntegerObject(t, testEval(`
-struct Token { text: str }
-struct Node { value: int }
-let lex = <call(str) array[Token]>
-let parse = <call(array[Token]) array[Node]>
-let eval = <call(array[Node]) int>
+type Token = struct { text: str }
+type Node = struct { value: int }
+type lex = call(str) array[Token]
+type parse = call(array[Token]) array[Node]
+type eval = call(array[Node]) int
 let parse_program = fn(l: lex, p: parse, e: eval) int {
 	return e(p(l("42")))
 }
@@ -26,68 +26,68 @@ parse_program(lexer, parser, evaluator)
 
 func TestTypeAliasContracts(t *testing.T) {
 	for name, input := range map[string]string{
-		"primitive chain": `let Number = <int>
-let Count = <Number>
+		"primitive chain": `type Number = int
+type Count = Number
 let value: Count = 42
 value`,
 		"primitive value": `let Number = int
 let value: Number = 42
 value`,
-		"return alias": `let Number = <int>
+		"return alias": `type Number = int
 let produce = fn() Number { return 42 }
 let callback: call() int = produce
 callback()`,
-		"captured binding": `let Number = <int>
-let Numbers = <array[Number]>
-Number = <str>
+		"captured binding": `type Number = int
+type Numbers = array[Number]
+type Number = str
 let values: Numbers = [42]
 values[0]`,
-		"self rebind captures previous": `let Value = <int>
-Value = <array[Value]>
+		"self rebind captures previous": `type Value = int
+type Value = array[Value]
 let values: Value = [42]
 values[0]`,
 		"nested arrays": `let values: array[array[int]] = [[], [42]]
 values[1][0]`,
-		"array of callables": `let Operation = <call(int) int>
+		"array of callables": `type Operation = call(int) int
 let operations: array[Operation] = [fn(value: int) int { return value }]
 operations[0](42)`,
-		"variadic": `let Sum = <call(values: int...) int>
+		"variadic": `type Sum = call(values: int...) int
 let add = fn(left: int, right: int) int { return left + right }
 let sum: Sum = fn(values: int...) int { return add(values) }
 sum(20, 22)`,
-		"method receiver": `struct Scale { x: int }
-let Grow = <call(scale: Scale, amount: int)>
-struct Transform { scale: Scale, grow: Grow }
+		"method receiver": `type Scale = struct { x: int }
+type Grow = call(scale: Scale, amount: int)
+type Transform = struct { scale: Scale, grow: Grow }
 let grow = fn(scale: Scale, amount: int) { scale.x = scale.x + amount }
 let actor = Transform{Scale{40}, grow}
 actor.grow(2)
 actor.scale.x`,
-		"embedded struct": `struct Item { value: int }
-let ItemType = <Item>
-struct Box { item :: ItemType }
+		"embedded struct": `type Item = struct { value: int }
+type ItemType = Item
+type Box = struct { item :: ItemType }
 Box{Item{42}}.value`,
-		"destructuring": `let Number = <int>
-let Reader = <call() Number>
-struct Provider { read: Reader }
+		"destructuring": `type Number = int
+type Reader = call() Number
+type Provider = struct { read: Reader }
 let use = fn(read: Reader) int { return read() }
 use(Provider{fn() int { return 42 }})`,
-		"nominal capture": `struct Item { value: int }
-let ItemType = <Item>
+		"nominal capture": `type Item = struct { value: int }
+type ItemType = Item
 let item = Item{42}
-struct Item { value: int }
+type Item = struct { value: int }
 let saved: ItemType = item
 saved.value`,
-		"errors": `struct Failure { value: int }
-let ErrorType = <Failure>
-let Reader = <call() int | ErrorType>
+		"errors": `type Failure = struct { value: int }
+type ErrorType = Failure
+type Reader = call() int | ErrorType
 let read: Reader = fn() int | Failure { return Failure{42} }
 try { read() } catch ErrorType err { err.value }`,
-		"null return alias": `let Nothing = <null>
-let Action = <call() Nothing>
+		"null return alias": `type Nothing = null
+type Action = call() Nothing
 let run: Action = fn() {}
 run()
 42`,
-		"native callable": `let Codepoint = <call(str) int | ValueError>
+		"native callable": `type Codepoint = call(str) int | ValueError
 let codepoint: Codepoint = import("string").codepoint
 codepoint("*")`,
 	} {
@@ -103,23 +103,23 @@ codepoint("*")`,
 
 func TestTypeAliasAndArrayContractFailures(t *testing.T) {
 	for _, test := range []struct{ input, message string }{
-		{`let MissingType = <Missing>`, `unknown type "Missing"`},
-		{`let T = <array[Missing]>`, `unknown type "Missing"`},
-		{`let T = <call() Missing>`, `unknown type "Missing"`},
-		{`let T = <T>`, `unknown type "T"`},
-		{"let value = 1\nlet T = <value>", `does not name a value type`},
-		{"let T = <call(int) str>\nlet f: T = fn(x: str) str { return x }", `expected T, got call`},
-		{"let T = <int>\nlet value: T = 1\nvalue = \"bad\"", `expected T, got str`},
+		{`type MissingType = Missing`, `unknown type "Missing"`},
+		{`type T = array[Missing]`, `unknown type "Missing"`},
+		{`type T = call() Missing`, `unknown type "Missing"`},
+		{`type T = T`, `unknown type "T"`},
+		{"let value = 1\ntype T = value", `does not name a value type`},
+		{"type T = call(int) str\nlet f: T = fn(x: str) str { return x }", `expected T, got call`},
+		{"type T = int\nlet value: T = 1\nvalue = \"bad\"", `expected T, got str`},
 		{`let values: array[int] = [1, "bad"]`, `expected array[int], got array`},
 		{`let values: array[array[int]] = [[1], ["bad"]]`, `expected array[array[int]], got array`},
 		{"let values: array[int] = []\nvalues = [False]", `expected array[int], got array`},
 		{"let use = fn(values: array[int]) {}\nuse([\"bad\"])", `parameter "values"`},
 		{"let produce = fn() array[int] { return [\"bad\"] }\nproduce()", `return value of "produce"`},
-		{"struct Box { values: array[int] }\nBox{[\"bad\"]}", `field "Box.values"`},
-		{"struct Box { values: array[int] }\nlet box = Box{[]}\nbox.values = [\"bad\"]", `field "Box.values"`},
-		{`let T = <call() int | array[str]>`, `must be a struct`},
-		{"let T = <str>\nlet U = <call() int | T>", `must be a struct`},
-		{"enum Left { One }\nenum Right { One }\nlet Values = <array[Left]>\nlet values: Values = [Right.One]", `expected Values, got array`},
+		{"type Box = struct { values: array[int] }\nBox{[\"bad\"]}", `field "Box.values"`},
+		{"type Box = struct { values: array[int] }\nlet box = Box{[]}\nbox.values = [\"bad\"]", `field "Box.values"`},
+		{`type T = call() int | array[str]`, `must be a struct`},
+		{"type T = str\ntype U = call() int | T", `must be a struct`},
+		{"type Left = enum { One }\ntype Right = enum { One }\ntype Values = array[Left]\nlet values: Values = [Right.One]", `expected Values, got array`},
 	} {
 		t.Run(test.input, func(t *testing.T) {
 			value := testEval(test.input)
@@ -147,7 +147,7 @@ func TestArrayCallableCompatibility(t *testing.T) {
 		{"call(array[int]) array[str]", "fn(x: array[int]) array[int]", false},
 	} {
 		t.Run(test.expected+" / "+test.actual, func(t *testing.T) {
-			value := testEval("let Contract = <" + test.expected + ">\nlet f: Contract = " + test.actual + " {}\nf")
+			value := testEval("type Contract = " + test.expected + "\nlet f: Contract = " + test.actual + " {}\nf")
 			_, accepted := value.(*object.Function)
 			if accepted != test.accepted {
 				t.Fatalf("accepted = %t, want %t: %v", accepted, test.accepted, value)
@@ -160,13 +160,13 @@ func TestExportedTypeAlias(t *testing.T) {
 	dir := t.TempDir()
 	libraryPath, mainPath := filepath.Join(dir, "library.slv"), filepath.Join(dir, "main.slv")
 	writeSilverFile(t, libraryPath, `export { Read, make }
-struct Item { value: int }
-let Items = <array[Item]>
-let Read = <call() Items>
+type Item = struct { value: int }
+type Items = array[Item]
+type Read = call() Items
 let make = fn() Items { return [Item{42}] }
 `)
 	writeSilverFile(t, mainPath, `let library = import("./library.slv")
-let Reader = <library.Read>
+type Reader = library.Read
 let read: Reader = library.make
 read()[0].value
 `)
@@ -176,6 +176,6 @@ read()[0].value
 }
 
 func TestTypeAliasIsATypeValue(t *testing.T) {
-	testBooleanObject(t, testEval(`let Alias = <array[str]>
+	testBooleanObject(t, testEval(`type Alias = array[str]
 import("core").type(Alias) == Alias`), true)
 }

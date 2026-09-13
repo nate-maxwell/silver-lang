@@ -9,12 +9,12 @@ Any struct can be used as an application error type. A `message: str` field is c
 built-in error types, but application errors may carry any additional fields they need:
 
 ```silver
-struct NotFound {
+type NotFound = struct {
     message: str
     path: str
 }
 
-struct PermissionProblem {
+type PermissionProblem = struct {
     message: str
 }
 ```

@@ -53,11 +53,11 @@ func TestNewlineEndsCallExpression(t *testing.T) {
 }
 
 func TestEnumMembersMayBeNewlineSeparated(t *testing.T) {
-	p := New(lexer.New("enum Direction {\nNorth\nSouth\n}"))
+	p := New(lexer.New("type Direction = enum {\nNorth\nSouth\n}"))
 	program := p.ParseProgram()
 	checkParserErrors(t, p)
 
-	declaration := program.Statements[0].(*ast.EnumStatement)
+	declaration := program.Statements[0].(*ast.TypeStatement).Value.(*ast.EnumTypeLiteral)
 	if len(declaration.Members) != 2 {
 		t.Fatalf("enum has %d members, want 2", len(declaration.Members))
 	}

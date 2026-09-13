@@ -10,7 +10,7 @@
 # text passes through literally except that it may need to be wrapped in
 # [square brackets] if it happens to contain one of those token substrings.
 
-struct Time {
+type Time = struct {
     year: int
     month: int
     day: int
@@ -21,7 +21,7 @@ struct Time {
     timezone: str
 }
 
-struct Duration {
+type Duration = struct {
     hours: float
     minutes: float
     seconds: float

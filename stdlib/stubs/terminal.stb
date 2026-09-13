@@ -3,7 +3,7 @@
 # Terminal coordinates are zero-based (x, y). Output functions write without
 # a trailing newline. ANSI/VT control sequences require a compatible terminal.
 
-enum Style {
+type Style = enum {
     Normal,
     Bold,
     Underline,

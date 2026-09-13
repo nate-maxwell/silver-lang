@@ -74,13 +74,5 @@ func (ta *TypeAnnotation) String() string {
 	return out.String()
 }
 
-// TypeAliasLiteral creates a first-class type contract from <Type>.
-type TypeAliasLiteral struct {
-	Token      token.Token // opening <
-	Annotation *TypeAnnotation
-}
-
-func (ta *TypeAliasLiteral) expressionNode()          {}
-func (ta *TypeAliasLiteral) TokenLiteral() string     { return ta.Token.Literal }
-func (ta *TypeAliasLiteral) Position() token.Position { return ta.Token.Position }
-func (ta *TypeAliasLiteral) String() string           { return "<" + ta.Annotation.String() + ">" }
+func (ta *TypeAnnotation) typeExpressionNode()  {}
+func (ta *TypeAnnotation) TokenLiteral() string { return ta.Token.Literal }

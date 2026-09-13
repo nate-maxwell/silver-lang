@@ -7,7 +7,7 @@ import (
 )
 
 const indexStructPrelude = `
-struct Box {
+type Box = struct {
 	values: map
 	get_item: call(self: Box, key: str) int
 	set_item: call(self: Box, key: str, value: int)
@@ -27,9 +27,9 @@ box["answer"]
 
 func TestStructIndexRequiresMappedMethod(t *testing.T) {
 	for _, input := range []string{
-		`struct Box {}
+		`type Box = struct {}
 Box{}[0]`,
-		`struct Box {}
+		`type Box = struct {}
 let box = Box{}
 box[0] = 1`,
 	} {
@@ -42,7 +42,7 @@ box[0] = 1`,
 }
 
 func TestStructIndexMethodMustBeCallable(t *testing.T) {
-	evaluated := testEval(`struct Invalid { get_item: int }
+	evaluated := testEval(`type Invalid = struct { get_item: int }
 Invalid{1}[0]`)
 	err, ok := evaluated.(*object.Error)
 	if !ok || !strings.Contains(err.MessageText(), `index method "get_item" on struct "Invalid" is not callable`) {

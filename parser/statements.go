@@ -12,10 +12,8 @@ func (p *Parser) parseStatement() ast.Statement {
 	switch p.curToken.Type {
 	case token.LET:
 		return p.parseLetStatement()
-	case token.ENUM:
-		return p.parseEnumStatement()
-	case token.STRUCT:
-		return p.parseStructStatement()
+	case token.TYPE:
+		return p.parseTypeStatement()
 	case token.FOR:
 		return p.parseForStatement()
 	case token.WHILE:

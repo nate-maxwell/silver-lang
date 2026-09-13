@@ -6,17 +6,17 @@ let _core = import("core")
 let _strings = import("string")
 let _time = import("time")
 
-struct JarError {
+type JarError = struct {
     message: str
 }
 
-struct _Target {
+type _Target = struct {
     host: str
     path: str
     secure: bool
 }
 
-struct _StoredCookie {
+type _StoredCookie = struct {
     cookie: _cookies.Cookie
     domain: str
     path: str
@@ -24,7 +24,7 @@ struct _StoredCookie {
     expires_at: int
 }
 
-struct Jar {
+type Jar = struct {
     cookies: array
     set: call(self: Jar, url: str, cookie: _cookies.Cookie) | JarError
     set_from_header: call(self: Jar, url: str, header: str) | JarError

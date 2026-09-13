@@ -4,14 +4,14 @@ let _arrays = import("arrays")
 let _core = import("core")
 let _strings = import("string")
 
-enum SameSite {
+type SameSite = enum {
     Default,
     Lax,
     Strict,
     None,
 }
 
-struct Cookie {
+type Cookie = struct {
     name: str
     value: str
     path: str
@@ -23,11 +23,11 @@ struct Cookie {
     same_site: SameSite
 }
 
-struct CookieError {
+type CookieError = struct {
     message: str
 }
 
-struct _Pair {
+type _Pair = struct {
     name: str
     value: str
 }

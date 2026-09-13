@@ -295,7 +295,10 @@ func (p *Parser) parseImportExpression() ast.Expression {
 func (p *Parser) parseMemberExpression(left ast.Expression) ast.Expression {
 	expression := &ast.MemberExpression{Token: p.curToken, Object: left}
 
-	if !p.expectPeek(token.IDENT) {
+	// The standard library exposes core.type as a module member.
+	if p.peekTokenIs(token.TYPE) {
+		p.nextToken()
+	} else if !p.expectPeek(token.IDENT) {
 		return nil
 	}
 

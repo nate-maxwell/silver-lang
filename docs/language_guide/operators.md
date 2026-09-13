@@ -30,11 +30,6 @@ User-defined operator precedence cannot be customized.
 Symbols may contain the punctuation characters `!$%&*+-./:;<=>?@^|~`. Existing delimiter spellings such as `::` can
 therefore be declared for ordinary expressions without affecting their established declaration syntax.
 
-## Limitations
-
-Silver uses pass-by-copy semantics. Therefore, creating operators that bind, like
-`+=` in other languages, is not currently doable.
-
 ## Examples
 
 ### Pipeline Operator
@@ -106,12 +101,12 @@ io.println(null ?? 5)
 
 ### Destructuring Utilization
 ```silver
-struct Vector {
+type Vector = struct {
     x: float
     y: float
 }
 
-struct Outer {
+type Outer = struct {
     v: Vector
 }
 

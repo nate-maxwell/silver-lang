@@ -65,7 +65,7 @@ Create `hello.slv`:
 ```silver
 let io = import("io")
 
-struct Person {
+type Person = struct {
     name: str
     greet: call(self: Person) str
 }

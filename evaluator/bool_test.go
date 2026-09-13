@@ -66,7 +66,7 @@ func TestLogicalOperators(t *testing.T) {
 		{"False || True && False", false},
 		{"42 && True", true},
 		{"False || \"value\"", true},
-		{"struct Value {}\nValue{} && True", true},
+		{"type Value = struct {}\nValue{} && True", true},
 	}
 
 	for _, test := range tests {

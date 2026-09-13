@@ -28,7 +28,7 @@ Silver functions can destructure structs by parameter name. Here, `move` declare
 receives one `Location`:
 
 ```silver
-struct Location {
+type Location = struct {
     x: float
     y: float
     z: float
@@ -39,7 +39,7 @@ let move = fn(x: float, y: float, z: float) Location {
 }
 
 let location = Location{ 0.0, 0.0, 0.0 }
-io.print(move(location)
+io.print(move(location))
 ```
 ```
 >> Location{ 5.0, 5.0, 5.0 }
@@ -58,7 +58,7 @@ the values it acts on:
 ```silver
 let print = import("io").print
 
-struct MovableLocation {
+type MovableLocation = struct {
     x: float
     y: float
     z: float
@@ -89,12 +89,12 @@ of ways structs can utilize callable fields.
 Struts can "embed" themsleves in other structs, raising their members to the outer struct's namespace.
 
 ```
-struct Location {
+type Location = struct {
     x: float
     y: float
 }
 
-struct Actor {
+type Actor = struct {
     name: str
     location:: Location
 }
@@ -137,7 +137,7 @@ Structs overload an operator by declaring a callable field named after that oper
 `self`, and the right operand is passed as the method's argument:
 
 ```silver
-struct Vector {
+type Vector = struct {
     x: int
     y: int
     +: call(self: Vector, other: Vector) Vector
@@ -169,8 +169,8 @@ Errors are detected in signatures as `| ErrorType`. The first value is the good 
 All values following, preceded by a `|` are considered returnable errors.
 
 ```silver
-struct MissingUser     { message: str, id: int }
-struct DeactivatedUser { message: str, id: int }
+type MissingUser = struct { message: str, id: int }
+type DeactivatedUser = struct { message: str, id: int }
 
 let find_user = fn(id: int) str | MissingUser | DeactivatedUser {
     if id == 7 {

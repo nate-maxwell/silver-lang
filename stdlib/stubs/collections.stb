@@ -6,7 +6,7 @@
 # index syntax (sequence[i], sequence[i] = v) through their get_item and
 # set_item fields.
 
-struct Deque {
+type Deque = struct {
     # Deque is a double-ended queue with a required maximum length. Once full,
     # appending at either end silently drops the oldest element at the opposite
     # end instead of growing further or raising, matching Python's
@@ -21,7 +21,7 @@ struct Deque {
     set_item: call
 }
 
-struct Stack {
+type Stack = struct {
     # Stack is an unbounded last-in-first-out sequence. push adds to the top,
     # pop removes and returns the top, and peek reads the top without removing
     # it; pop and peek both raise IndexError on an empty stack.
@@ -33,7 +33,7 @@ struct Stack {
     set_item: call
 }
 
-struct DefaultMap {
+type DefaultMap = struct {
     # DefaultMap wraps an ordinary map so that indexing a missing key computes
     # and stores a value instead of returning null. Reading defaultmap_value[key]
     # calls factory() exactly once for that key, saves the result into values,

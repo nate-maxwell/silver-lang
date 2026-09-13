@@ -211,6 +211,9 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 	case *ast.OperatorStatement:
 		return e.registerInfix(node, env)
 
+	case *ast.TypeStatement:
+		return e.evalTypeStatement(node, env)
+
 	case *ast.LetStatement:
 		if err := e.validateTypeAnnotation(node.Name.Type, env); err != nil {
 			return err
@@ -238,12 +241,6 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 	case *ast.IndexAssignmentStatement:
 		return e.evalIndexAssignment(node, env)
 
-	case *ast.EnumStatement:
-		return e.evalEnumStatement(node, env)
-
-	case *ast.StructStatement:
-		return e.evalStructStatement(node, env)
-
 	case *ast.ForStatement:
 		return e.evalForStatement(node, env)
 
@@ -252,9 +249,6 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 
 	case *ast.Identifier:
 		return e.evalIdentifier(node, env)
-
-	case *ast.TypeAliasLiteral:
-		return e.evalTypeAlias(node, env)
 
 	case *ast.ImportExpression:
 		pathValue := e.Eval(node.Path, env)

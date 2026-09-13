@@ -159,7 +159,7 @@ supplied callable. This matters for callable struct fields because named paramet
 [method receivers](objects.md#methods-are-callable-fields):
 
 ```silver
-struct Counter {
+type Counter = struct {
     value: int
     increment: call(self: Counter, amount: int) int
 }
@@ -172,12 +172,12 @@ Use [type aliases](types.md#type-aliases) to give long signatures a reusable nam
 element type with `array[T]`:
 
 ```silver
-struct Token { text: str }
-struct Node { value: int }
+type Token = struct { text: str }
+type Node = struct { value: int }
 
-let Lex = <call(str) array[Token]>
-let Parse = <call(array[Token]) array[Node]>
-let Eval = <call(array[Node]) int>
+type Lex = call(str) array[Token]
+type Parse = call(array[Token]) array[Node]
+type Eval = call(array[Node]) int
 
 let parse_program = fn(l: Lex, p: Parse, e: Eval, source: str) int {
     return e(p(l(source)))

@@ -112,7 +112,7 @@ load()
 }
 
 func TestEnumTypeAnnotation(t *testing.T) {
-	evaluated := testEval("enum Direction { North, South }\nlet direction: Direction = Direction.North\ndirection")
+	evaluated := testEval("type Direction = enum { North, South }\nlet direction: Direction = Direction.North\ndirection")
 	value, ok := evaluated.(*object.EnumValue)
 	if !ok || value.Member != "North" {
 		t.Fatalf("result is %#v, want Direction.North", evaluated)
@@ -200,7 +200,7 @@ makeIdentity()
 
 func TestFunctionErrorStructUnwindsIntoDestructuringCatch(t *testing.T) {
 	evaluated := testEval(`
-struct FileNotFound {
+type FileNotFound = struct {
 	message: str
 }
 let open = fn(found: bool) str | FileNotFound {
@@ -222,7 +222,7 @@ try {
 
 func TestFunctionMayReturnSuccessFromReturnUnion(t *testing.T) {
 	evaluated := testEval(`
-struct FileNotFound { message: str }
+type FileNotFound = struct { message: str }
 let open = fn() str | FileNotFound { return "contents" }
 open()
 `)
@@ -234,7 +234,7 @@ open()
 
 func TestLeadingPipeDeclaresNullSuccess(t *testing.T) {
 	evaluated := testEval(`
-struct PermissionDenied { message: str }
+type PermissionDenied = struct { message: str }
 let writeFile = fn(allowed: bool) | PermissionDenied {
 	if (allowed) { return }
 	return PermissionDenied{"denied"}
@@ -246,7 +246,7 @@ writeFile(True)
 
 func TestLeadingPipeTreatsEmptyBodyAsNullSuccess(t *testing.T) {
 	evaluated := testEval(`
-struct PermissionDenied { message: str }
+type PermissionDenied = struct { message: str }
 let writeFile = fn() | PermissionDenied {}
 writeFile()
 `)
@@ -255,7 +255,7 @@ writeFile()
 
 func TestLeadingPipeRaisesErrorStruct(t *testing.T) {
 	evaluated := testEval(`
-struct PermissionDenied { message: str }
+type PermissionDenied = struct { message: str }
 let writeFile = fn() | PermissionDenied {
 	return PermissionDenied{"denied"}
 }
@@ -273,7 +273,7 @@ try {
 
 func TestReturnUnionRejectsUndeclaredValue(t *testing.T) {
 	evaluated := testEval(`
-struct FileNotFound { message: str }
+type FileNotFound = struct { message: str }
 let open = fn() str | FileNotFound { return 42 }
 open()
 `)
@@ -299,7 +299,7 @@ func TestErrorReturnAlternativeMustBeStruct(t *testing.T) {
 
 func TestCallableReturnUnionAcceptsFunctionWithFewerErrors(t *testing.T) {
 	evaluated := testEval(`
-struct FileNotFound { message: str }
+type FileNotFound = struct { message: str }
 let opener: call() str | FileNotFound = fn() str { return "contents" }
 opener()
 `)
@@ -311,7 +311,7 @@ opener()
 
 func TestCallableReturnUnionRejectsUndeclaredFunctionError(t *testing.T) {
 	evaluated := testEval(`
-struct FileNotFound { message: str }
+type FileNotFound = struct { message: str }
 let opener: call() str = fn() str | FileNotFound { return "contents" }
 `)
 	err, ok := evaluated.(*object.Error)

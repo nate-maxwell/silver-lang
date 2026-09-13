@@ -6,24 +6,24 @@
 # instead of raising, so callers pattern-match the result or catch it as a
 # thrown value.
 
-struct IOError {
+type IOError = struct {
     # IOError is the general-purpose I/O failure, covering closed streams and
     # operating-system errors other than a missing file or denied permission.
     message: str
 }
 
-struct FileNotFound {
+type FileNotFound = struct {
     # FileNotFound is returned by open when path does not exist.
     message: str
 }
 
-struct PermissionDenied {
+type PermissionDenied = struct {
     # PermissionDenied is returned by open when the operating system refuses
     # access to path for a reason other than it being missing.
     message: str
 }
 
-struct IOStream {
+type IOStream = struct {
     # IOStream wraps one of the process's standard streams. stdin only
     # supports read and read_line; stdout and stderr only support write. Calling
     # an unsupported operation returns an IOError rather than raising a type
@@ -34,7 +34,7 @@ struct IOStream {
     write: call(data: str) | IOError
 }
 
-struct File {
+type File = struct {
     # File represents one already-open file handle returned by open. read
     # always rewinds to the beginning and returns the file's complete current
     # contents; write rewinds and truncates first, so it replaces the entire

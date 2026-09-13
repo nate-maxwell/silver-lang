@@ -83,6 +83,7 @@ const (
 	// Keywords
 	FUNCTION = "FUNCTION"
 	LET      = "LET"
+	TYPE     = "TYPE"
 	TRUE     = "TRUE"
 	FALSE    = "FALSE"
 	IF       = "IF"
@@ -112,6 +113,7 @@ const (
 var keywords = map[string]TokenType{
 	"fn":       FUNCTION,
 	"let":      LET,
+	"type":     TYPE,
 	"True":     TRUE,
 	"False":    FALSE,
 	"if":       IF,

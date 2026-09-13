@@ -6,13 +6,13 @@
 
 let cookies = import("./cookies.stb")
 
-struct JarError {
+type JarError = struct {
     # JarError reports an invalid URL, mismatched cookie domain, or malformed
     # cookie header.
     message: str
 }
 
-struct Jar {
+type Jar = struct {
     cookies: array
     set: call(self: Jar, url: str, cookie: cookies.Cookie) | JarError
     set_from_header: call(self: Jar, url: str, header: str) | JarError

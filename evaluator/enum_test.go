@@ -8,7 +8,7 @@ import (
 
 func TestEnumValue(t *testing.T) {
 	evaluated := testEval(`
-enum Direction { North, East, South, West }
+type Direction = enum { North, East, South, West }
 Direction.North
 `)
 
@@ -29,10 +29,10 @@ func TestEnumEquality(t *testing.T) {
 		input string
 		want  bool
 	}{
-		{"enum Direction { North, South }\nDirection.North == Direction.North", true},
-		{"enum Direction { North, South }\nDirection.North == Direction.South", false},
-		{"enum Direction { North, South }\nDirection.North != Direction.South", true},
-		{"enum First { Value }\nenum Second { Value }\nFirst.Value == Second.Value", false},
+		{"type Direction = enum { North, South }\nDirection.North == Direction.North", true},
+		{"type Direction = enum { North, South }\nDirection.North == Direction.South", false},
+		{"type Direction = enum { North, South }\nDirection.North != Direction.South", true},
+		{"type First = enum { Value }\ntype Second = enum { Value }\nFirst.Value == Second.Value", false},
 	}
 
 	for _, tt := range tests {
@@ -44,7 +44,7 @@ func TestEnumEquality(t *testing.T) {
 
 func TestEnumValuesAreHashable(t *testing.T) {
 	evaluated := testEval(`
-enum Direction { North, South }
+type Direction = enum { North, South }
 let labels = { Direction.North: "north", Direction.South: "south" }
 labels[Direction.South]
 `)
@@ -59,7 +59,7 @@ labels[Direction.South]
 }
 
 func TestMissingEnumMember(t *testing.T) {
-	evaluated := testEval("enum Direction { North }\nDirection.South")
+	evaluated := testEval("type Direction = enum { North }\nDirection.South")
 	err, ok := evaluated.(*object.Error)
 	if !ok {
 		t.Fatalf("result is %T, want *object.Error", evaluated)
@@ -73,7 +73,7 @@ func TestEnumExportedFromModule(t *testing.T) {
 	dir := t.TempDir()
 	libraryPath := filepath.Join(dir, "library.slv")
 	mainPath := filepath.Join(dir, "main.slv")
-	writeSilverFile(t, libraryPath, `enum Status { Ready, Busy }`)
+	writeSilverFile(t, libraryPath, `type Status = enum { Ready, Busy }`)
 	writeSilverFile(t, mainPath, `
 let library = import("./library.slv")
 library.Status.Ready

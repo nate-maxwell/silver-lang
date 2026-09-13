@@ -90,7 +90,6 @@ func NewWithInfixRegistry(l *lexer.Lexer, operators *InfixRegistry) *Parser {
 	p.registerPrefix(token.LBRACE, p.parseMapLiteral)
 	p.registerPrefix(token.IMPORT, p.parseImportExpression)
 	p.registerPrefix(token.TRY, p.parseTryExpression)
-	p.registerPrefix(token.LT, p.parseTypeAliasLiteral)
 
 	p.infixParseFns = make(map[token.TokenType]infixParseFn)
 	p.registerInfix(token.PLUS, p.parseInfixExpression)

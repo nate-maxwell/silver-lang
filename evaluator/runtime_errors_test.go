@@ -17,11 +17,11 @@ func TestRuntimeFaultsProduceSpecificErrorStructs(t *testing.T) {
 		{name: "value", input: coreImport + `core.range(0, 1000001)`, want: "ValueError"},
 		{name: "zero division", input: `1 / 0`, want: "ZeroDivisionError"},
 		{name: "name", input: `missing`, want: "NameError"},
-		{name: "attribute", input: `struct Point { x: int }
+		{name: "attribute", input: `type Point = struct { x: int }
 Point{1}.missing`, want: "AttributeError"},
 		{name: "key", input: `{"known": 1}["missing"]`, want: "KeyError"},
 		{name: "index", input: `[1][2]`, want: "IndexError"},
-		{name: "runtime", input: `struct Missing { message: str }
+		{name: "runtime", input: `type Missing = struct { message: str }
 let read = fn() str | Missing { return Missing{"not found"} }
 let caller = fn() str { read() }
 caller()`, want: "RuntimeError"},

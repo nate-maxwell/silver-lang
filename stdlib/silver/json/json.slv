@@ -10,7 +10,7 @@ let _contains = _arrays.contains
 let _len = _core.len
 let _type = _core.type
 
-struct JSONDecodeError {
+type JSONDecodeError = struct {
     message: str
     msg: str
     doc: str
@@ -19,13 +19,13 @@ struct JSONDecodeError {
     colno: int
 }
 
-struct _Parser {
+type _Parser = struct {
     document: str
     characters: array
     position: int
 }
 
-struct _EncodeOptions {
+type _EncodeOptions = struct {
     pretty: bool
     indentation: str
 }

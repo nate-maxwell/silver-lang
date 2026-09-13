@@ -8,13 +8,13 @@ let _arrays = import("arrays")
 let _print = _io.println
 let _append = _arrays.append
 
-struct Result {
+type Result = struct {
     name: str
     passed: bool
     message: str
 }
 
-struct Summary {
+type Summary = struct {
     total: int
     passed: int
     failed: int

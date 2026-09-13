@@ -5,9 +5,9 @@ import (
 	"silver/object"
 )
 
-// evalStructStatement creates a callable struct definition and binds it in
+// evalStructType creates a callable struct definition and binds it in
 // the current environment.
-func (e *Evaluator) evalStructStatement(node *ast.StructStatement, env *object.Environment) object.Object {
+func (e *Evaluator) evalStructType(name string, node *ast.StructTypeLiteral, env *object.Environment) object.Object {
 	fields := make([]string, 0, len(node.Fields))
 	fieldTypes := make([]*ast.TypeAnnotation, 0, len(node.Fields))
 	embeddedFields := make([]bool, 0, len(node.Fields))
@@ -23,14 +23,14 @@ func (e *Evaluator) evalStructStatement(node *ast.StructStatement, env *object.E
 	}
 
 	definition := &object.Struct{
-		Name:           node.Name.Value,
+		Name:           name,
 		PackageID:      env.PackageID(),
 		Fields:         fields,
 		FieldTypes:     fieldTypes,
 		EmbeddedFields: embeddedFields,
 		Env:            env,
 	}
-	env.Set(node.Name.Value, definition)
+	env.Set(name, definition)
 	for index, fieldType := range fieldTypes {
 		if err := e.validateTypeAnnotation(fieldType, env); err != nil {
 			return err
@@ -43,7 +43,7 @@ func (e *Evaluator) evalStructStatement(node *ast.StructStatement, env *object.E
 			fieldType = resolvedField
 			if len(fieldType.Parts) == 1 {
 				if _, isPrimitive := object.TypeDefinitionByName(fieldType.Parts[0]); isPrimitive {
-					return newError(object.RuntimeErrorKindType, "embedded field %q must have a struct type", node.Name.Value+"."+fields[index])
+					return newError(object.RuntimeErrorKindType, "embedded field %q must have a struct type", name+"."+fields[index])
 				}
 			}
 			fieldTypeValue, resolutionError := resolveNamedType(fieldType, fieldEnv)
@@ -51,7 +51,7 @@ func (e *Evaluator) evalStructStatement(node *ast.StructStatement, env *object.E
 				return newError(object.RuntimeErrorKindName, "%s", resolutionError)
 			}
 			if _, ok := fieldTypeValue.(*object.Struct); !ok {
-				return newError(object.RuntimeErrorKindType, "embedded field %q must have a struct type", node.Name.Value+"."+fields[index])
+				return newError(object.RuntimeErrorKindType, "embedded field %q must have a struct type", name+"."+fields[index])
 			}
 		}
 	}

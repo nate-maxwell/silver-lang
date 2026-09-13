@@ -7,13 +7,13 @@
 # shared module state that results, summary, report, and reset all operate
 # on; reset that state between independent test files or runs if needed.
 
-struct Result {
+type Result = struct {
     name: str
     passed: bool
     message: str
 }
 
-struct Summary {
+type Summary = struct {
     total: int
     passed: int
     failed: int

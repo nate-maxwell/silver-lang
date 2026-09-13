@@ -7,8 +7,8 @@ import (
 )
 
 // evalTemplateStringLiteral captures the declaration environment but leaves
-// every interpolation untouched until eval is called. A clean evaluator fork
-// per invocation makes the same TemplateString safe to evaluate from tasks.
+// every interpolation untouched until eval is called. Each invocation uses
+// a fresh copy of the evaluator state captured at declaration.
 func (e *Evaluator) evalTemplateStringLiteral(node *ast.TemplateStringLiteral, env *object.Environment) object.Object {
 	baseEvaluator := e.fork()
 	definition, _ := object.BuiltinStructDefinitionByName("TemplateString")

@@ -25,7 +25,6 @@ type Evaluator struct {
 	modules         map[string]*object.Module // filepath or standard-library name to module
 	loading         map[string]bool           // module load state | circular import detection
 	contexts        []string                  // active Silver function/module names
-	warnings        io.Writer                 // scope-exit task diagnostics
 	// nextEnumValueID gives every evaluated enum member a session-unique hash
 	// identity, even when separate modules declare enums with the same names.
 	nextEnumValueID *atomic.Uint64
@@ -53,46 +52,6 @@ type infixDefinition struct {
 	node     *ast.OperatorStatement
 	env      *object.Environment
 	callable *object.Function
-}
-
-// synchronizedWriter makes builtin output and warnings safe when tasks write
-// from multiple goroutines.
-type synchronizedWriter struct {
-	mu *sync.Mutex
-	w  io.Writer
-}
-
-func (w *synchronizedWriter) Write(p []byte) (int, error) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	return w.w.Write(p)
-}
-
-// Flush forwards an optional flush operation while holding the same lock as
-// writes, allowing stream-aware standard-library modules to flush safely.
-func (w *synchronizedWriter) Flush() error {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	switch writer := w.w.(type) {
-	case interface{ Flush() error }:
-		return writer.Flush()
-	case interface{ Flush() }:
-		writer.Flush()
-	}
-	return nil
-}
-
-// TerminalFileDescriptor exposes an underlying terminal handle without
-// pretending that every synchronized writer necessarily has one.
-func (w *synchronizedWriter) TerminalFileDescriptor() (uintptr, bool) {
-	if provider, ok := w.w.(interface{ TerminalFileDescriptor() (uintptr, bool) }); ok {
-		return provider.TerminalFileDescriptor()
-	}
-	provider, ok := w.w.(interface{ Fd() uintptr })
-	if !ok {
-		return 0, false
-	}
-	return provider.Fd(), true
 }
 
 // New constructs an evaluator whose print builtin writes to standard output.
@@ -126,28 +85,11 @@ func NewWithOutput(out io.Writer) *Evaluator {
 	if out == nil {
 		out = io.Discard
 	}
-	safe := &synchronizedWriter{mu: &sync.Mutex{}, w: out}
-	return newEvaluator(os.Stdin, safe, safe, safe)
-}
-
-// NewWithWriters constructs an evaluator with separate program-output and
-// warning destinations. The CLI uses stderr for warnings while the REPL keeps
-// all diagnostics in its single output stream.
-func NewWithWriters(out, warnings io.Writer) *Evaluator {
-	if out == nil {
-		out = io.Discard
-	}
-	if warnings == nil {
-		warnings = io.Discard
-	}
-	streamLock := &sync.Mutex{}
-	safeOut := &synchronizedWriter{mu: streamLock, w: out}
-	safeWarnings := &synchronizedWriter{mu: streamLock, w: warnings}
-	return newEvaluator(os.Stdin, safeOut, safeWarnings, safeWarnings)
+	return newEvaluator(os.Stdin, out, out)
 }
 
 // NewWithStreams constructs an evaluator with explicit language-level stdin,
-// stdout, and stderr. Runtime warnings share stderr.
+// stdout, and stderr.
 func NewWithStreams(in io.Reader, out, errOut io.Writer) *Evaluator {
 	if out == nil {
 		out = io.Discard
@@ -155,20 +97,16 @@ func NewWithStreams(in io.Reader, out, errOut io.Writer) *Evaluator {
 	if errOut == nil {
 		errOut = io.Discard
 	}
-	streamLock := &sync.Mutex{}
-	safeOut := &synchronizedWriter{mu: streamLock, w: out}
-	safeErrOut := &synchronizedWriter{mu: streamLock, w: errOut}
-	return newEvaluator(in, safeOut, safeErrOut, safeErrOut)
+	return newEvaluator(in, out, errOut)
 }
 
-func newEvaluator(in io.Reader, out, errOut, warnings io.Writer) *Evaluator {
+func newEvaluator(in io.Reader, out, errOut io.Writer) *Evaluator {
 	return &Evaluator{
 		standardLibrary: stdlibpkg.NewWithStreams(in, out, errOut, NULL, TRUE, FALSE),
 		constants:       newConstantPool(),
 		modules:         make(map[string]*object.Module),
 		loading:         make(map[string]bool),
 		contexts:        make([]string, 0),
-		warnings:        warnings,
 		nextEnumValueID: &atomic.Uint64{},
 		operatorScopes:  &operatorScopeSet{values: make(map[string]*operatorScope)},
 		packages:        packages.NewIndex(),
@@ -176,9 +114,8 @@ func newEvaluator(in io.Reader, out, errOut, warnings io.Writer) *Evaluator {
 	}
 }
 
-// fork gives a task independent mutable evaluator state while sharing the
-// immutable standard library, synchronized output, and enum identity
-// source.
+// fork captures evaluator state for lazy templates while sharing the
+// standard library, output streams, and enum identity source.
 func (e *Evaluator) fork() *Evaluator {
 	modules := make(map[string]*object.Module, len(e.modules))
 	for path, module := range e.modules {
@@ -190,7 +127,6 @@ func (e *Evaluator) fork() *Evaluator {
 		modules:         modules,
 		loading:         make(map[string]bool),
 		contexts:        append([]string(nil), e.contexts...),
-		warnings:        e.warnings,
 		nextEnumValueID: e.nextEnumValueID,
 		operatorScopes:  e.operatorScopes,
 		packages:        e.packages,
@@ -290,9 +226,6 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 			if function.Name == "" {
 				function.Name = node.Name.Value
 			}
-		}
-		if task, ok := val.(*object.Task); ok {
-			task.SetName(node.Name.Value)
 		}
 		env.SetTyped(node.Name.Value, val, node.Name.Type)
 
@@ -485,12 +418,6 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 
 	case *ast.MapLiteral:
 		return e.evalMapLiteral(node, env)
-
-	case *ast.TaskExpression:
-		return e.evalTaskExpression(node, env)
-
-	case *ast.CollectExpression:
-		return e.evalCollectExpression(node, env)
 	}
 
 	return nil

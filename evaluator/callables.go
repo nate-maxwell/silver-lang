@@ -58,7 +58,6 @@ func (e *Evaluator) applyUserFunction(fn *object.Function, args []object.Object,
 		return err
 	}
 	extendedEnv := extendFunctionEnv(fn, boundArgs)
-	defer e.finishTasks(extendedEnv)
 	if contextName == "" {
 		contextName = "<anonymous>"
 	}

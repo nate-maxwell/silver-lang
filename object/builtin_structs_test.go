@@ -86,7 +86,6 @@ func TestRuntimeErrorStructTableConstructsEveryKind(t *testing.T) {
 		RuntimeErrorKindSyntax:       "SyntaxError",
 		RuntimeErrorKindKey:          "KeyError",
 		RuntimeErrorKindIndex:        "IndexError",
-		RuntimeErrorKindTask:         "TaskError",
 	}
 	if len(runtimeErrorStructNames) != len(want) {
 		t.Fatalf("runtime error table has %d entries, want %d", len(runtimeErrorStructNames), len(want))

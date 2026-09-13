@@ -1,6 +1,8 @@
 package stdlib_test
 
 import (
+	"fmt"
+	"silver/evaluator"
 	"silver/object"
 	"testing"
 )
@@ -17,14 +19,41 @@ func TestHTTPClientAndServerRoundTrip(t *testing.T) {
     assert request.body == "silver"
     return server_module.response_with_headers(http.StatusCreated, {"content-type": "text/plain"}, "created")
 }
-let server = server_module.new("127.0.0.1:0", handler)
-let serve = task server.serve_once
-let result = client.post("http://" + server.address + "/submit?source=test", "silver")
-collect serve
+server_module.new("127.0.0.1:0", handler)`
+	serverValue := testEval(httpImport + input)
+	server, ok := serverValue.(*object.StructInstance)
+	if !ok {
+		t.Fatalf("server creation returned %T (%v), want a server", serverValue, serverValue)
+	}
+	address, _ := server.Get("address")
+	listener, _ := server.Get("listener")
+	closeListener, _ := listener.(*object.StructInstance).Get("close")
+
+	program, parseError := evaluator.ParseSource("http_server_test.slv", []byte("server.serve_once()"))
+	if parseError != nil {
+		t.Fatal(parseError.Inspect())
+	}
+	env := object.NewEnvironment()
+	env.Set("server", server)
+	serverEvaluator := evaluator.New()
+	// The Go harness runs the blocking server while a separate interpreter
+	// makes the client request. Each Silver program executes synchronously.
+	served := make(chan object.Object, 1)
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		served <- serverEvaluator.Eval(program, env)
+	}()
+	t.Cleanup(func() {
+		closeListener.(*object.Builtin).Fn()
+		<-done
+	})
+
+	input = fmt.Sprintf(`let result = client.post(%q, "silver")
 assert result.status_code == http.StatusCreated
 assert result.status == "201 Created"
 assert result.headers["content-type"] == "text/plain"
-result.body`
+result.body`, "http://"+address.(*object.String).Value+"/submit?source=test")
 
 	evaluated := testEval(httpImport + input)
 	result, ok := evaluated.(*object.String)
@@ -33,6 +62,9 @@ result.body`
 			t.Fatalf("round trip failed: %s", failure.MessageText())
 		}
 		t.Fatalf("round trip returned %#v, want %q", evaluated, "created")
+	}
+	if failure, ok := (<-served).(*object.Error); ok {
+		t.Fatalf("server failed: %s", failure.Inspect())
 	}
 }
 

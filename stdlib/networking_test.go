@@ -11,18 +11,14 @@ const networkingImport = `let net = import("networking")
 
 func TestNetworkingTCPRoundTrip(t *testing.T) {
 	input := `let listener: Listener = net.listen("127.0.0.1:0")
-let echo = fn() {
-    let connection: Connection = listener.accept()
-    let data = connection.read(1024)
-    connection.write(data)
-    connection.close()
-}
-let server = task echo
 let connection: Connection = net.dial(net.Network.TCP, listener.address)
+let peer: Connection = listener.accept()
 connection.write("hello over tcp")
+let data = peer.read(1024)
+peer.write(data)
+peer.close()
 let response = connection.read(1024)
 connection.close()
-collect server
 listener.close()
 response`
 
@@ -183,12 +179,9 @@ connection.read(-1)`, message: "argument to `Connection.read` must be nonnegativ
 
 func TestNetworkingConnectionProtocolErrors(t *testing.T) {
 	input := `let listener = net.listen("127.0.0.1:0")
-let accept_once = fn() {
-    let connection = listener.accept()
-    connection.close()
-}
-let server = task accept_once
 let connection = net.dial(net.Network.TCP, listener.address)
+let peer = listener.accept()
+peer.close()
 let handled = try {
     connection.write_to("data", listener.address)
     False
@@ -196,7 +189,6 @@ let handled = try {
     err.message != ""
 }
 connection.close()
-collect server
 listener.close()
 handled`
 	testBooleanObject(t, testEval(networkingImport+input), true)

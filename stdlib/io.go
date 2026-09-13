@@ -120,7 +120,7 @@ func (stream *nativeIOStream) write(args ...object.Object) object.Object {
 }
 
 // nativeFile owns an open OS handle shared by the closures stored in a Silver
-// File struct. Its lock serializes reads, writes, and close across tasks.
+// File struct. Its lock serializes reads, writes, and close.
 type nativeFile struct {
 	mu     sync.Mutex
 	file   *os.File

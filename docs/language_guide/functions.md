@@ -193,7 +193,6 @@ promise `array[int]` contents.
 
 - [`return`](control_flow.md#returns-and-errors) can leave loops and nested conditional blocks inside a function.
 - [`defer`](control_flow.md#deferred-calls) schedules cleanup for function exit, including error propagation.
-- [Tasks](concurrency.md) accept zero-argument functions and retain their results or errors.
 - [Template strings](template_strings.md) capture scope and reevaluate their interpolations when `.eval()` is called.
 
 [Language guide](language_guide.md) | [Documentation index](../table_of_contents.md)

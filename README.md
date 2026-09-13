@@ -195,7 +195,7 @@ Errors are structs and can benefit from all struct features.
 Runtime failures use the same path, so errors such as `TypeError`, `KeyError`, and `AssertionError` are catchable
 too. A list of runtime errors can be found in the documentation.
 
-## Lazy Templates and Structured Concurrency
+## Lazy Templates
 
 Triple-backtick templates capture their lexical scope and evaluate only when asked:
 ```silver
@@ -206,24 +206,6 @@ greeting.eval()
 ```
 ```
 >> "Hello, world!"
-```
-
-Tasks run zero-argument callables concurrently. `collect` joins each non-null value as a struct with fields named
-after each handle.
-```silver
-let answer = fn() int { return 6 * 7 }
-let greeting = fn() str { return "hello" }
-
-let calculation = task answer
-let message = task greeting
-let results = collect calculation, message
-
-io.print(results.calculation) 
-io.print(results.message)     
-```
-```
->> 42
->> "hello"
 ```
 
 ## Get Started

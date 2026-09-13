@@ -99,8 +99,6 @@ const (
 	WHILE    = "WHILE"
 	BREAK    = "BREAK"
 	CONTINUE = "CONTINUE"
-	TASK     = "TASK"
-	COLLECT  = "COLLECT"
 	TRY      = "TRY"
 	CATCH    = "CATCH"
 	SWITCH   = "SWITCH"
@@ -130,8 +128,6 @@ var keywords = map[string]TokenType{
 	"while":    WHILE,
 	"break":    BREAK,
 	"continue": CONTINUE,
-	"task":     TASK,
-	"collect":  COLLECT,
 	"try":      TRY,
 	"catch":    CATCH,
 	"switch":   SWITCH,

@@ -66,8 +66,7 @@ func (m *Map) Len() int {
 	return len(m.Pairs)
 }
 
-// Set creates or replaces one pair. Synchronization makes map assignment safe
-// when aliases are shared by concurrent tasks.
+// Set creates or replaces one pair.
 func (m *Map) Set(key HashKey, pair MapPair) {
 	m.mu.Lock()
 	if m.Pairs == nil {

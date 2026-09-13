@@ -29,7 +29,7 @@ separate compilation phase.
 | `enum`           | `Direction.North`                     | Nominal singleton value from an enum declaration.            |
 | `struct`         | `User{"Ada"}`                         | Instance of a nominal struct declaration.                    |
 
-Structs and enums introduce nominal types. Task handles, built-in errors, and standard-library objects add other
+Structs and enums introduce nominal types. Built-in errors and standard-library objects add other
 runtime value kinds.
 
 Use `any` when an explicitly typed binding or return may contain heterogeneous values. Parameters that accept every

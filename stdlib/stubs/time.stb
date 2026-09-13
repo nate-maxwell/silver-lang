@@ -69,7 +69,7 @@ let diff = fn(from: Time, to: Time) Duration {
 }
 
 let sleep = fn(duration: Duration) {
-    # Block the current task for duration, then return null. duration.
+    # Block execution for duration, then return null. duration.
     # nanoseconds must fit the amount of time actually slept; a negative
     # duration returns immediately.
 }

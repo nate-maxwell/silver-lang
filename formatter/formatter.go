@@ -397,7 +397,7 @@ func firstWord(line []element) string {
 
 func spacedBeforeParen(word string) bool {
 	switch word {
-	case "if", "for", "while", "switch", "return", "assert", "defer", "task", "collect":
+	case "if", "for", "while", "switch", "return", "assert", "defer":
 		return true
 	default:
 		return false
@@ -406,7 +406,7 @@ func spacedBeforeParen(word string) bool {
 
 func statementKeyword(word string) bool {
 	switch word {
-	case "let", "return", "assert", "defer", "export", "if", "else", "for", "in", "while", "task", "collect", "switch", "case", "catch":
+	case "let", "return", "assert", "defer", "export", "if", "else", "for", "in", "while", "switch", "case", "catch":
 		return true
 	default:
 		return false

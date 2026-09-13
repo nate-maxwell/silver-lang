@@ -14,7 +14,6 @@ type Environment struct {
 	outer     *Environment // enclosing lexical scope, if any
 	sourceDir string       // directory of the source file being evaluated
 	packageID string       // manifest identity owning this source, if any
-	tasks     []*Task      // tasks launched directly in this lexical scope
 	defers    []DeferredCall
 }
 
@@ -159,21 +158,6 @@ func (e *Environment) PackageID() string {
 		return outer.PackageID()
 	}
 	return ""
-}
-
-// RegisterTask associates a launched task with this scope for exit-time
-// diagnostics and cleanup.
-func (e *Environment) RegisterTask(task *Task) {
-	e.mu.Lock()
-	e.tasks = append(e.tasks, task)
-	e.mu.Unlock()
-}
-
-// Tasks returns a stable snapshot of tasks launched in this scope.
-func (e *Environment) Tasks() []*Task {
-	e.mu.RLock()
-	defer e.mu.RUnlock()
-	return append([]*Task(nil), e.tasks...)
 }
 
 // RegisterDefer schedules a captured call for this scope's exit.

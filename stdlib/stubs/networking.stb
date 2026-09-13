@@ -2,7 +2,7 @@
 #
 # Blocking TCP and UDP sockets. Connection and Listener are struct values
 # whose call fields close over an underlying OS socket; every read or write
-# blocks the current task until data is available, written, or an error
+# blocks execution until data is available, written, or an error
 # occurs. Reads and writes are not buffered beyond the size requested, so a
 # read(bytes: n) call can return fewer than n bytes for a stream that has
 # not yet delivered that much data.

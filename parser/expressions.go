@@ -1,7 +1,6 @@
 package parser
 
 import (
-	"fmt"
 	"silver/ast"
 	"silver/token"
 )
@@ -36,77 +35,6 @@ func (p *Parser) parseTryExpression() ast.Expression {
 
 	if len(expression.Catches) == 0 {
 		p.addError(expression.Position(), "try requires at least one catch clause")
-	}
-	return expression
-}
-
-// parseTaskExpression accepts an unparenthesized callable reference, such as
-// task work or task service.work. The evaluator invokes it with no arguments.
-func (p *Parser) parseTaskExpression() ast.Expression {
-	expression := &ast.TaskExpression{Token: p.curToken}
-	if p.peekTokenIs(token.LPAREN) || p.peekTokenIs(token.LBRACE) {
-		p.addError(p.peekToken.Position, "TaskTargetError: task expects an unparenthesized callable name")
-		return nil
-	}
-	if p.peekTokenIs(token.EOF) || p.peekTokenIs(token.RBRACE) || p.lineBreakBeforePeek() {
-		p.addError(expression.Position(), "TaskTargetError: task expects a callable name")
-		return nil
-	}
-	p.nextToken()
-	expression.Work = p.parseExpression(PREFIX)
-	if expression.Work == nil {
-		p.addError(expression.Position(), "TaskTargetError: task expects a callable name")
-		return expression
-	}
-	switch expression.Work.(type) {
-	case *ast.Identifier, *ast.MemberExpression:
-		return expression
-	case *ast.FunctionLiteral:
-		function := expression.Work.(*ast.FunctionLiteral)
-		if len(function.Parameters) != 0 {
-			p.addError(function.Position(), "TaskTargetError: anonymous task functions must have no parameters")
-		}
-		return expression
-	default:
-		p.addError(expression.Work.Position(), "TaskTargetError: task expects a callable name")
-		return expression
-	}
-}
-
-// parseCollectExpression accepts an unparenthesized, comma-separated list of
-// identifiers so their names can become result fields.
-func (p *Parser) parseCollectExpression() ast.Expression {
-	expression := &ast.CollectExpression{Token: p.curToken}
-	if p.peekTokenIs(token.LPAREN) {
-		p.addError(p.peekToken.Position, "CollectSyntaxError: collect handles must not be parenthesized")
-		return nil
-	}
-	if p.peekTokenIs(token.EOF) || p.peekTokenIs(token.RBRACE) || p.lineBreakBeforePeek() {
-		p.addError(expression.Position(), "CollectArgumentError: collect expects at least one task handle")
-		return expression
-	}
-
-	seen := make(map[string]bool)
-	for {
-		if !p.expectPeek(token.IDENT) {
-			p.addError(p.peekToken.Position, "CannotCollectExpressionError: collect arguments must be named identifiers")
-			return expression
-		}
-		identifier := &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
-		if seen[identifier.Value] {
-			p.addError(identifier.Position(), fmt.Sprintf("TaskAlreadyCollectedError: task handle %q is collected more than once", identifier.Value))
-		} else {
-			seen[identifier.Value] = true
-			expression.Handles = append(expression.Handles, identifier)
-		}
-
-		if !p.peekTokenIs(token.COMMA) {
-			break
-		}
-		p.nextToken()
-	}
-	if p.peekTokenIs(token.LPAREN) || p.peekTokenIs(token.DOT) || p.peekTokenIs(token.LBRACKET) {
-		p.addError(p.peekToken.Position, "CannotCollectExpressionError: collect arguments must be named identifiers")
 	}
 	return expression
 }

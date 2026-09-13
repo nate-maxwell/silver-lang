@@ -89,8 +89,6 @@ func NewWithInfixRegistry(l *lexer.Lexer, operators *InfixRegistry) *Parser {
 	p.registerPrefix(token.LBRACKET, p.parseArrayLiteral)
 	p.registerPrefix(token.LBRACE, p.parseMapLiteral)
 	p.registerPrefix(token.IMPORT, p.parseImportExpression)
-	p.registerPrefix(token.TASK, p.parseTaskExpression)
-	p.registerPrefix(token.COLLECT, p.parseCollectExpression)
 	p.registerPrefix(token.TRY, p.parseTryExpression)
 	p.registerPrefix(token.LT, p.parseTypeAliasLiteral)
 
@@ -142,9 +140,6 @@ func (p *Parser) ParseProgram() *ast.Program {
 		stmt := p.parseStatement()
 		program.Statements = append(program.Statements, stmt)
 		p.nextToken()
-	}
-	if len(p.errors) == 0 {
-		p.validateTaskUsage(program)
 	}
 
 	return program

@@ -6,21 +6,21 @@ import (
 	"testing"
 )
 
-func TestTypeAliasLiterals(t *testing.T) {
+func TestTypeAliasDeclarations(t *testing.T) {
 	for _, contract := range []string{
 		"int", "models.Token", "array[str]", "array[array[int]]",
 		"array[call(str) array[models.Token]]", "call()", "call(array[int]) array[str]",
 		"call(values: array[Token]...) array[Node] | ParseError", "EarlierAlias",
 	} {
 		t.Run(contract, func(t *testing.T) {
-			p := New(lexer.New("let signature = <" + contract + ">"))
+			p := New(lexer.New("type signature = " + contract))
 			program := p.ParseProgram()
 			checkParserErrors(t, p)
-			literal := program.Statements[0].(*ast.LetStatement).Value.(*ast.TypeAliasLiteral)
-			if got := literal.Annotation.String(); got != contract {
+			literal := program.Statements[0].(*ast.TypeStatement).Value.(*ast.TypeAnnotation)
+			if got := literal.String(); got != contract {
 				t.Fatalf("contract = %q, want %q", got, contract)
 			}
-			if got := literal.String(); got != "<"+contract+">" {
+			if got := program.Statements[0].String(); got != "type signature = "+contract {
 				t.Fatalf("literal = %q", got)
 			}
 		})
@@ -42,9 +42,9 @@ func TestArrayTypeAnnotations(t *testing.T) {
 
 func TestMalformedTypeAliasesAndArrayTypes(t *testing.T) {
 	for _, input := range []string{
-		"let T = <>", "let T = <int", "let T = <array[]>", "let T = <array[int, str]>",
-		"let T = <array[int>", "let T = <map[str]>", "let T = <call(str) array[]>",
-		"let values: array[] = []", "let values: map[str] = {}", "let T = <int + str>",
+		"type T = ", "type T int", "type T = array[]", "type T = array[int, str]",
+		"type T = array[int", "type T = map[str]", "type T = call(str) array[]",
+		"let values: array[] = []", "let values: map[str] = {}", "type T = int + str",
 	} {
 		t.Run(input, func(t *testing.T) {
 			p := New(lexer.New(input))
@@ -63,7 +63,7 @@ func TestTypedLetStatement(t *testing.T) {
 
 	statement := program.Statements[0].(*ast.LetStatement)
 	if statement.Name.Type == nil || statement.Name.Type.String() != "int" {
-		t.Fatalf("let type is %v, want int", statement.Name.Type)
+		t.Fatalf("type is %v, want int", statement.Name.Type)
 	}
 	if got, want := statement.String(), "let age: int = 36"; got != want {
 		t.Fatalf("let string is %q, want %q", got, want)

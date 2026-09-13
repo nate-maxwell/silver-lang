@@ -39,9 +39,9 @@ func TestTypeBuiltinReturnsInspectableTypeValue(t *testing.T) {
 
 func TestTypeBuiltinReturnsStructDefinition(t *testing.T) {
 	for _, input := range []string{
-		`struct Point { x: int }
+		`type Point = struct { x: int }
 core.type(Point) == Point`,
-		`struct Point { x: int }
+		`type Point = struct { x: int }
 core.type(Point{1}) == Point`,
 	} {
 		testBooleanObject(t, testEval(coreImport+input), true)
@@ -50,9 +50,9 @@ core.type(Point{1}) == Point`,
 
 func TestTypeBuiltinReturnsEnumDefinition(t *testing.T) {
 	for _, input := range []string{
-		`enum Color { Red, Green }
+		`type Color = enum { Red, Green }
 core.type(Color) == Color`,
-		`enum Color { Red, Green }
+		`type Color = enum { Red, Green }
 core.type(Color.Red) == Color`,
 	} {
 		testBooleanObject(t, testEval(coreImport+input), true)
@@ -61,7 +61,7 @@ core.type(Color.Red) == Color`,
 
 func TestTypeBuiltinIdentifiesCaughtStructError(t *testing.T) {
 	evaluated := testEval(coreImport + `
-struct FileNotFound { message: str }
+type FileNotFound = struct { message: str }
 let open = fn() str | FileNotFound {
 	return FileNotFound{"missing"}
 }

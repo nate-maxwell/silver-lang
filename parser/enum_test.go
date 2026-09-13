@@ -9,7 +9,7 @@ import (
 
 func TestEnumStatement(t *testing.T) {
 	p := New(lexer.New(`
-enum Direction { North, East, South, West, }
+type Direction = enum { North, East, South, West, }
 let direction = Direction.North
 `))
 	program := p.ParseProgram()
@@ -18,36 +18,36 @@ let direction = Direction.North
 	if len(program.Statements) != 2 {
 		t.Fatalf("program has %d statements, want 2", len(program.Statements))
 	}
-	statement, ok := program.Statements[0].(*ast.EnumStatement)
+	statement, ok := program.Statements[0].(*ast.TypeStatement)
 	if !ok {
-		t.Fatalf("first statement is %T, want *ast.EnumStatement", program.Statements[0])
+		t.Fatalf("first statement is %T, want *ast.TypeStatement", program.Statements[0])
 	}
 	if statement.Name.Value != "Direction" {
 		t.Fatalf("enum name is %q, want Direction", statement.Name.Value)
 	}
 
 	wantMembers := []string{"North", "East", "South", "West"}
-	if len(statement.Members) != len(wantMembers) {
-		t.Fatalf("enum has %d members, want %d", len(statement.Members), len(wantMembers))
+	if len(statement.Value.(*ast.EnumTypeLiteral).Members) != len(wantMembers) {
+		t.Fatalf("enum has %d members, want %d", len(statement.Value.(*ast.EnumTypeLiteral).Members), len(wantMembers))
 	}
 	for i, want := range wantMembers {
-		if statement.Members[i].Value != want {
-			t.Fatalf("member %d is %q, want %q", i, statement.Members[i].Value, want)
+		if statement.Value.(*ast.EnumTypeLiteral).Members[i].Value != want {
+			t.Fatalf("member %d is %q, want %q", i, statement.Value.(*ast.EnumTypeLiteral).Members[i].Value, want)
 		}
 	}
-	if got, want := statement.String(), "enum Direction { North, East, South, West }"; got != want {
+	if got, want := statement.String(), "type Direction = enum { North, East, South, West }"; got != want {
 		t.Fatalf("enum string is %q, want %q", got, want)
 	}
 }
 
 func TestEnumRejectsDuplicateMembers(t *testing.T) {
-	p := New(lexer.NewWithSource(`enum State { Ready, Ready }`, "duplicate.slv"))
+	p := New(lexer.NewWithSource(`type State = enum { Ready, Ready }`, "duplicate.slv"))
 	p.ParseProgram()
 
 	if len(p.Errors()) != 1 {
 		t.Fatalf("parser returned %d errors, want 1: %v", len(p.Errors()), p.Errors())
 	}
-	if message := p.Errors()[0]; !strings.Contains(message, `duplicate enum member "Ready"`) || !strings.Contains(message, "duplicate.slv:1:21") {
+	if message := p.Errors()[0]; !strings.Contains(message, `duplicate enum member "Ready"`) || !strings.Contains(message, "duplicate.slv:1:28") {
 		t.Fatalf("unexpected parser error: %q", message)
 	}
 }

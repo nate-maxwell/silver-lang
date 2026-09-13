@@ -1,7 +1,7 @@
 # Editor stub for import("path").
 #
 
-struct Path {
+type Path = struct {
     # A pathlib-style wrapper around a single filesystem path string, modeled on
     # Python's pathlib.Path. Every Path is immutable: methods that describe a
     # different path (parent, joinpath, with_name, resolve, and so on) return a

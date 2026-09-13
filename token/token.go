@@ -83,6 +83,7 @@ const (
 	// Keywords
 	FUNCTION = "FUNCTION"
 	LET      = "LET"
+	TYPE     = "TYPE"
 	TRUE     = "TRUE"
 	FALSE    = "FALSE"
 	IF       = "IF"
@@ -99,8 +100,6 @@ const (
 	WHILE    = "WHILE"
 	BREAK    = "BREAK"
 	CONTINUE = "CONTINUE"
-	TASK     = "TASK"
-	COLLECT  = "COLLECT"
 	TRY      = "TRY"
 	CATCH    = "CATCH"
 	SWITCH   = "SWITCH"
@@ -114,6 +113,7 @@ const (
 var keywords = map[string]TokenType{
 	"fn":       FUNCTION,
 	"let":      LET,
+	"type":     TYPE,
 	"True":     TRUE,
 	"False":    FALSE,
 	"if":       IF,
@@ -130,8 +130,6 @@ var keywords = map[string]TokenType{
 	"while":    WHILE,
 	"break":    BREAK,
 	"continue": CONTINUE,
-	"task":     TASK,
-	"collect":  COLLECT,
 	"try":      TRY,
 	"catch":    CATCH,
 	"switch":   SWITCH,

@@ -7,13 +7,31 @@ import (
 	"strings"
 )
 
-func (e *Evaluator) evalTypeAlias(literal *ast.TypeAliasLiteral, env *object.Environment) object.Object {
-	if err := e.validateTypeAnnotation(literal.Annotation, env); err != nil {
+func (e *Evaluator) evalTypeStatement(node *ast.TypeStatement, env *object.Environment) object.Object {
+	switch value := node.Value.(type) {
+	case *ast.StructTypeLiteral:
+		return e.evalStructType(node.Name.Value, value, env)
+	case *ast.EnumTypeLiteral:
+		return e.evalEnumType(node.Name.Value, value, env)
+	case *ast.TypeAnnotation:
+		alias := e.evalTypeAlias(value, env)
+		if isError(alias) {
+			return alias
+		}
+		env.Set(node.Name.Value, alias)
+		return nil
+	default:
+		return newError(object.RuntimeErrorKindType, "invalid type declaration %q", node.Name.Value)
+	}
+}
+
+func (e *Evaluator) evalTypeAlias(annotation *ast.TypeAnnotation, env *object.Environment) object.Object {
+	if err := e.validateTypeAnnotation(annotation, env); err != nil {
 		return err
 	}
 	captured := object.NewEnvironment()
-	captureTypeBindings(literal.Annotation, env, captured)
-	return &object.TypeAlias{Annotation: literal.Annotation, Env: captured}
+	captureTypeBindings(annotation, env, captured)
+	return &object.TypeAlias{Annotation: annotation, Env: captured}
 }
 
 // Capture only dependencies of this contract, retaining the exact nominal
@@ -39,7 +57,7 @@ func captureTypeBindings(annotation *ast.TypeAnnotation, env, captured *object.E
 }
 
 // expandTypeAlias follows named contracts in their captured environments.
-// Alias literals are validated before being bound and capture earlier values,
+// Alias declarations are validated before being bound and capture earlier values,
 // so alias chains cannot introduce recursive type definitions.
 func expandTypeAlias(annotation *ast.TypeAnnotation, env *object.Environment) (*ast.TypeAnnotation, *object.Environment, string) {
 	for annotation != nil && !annotation.IsCallSignature() && annotation.ElementType == nil {

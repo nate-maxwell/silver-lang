@@ -3,14 +3,14 @@
 # Cookie and Set-Cookie parsing and serialization. Cookie attributes use
 # empty strings, zero, or False when they were not supplied.
 
-enum SameSite {
+type SameSite = enum {
     Default,
     Lax,
     Strict,
     None,
 }
 
-struct Cookie {
+type Cookie = struct {
     name: str
     value: str
     path: str
@@ -22,7 +22,7 @@ struct Cookie {
     same_site: SameSite
 }
 
-struct CookieError {
+type CookieError = struct {
     # CookieError reports a malformed name, value, pair, or Max-Age value.
     message: str
 }

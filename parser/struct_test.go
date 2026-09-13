@@ -9,7 +9,7 @@ import (
 
 func TestStructStatement(t *testing.T) {
 	p := New(lexer.New(`
-	struct Point {
+	type Point = struct {
 		x: int
 		y: int
 	}
@@ -21,54 +21,54 @@ func TestStructStatement(t *testing.T) {
 	if len(program.Statements) != 2 {
 		t.Fatalf("program has %d statements, want 2", len(program.Statements))
 	}
-	statement, ok := program.Statements[0].(*ast.StructStatement)
+	statement, ok := program.Statements[0].(*ast.TypeStatement)
 	if !ok {
-		t.Fatalf("first statement is %T, want *ast.StructStatement", program.Statements[0])
+		t.Fatalf("first statement is %T, want *ast.TypeStatement", program.Statements[0])
 	}
 	if statement.Name.Value != "Point" {
 		t.Fatalf("struct name is %q, want Point", statement.Name.Value)
 	}
 
 	wantFields := []string{"x", "y"}
-	if len(statement.Fields) != len(wantFields) {
-		t.Fatalf("struct has %d fields, want %d", len(statement.Fields), len(wantFields))
+	if len(statement.Value.(*ast.StructTypeLiteral).Fields) != len(wantFields) {
+		t.Fatalf("struct has %d fields, want %d", len(statement.Value.(*ast.StructTypeLiteral).Fields), len(wantFields))
 	}
 	for i, want := range wantFields {
-		if statement.Fields[i].Value != want {
-			t.Fatalf("field %d is %q, want %q", i, statement.Fields[i].Value, want)
+		if statement.Value.(*ast.StructTypeLiteral).Fields[i].Value != want {
+			t.Fatalf("field %d is %q, want %q", i, statement.Value.(*ast.StructTypeLiteral).Fields[i].Value, want)
 		}
-		if statement.Fields[i].Type == nil || statement.Fields[i].Type.String() != "int" {
-			t.Fatalf("field %d type is %v, want int", i, statement.Fields[i].Type)
+		if statement.Value.(*ast.StructTypeLiteral).Fields[i].Type == nil || statement.Value.(*ast.StructTypeLiteral).Fields[i].Type.String() != "int" {
+			t.Fatalf("field %d type is %v, want int", i, statement.Value.(*ast.StructTypeLiteral).Fields[i].Type)
 		}
 	}
-	if got, want := statement.String(), "struct Point { x: int, y: int }"; got != want {
+	if got, want := statement.String(), "type Point = struct { x: int, y: int }"; got != want {
 		t.Fatalf("struct string is %q, want %q", got, want)
 	}
 }
 
 func TestStructRejectsDuplicateFields(t *testing.T) {
-	p := New(lexer.NewWithSource(`struct Pair { x: int, x: int }`, "duplicate.slv"))
+	p := New(lexer.NewWithSource(`type Pair = struct { x: int, x: int }`, "duplicate.slv"))
 	p.ParseProgram()
 
 	if len(p.Errors()) != 1 {
 		t.Fatalf("parser returned %d errors, want 1: %v", len(p.Errors()), p.Errors())
 	}
-	if message := p.Errors()[0]; !strings.Contains(message, `duplicate struct field "x"`) || !strings.Contains(message, "duplicate.slv:1:23") {
+	if message := p.Errors()[0]; !strings.Contains(message, `duplicate struct field "x"`) || !strings.Contains(message, "duplicate.slv:1:30") {
 		t.Fatalf("unexpected parser error: %q", message)
 	}
 }
 
 func TestStructEmbeddedField(t *testing.T) {
-	p := New(lexer.New(`struct Outer { inner :: Inner }`))
+	p := New(lexer.New(`type Outer = struct { inner :: Inner }`))
 	program := p.ParseProgram()
 	checkParserErrors(t, p)
 
-	statement := program.Statements[0].(*ast.StructStatement)
-	field := statement.Fields[0]
+	statement := program.Statements[0].(*ast.TypeStatement)
+	field := statement.Value.(*ast.StructTypeLiteral).Fields[0]
 	if !field.Embedded || field.Type == nil || field.Type.String() != "Inner" {
 		t.Fatalf("embedded field is %#v, want inner :: Inner", field)
 	}
-	if got, want := statement.String(), "struct Outer { inner:: Inner }"; got != want {
+	if got, want := statement.String(), "type Outer = struct { inner:: Inner }"; got != want {
 		t.Fatalf("struct string is %q, want %q", got, want)
 	}
 }
@@ -76,13 +76,13 @@ func TestStructEmbeddedField(t *testing.T) {
 func TestStructCustomOperatorField(t *testing.T) {
 	p := New(lexer.New(`
 operator @@ = fn(left, right) { left }
-struct Box { value: int, @@: call(self: Box, other: int) int }
+type Box = struct { value: int, @@: call(self: Box, other: int) int }
 `))
 	program := p.ParseProgram()
 	checkParserErrors(t, p)
 
-	statement := program.Statements[1].(*ast.StructStatement)
-	field := statement.Fields[1]
+	statement := program.Statements[1].(*ast.TypeStatement)
+	field := statement.Value.(*ast.StructTypeLiteral).Fields[1]
 	if field.Value != "@@" || field.Type == nil || field.Type.String() != "call(self: Box, other: int) int" {
 		t.Fatalf("operator field is %#v, want typed @@ field", field)
 	}

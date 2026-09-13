@@ -3,8 +3,7 @@
 ## Start here
 
 - [Getting Started](getting_started.md) — build Silver, use the REPL, run files, and create a small multi-file program.
-- [Language Guide](language_guide/language_guide.md) — syntax, values, types, structs, errors, modules, concurrency, and
-  templates.
+- [Language Guide](language_guide/language_guide.md) — syntax, values, types, structs, errors, modules, and templates.
 
 ## Command-line interface
 

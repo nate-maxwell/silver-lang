@@ -31,7 +31,6 @@ const (
 	STRUCT_OBJ       = "STRUCT"
 	STRUCT_VALUE_OBJ = "STRUCT_VALUE"
 	TYPE_OBJ         = "TYPE"
-	TASK_OBJ         = "TASK"
 	VARIADIC_OBJ     = "VARIADIC_ARGUMENTS"
 )
 

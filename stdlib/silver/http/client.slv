@@ -9,14 +9,14 @@ let _net = import("networking")
 let _strings = import("string")
 let _http = import("http")
 
-struct Request {
+type Request = struct {
     method: str
     url: str
     headers: map
     body: str
 }
 
-struct Response {
+type Response = struct {
     status: str
     status_code: int
     reason: str
@@ -24,11 +24,11 @@ struct Response {
     body: str
 }
 
-struct ClientError {
+type ClientError = struct {
     message: str
 }
 
-struct _Target {
+type _Target = struct {
     address: str
     host: str
     path: str

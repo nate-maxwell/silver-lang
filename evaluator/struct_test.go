@@ -8,7 +8,7 @@ import (
 
 func TestStructConstructionAndFieldAccess(t *testing.T) {
 	evaluated := testEval(`
-struct Point {
+type Point = struct {
 	x: int
 	y: int
 }
@@ -20,14 +20,14 @@ point.x + point.y
 
 func TestEmbeddedStructPromotesFieldsRecursively(t *testing.T) {
 	evaluated := testEval(`
-struct Person {
+type Person = struct {
 	name: str
 }
-struct Details {
+type Details = struct {
 	person :: Person
 	age: int
 }
-struct Record {
+type Record = struct {
 	details :: Details
 }
 let person = Person{"Ada"}
@@ -40,8 +40,8 @@ record.name + ":" + record.details.person.name
 
 func TestDirectFieldTakesPrecedenceOverPromotedField(t *testing.T) {
 	evaluated := testEval(`
-struct Inner { value: int }
-struct Outer {
+type Inner = struct { value: int }
+type Outer = struct {
 	inner :: Inner
 	value: int
 }
@@ -52,7 +52,7 @@ Outer{Inner{1}, 2}.value
 
 func TestEmbeddedStructPromotesMethodsWithInnerReceiver(t *testing.T) {
 	evaluated := testEval(`
-struct Counter {
+type Counter = struct {
 	value: int
 	increment: call(self: Counter) int
 }
@@ -60,7 +60,7 @@ let increment = fn(self: Counter) int {
 	self.value = self.value + 1
 	return self.value
 }
-struct Wrapper {
+type Wrapper = struct {
 	counter :: Counter
 }
 let wrapper = Wrapper{Counter{4, increment}}
@@ -71,8 +71,8 @@ wrapper.increment()
 
 func TestEmbeddedStructFieldsParticipateInDestructuring(t *testing.T) {
 	evaluated := testEval(`
-struct Person { name: str }
-struct Details { person :: Person }
+type Person = struct { name: str }
+type Details = struct { person :: Person }
 let greet = fn(name: str) str { return name }
 greet(Details{Person{"Ada"}})
 `)
@@ -80,7 +80,7 @@ greet(Details{Person{"Ada"}})
 }
 
 func TestEmbeddedFieldRequiresStructType(t *testing.T) {
-	evaluated := testEval(`struct Invalid { value :: str }`)
+	evaluated := testEval(`type Invalid = struct { value :: str }`)
 	err, ok := evaluated.(*object.Error)
 	if !ok {
 		t.Fatalf("result is %T, want *object.Error", evaluated)
@@ -92,7 +92,7 @@ func TestEmbeddedFieldRequiresStructType(t *testing.T) {
 
 func TestStructValueInspection(t *testing.T) {
 	evaluated := testEval(`
-struct Person {
+type Person = struct {
 	name: str
 	age: int
 }
@@ -109,7 +109,7 @@ Person{"Ada", 36}
 
 func TestStructConstructorArity(t *testing.T) {
 	evaluated := testEval(`
-struct Point {
+type Point = struct {
 	x: int
 	y: int
 }
@@ -126,7 +126,7 @@ Point{1}
 
 func TestMissingStructField(t *testing.T) {
 	evaluated := testEval(`
-struct Point {
+type Point = struct {
 	x: int
 }
 Point{1}.y
@@ -145,7 +145,7 @@ func TestStructExportedFromModule(t *testing.T) {
 	libraryPath := filepath.Join(dir, "library.slv")
 	mainPath := filepath.Join(dir, "main.slv")
 	writeSilverFile(t, libraryPath, `
-struct Point {
+type Point = struct {
 	x: int
 	y: int
 }
@@ -162,7 +162,7 @@ point.y
 
 func TestStructFieldTypeMismatch(t *testing.T) {
 	evaluated := testEval(`
-struct Person {
+type Person = struct {
 	name: str
 	age: int
 }
@@ -179,22 +179,22 @@ Person{"Ada", "old"}
 
 func TestFunctionDestructuresMismatchedStructArgument(t *testing.T) {
 	evaluated := testEval(`
-struct Location {
+type Location = struct {
 	x: float
 	y: float
 	z: float
 }
-struct Rotation {
+type Rotation = struct {
 	x: float
 	y: float
 	z: float
 }
-struct Scale {
+type Scale = struct {
 	x: float
 	y: float
 	z: float
 }
-struct Transform {
+type Transform = struct {
 	location: Location
 	rotation: Rotation
 	scale: Scale
@@ -219,7 +219,7 @@ moved.x + moved.y + moved.z + grown.x + grown.y + grown.z
 
 func TestMatchingStructArgumentIsNotDestructured(t *testing.T) {
 	evaluated := testEval(`
-struct Wrapped {
+type Wrapped = struct {
 	wrapped: int
 }
 let read = fn(wrapped: Wrapped) int { return wrapped.wrapped }
@@ -230,7 +230,7 @@ read(Wrapped{7})
 
 func TestDestructuringCombinesWithPositionalArguments(t *testing.T) {
 	evaluated := testEval(`
-struct Point {
+type Point = struct {
 	x: int
 	y: int
 }
@@ -244,11 +244,11 @@ combine(100, Point{2, 3})
 
 func TestDestructuringCombinesMultipleStructArguments(t *testing.T) {
 	evaluated := testEval(`
-struct Position {
+type Position = struct {
 	x: int
 	y: int
 }
-struct Size {
+type Size = struct {
 	width: int
 	height: int
 }
@@ -262,7 +262,7 @@ encode(Position{1, 2}, Size{3, 4})
 
 func TestDestructuringMatchesFieldNamesNotDeclarationOrder(t *testing.T) {
 	evaluated := testEval(`
-struct Coordinates {
+type Coordinates = struct {
 	z: int
 	x: int
 	y: int
@@ -275,7 +275,7 @@ encode(Coordinates{3, 1, 2})
 
 func TestDestructuredFieldMustMatchParameterType(t *testing.T) {
 	evaluated := testEval(`
-struct Payload {
+type Payload = struct {
 	value: str
 }
 let consume = fn(value: int) int { return value }
@@ -292,7 +292,7 @@ consume(Payload{"wrong"})
 
 func TestDestructuringCanBindLaterNamedParameters(t *testing.T) {
 	evaluated := testEval(`
-struct Point {
+type Point = struct {
 	x: int
 }
 let combine = fn(value: int, x: int) int { return value * 10 + x }
@@ -303,7 +303,7 @@ combine(Point{2}, 3)
 
 func TestStructWithoutMatchingFieldsKeepsTypeMismatch(t *testing.T) {
 	evaluated := testEval(`
-struct Point {
+type Point = struct {
 	x: int
 }
 let consume = fn(value: int) int { return value }
@@ -334,7 +334,7 @@ value{}
 
 func TestStructMemberAssignment(t *testing.T) {
 	evaluated := testEval(`
-struct Point {
+type Point = struct {
 	x: int
 	y: int
 }
@@ -347,10 +347,10 @@ point.x + point.y
 
 func TestNestedStructMemberAssignment(t *testing.T) {
 	evaluated := testEval(`
-struct Location {
+type Location = struct {
 	x: int
 }
-struct Actor {
+type Actor = struct {
 	location: Location
 }
 let move = fn(x: int) Location { return Location{x + 1} }
@@ -363,7 +363,7 @@ actor.location.x
 
 func TestStructMemberAssignmentChecksFieldType(t *testing.T) {
 	evaluated := testEval(`
-struct Point {
+type Point = struct {
 	x: int
 }
 let point = Point{1}
@@ -380,7 +380,7 @@ point.x = "wrong"
 
 func TestStructMemberAssignmentMutatesAliases(t *testing.T) {
 	evaluated := testEval(`
-struct Point {
+type Point = struct {
 	x: int
 }
 let first = Point{1}

@@ -41,29 +41,27 @@ func TestSourceFormatsVariadicParameter(t *testing.T) {
 }
 
 func TestSourceFormatsTypeAliasesAndArrays(t *testing.T) {
-	source := []byte(`let Lex=<call(str)array[models.Token]>
-let Nested = < array[ array[int] ] >
-let Read=<
-call() array[str]
->
+	source := []byte(`type Lex = call(str)array[models.Token]
+type Nested= array[ array[int] ]
+type Read=call(
+)array[str]
 let use=fn(l:Lex,values:array[str])array[str]{
 return values
 }
 let less=1<2
 let greater=2>1
-let types=[<int>,<call()>]
+let types=[int,Read]
 `)
-	want := `let Lex = <call(str) array[models.Token]>
-let Nested = <array[array[int]]>
-let Read = <
-    call() array[str]
->
+	want := `type Lex = call(str) array[models.Token]
+type Nested = array[array[int]]
+type Read = call(
+) array[str]
 let use = fn(l: Lex, values: array[str]) array[str] {
     return values
 }
 let less = 1 < 2
 let greater = 2 > 1
-let types = [<int>, <call()>]
+let types = [int, Read]
 `
 	formatted, err := Source("aliases.slv", source)
 	if err != nil {
@@ -127,11 +125,11 @@ func TestSourceFormatsExportDeclaration(t *testing.T) {
 }
 
 func TestSourceFormatsEmbeddedStructField(t *testing.T) {
-	formatted, err := Source("embedding.slv", []byte("struct Outer{\ninner :: Inner\n}\n"))
+	formatted, err := Source("embedding.slv", []byte("type Outer = struct {\ninner :: Inner\n}\n"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got, want := string(formatted), "struct Outer {\n    inner:: Inner\n}\n"; got != want {
+	if got, want := string(formatted), "type Outer = struct {\n    inner:: Inner\n}\n"; got != want {
 		t.Fatalf("formatted source is %q, want %q", got, want)
 	}
 }

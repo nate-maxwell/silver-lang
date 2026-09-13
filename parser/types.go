@@ -5,15 +5,45 @@ import (
 	"silver/token"
 )
 
-// parseTypeAliasLiteral parses <Type> in expression position. Infix < and >
-// retain their ordinary comparison meaning.
-func (p *Parser) parseTypeAliasLiteral() ast.Expression {
-	literal := &ast.TypeAliasLiteral{Token: p.curToken}
-	literal.Annotation = p.parseTypeAnnotation()
-	if literal.Annotation == nil || !p.expectPeek(token.GT) {
+// parseTypeStatement parses type Name = struct/enum { ... } or a type
+// annotation. The right-hand side is a type, not an arbitrary value expression.
+func (p *Parser) parseTypeStatement() *ast.TypeStatement {
+	statement := &ast.TypeStatement{Token: p.curToken}
+	if !p.expectPeek(token.IDENT) {
 		return nil
 	}
-	return literal
+	statement.Name = &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
+	if !p.expectPeek(token.ASSIGN) {
+		return nil
+	}
+	p.nextToken()
+	switch p.curToken.Type {
+	case token.STRUCT:
+		definition := &ast.StructTypeLiteral{Token: p.curToken}
+		if !p.expectPeek(token.LBRACE) {
+			return nil
+		}
+		definition.Fields = p.parseStructFields()
+		statement.Value = definition
+	case token.ENUM:
+		definition := &ast.EnumTypeLiteral{Token: p.curToken}
+		if !p.expectPeek(token.LBRACE) {
+			return nil
+		}
+		definition.Members = p.parseEnumMembers()
+		statement.Value = definition
+	case token.IDENT:
+		annotation := p.parseTypeAnnotationFromCurrent()
+		if annotation == nil {
+			return nil
+		}
+		statement.Value = annotation
+	default:
+		p.addError(p.curToken.Position, "expected a type after = in type declaration")
+		return nil
+	}
+	p.consumeStatementEnd()
+	return statement
 }
 
 // parseDeclarationIdentifier parses the optional : type suffix on the

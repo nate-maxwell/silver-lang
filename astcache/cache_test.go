@@ -15,10 +15,15 @@ func TestRoundTrip(t *testing.T) {
 	source := []byte(`
 export { State, Person, Details, values, choose, module }
 operator @ = fn(left: int, right: int) int { left + right }
-enum State { Ready, Waiting }
-struct Person { name: string, age: int }
-struct Details { person :: Person }
-struct Handler { callback: call(value: int) }
+type Point = struct { x: float, y: float }
+type Direction = enum { North, South }
+type Names = array[str]
+type Transform = call(Point) Point
+type Read = call() array[Point]
+type State = enum { Ready, Waiting }
+type Person = struct { name: string, age: int }
+type Details = struct { person :: Person }
+type Handler = struct { callback: call(value: int) }
 let values = [1, 2.5, True, "four", {"five": 5}]
 assert values[0] == 1, "cached assertion"
 let person = Person{"Ada", 36}
@@ -32,7 +37,7 @@ default:
     "other"
 }
 let apply = fn(operation: call(int) int, value: int) int { operation(value) }
-struct Missing { message: str }
+type Missing = struct { message: str }
 let read = fn() str | Missing { Missing{"missing"} }
 try { read() } catch Missing err { err.message }
 for value in values { continue }
@@ -73,7 +78,7 @@ func TestSourceChangeInvalidatesCache(t *testing.T) {
 
 func TestTypeAliasRoundTrip(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "aliases.slv")
-	source := []byte(`let Read = <call() array[array[int]]>`)
+	source := []byte(`type Read = call() array[array[int]]`)
 	program := parse(t, path, source)
 	if err := astcache.Store(path, source, program); err != nil {
 		t.Fatal(err)
@@ -82,12 +87,32 @@ func TestTypeAliasRoundTrip(t *testing.T) {
 	if !ok {
 		t.Fatal("type alias cache was not loaded")
 	}
-	alias := loaded.Statements[0].(*ast.LetStatement).Value.(*ast.TypeAliasLiteral)
-	if !alias.Annotation.IsCallSignature() || len(alias.Annotation.ParameterTypes) != 0 {
+	alias := loaded.Statements[0].(*ast.TypeStatement).Value.(*ast.TypeAnnotation)
+	if !alias.IsCallSignature() || len(alias.ParameterTypes) != 0 {
 		t.Fatal("cache lost zero-argument call signature")
 	}
-	if got, want := alias.String(), "<call() array[array[int]]>"; got != want {
+	if got, want := alias.String(), "call() array[array[int]]"; got != want {
 		t.Fatalf("loaded alias = %q, want %q", got, want)
+	}
+}
+
+func TestTypeDeclarationRoundTrip(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "types.slv")
+	source := []byte("type Empty = struct {}\ntype Nothing = enum {}\ntype Read = call() array[int]")
+	program := parse(t, path, source)
+	if err := astcache.Store(path, source, program); err != nil {
+		t.Fatal(err)
+	}
+	loaded, ok := astcache.Load(path, source)
+	if !ok {
+		t.Fatal("type declaration cache was not loaded")
+	}
+	if got, want := loaded.String(), program.String(); got != want {
+		t.Fatalf("loaded declarations = %q, want %q", got, want)
+	}
+	alias := loaded.Statements[2].(*ast.TypeStatement).Value.(*ast.TypeAnnotation)
+	if !alias.IsCallSignature() || len(alias.ParameterTypes) != 0 {
+		t.Fatal("cache lost zero-argument call signature")
 	}
 }
 

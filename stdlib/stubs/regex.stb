@@ -6,7 +6,7 @@
 # pattern re-compiles it on each call; use compile to reuse a pattern across
 # many calls without recompiling it each time.
 
-struct MatchObject {
+type MatchObject = struct {
     # MatchObject is returned by match, search, fullmatch, and findlist, and by
     # the corresponding methods on a compiled Expression. group, start, end, and
     # span each accept an optional single argument: omitted or 0 means the
@@ -25,7 +25,7 @@ struct MatchObject {
     string: str
 }
 
-struct Expression {
+type Expression = struct {
     # Expression is a pre-compiled pattern returned by compile. Its methods
     # mirror the identically named module-level functions but take only string
     # and no longer a pattern argument, avoiding recompilation on repeated use.

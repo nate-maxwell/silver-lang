@@ -8,7 +8,7 @@ import (
 
 // InfixRegistry holds the symbolic operators known to an interpreter or
 // standalone parser session. Evaluators share one registry across files,
-// imports, tasks, and REPL submissions.
+// imports and REPL submissions.
 type InfixRegistry struct {
 	definitions map[string]token.Position
 }

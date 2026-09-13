@@ -144,12 +144,6 @@ func foldExpressionConstants(expression ast.Expression) ast.Expression {
 
 	case *ast.ImportExpression:
 		node.Path = foldExpressionConstants(node.Path)
-
-	case *ast.TaskExpression:
-		node.Work = foldExpressionConstants(node.Work)
-
-	case *ast.CollectExpression:
-		// Handles are identifiers, so there are no constant children to fold.
 	}
 
 	return expression

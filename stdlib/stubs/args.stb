@@ -12,14 +12,14 @@
 # argv: Option takes one value token, Flag toggles a boolean with no value,
 # Count increments an integer once per occurrence, and Positional consumes
 # tokens by position instead of by name.
-enum ArgumentKind {
+type ArgumentKind = enum {
     Option,
     Flag,
     Count,
     Positional,
 }
 
-struct Argument {
+type Argument = struct {
     # Argument describes one option or positional argument before it is added to
     # a Parser. Construct values with option, option_with_default,
     # required_option, flag, count, positional, or optional_positional rather
@@ -34,7 +34,7 @@ struct Argument {
     has_default: bool
 }
 
-struct ArgumentError {
+type ArgumentError = struct {
     # ArgumentError reports a problem either while declaring an Argument (a
     # duplicate or malformed name, a reserved -h/--help, or an invalid ordering
     # of positional arguments) or while parsing argv (an unknown option, a
@@ -42,7 +42,7 @@ struct ArgumentError {
     message: str
 }
 
-struct ParsedArgs {
+type ParsedArgs = struct {
     # ParsedArgs is the result of a successful Parser.parse call. values maps
     # each declared Argument's name to its parsed string, boolean flag, or
     # integer count; an option with no default that was not supplied on the
@@ -54,7 +54,7 @@ struct ParsedArgs {
     help_requested: bool
 }
 
-struct Parser {
+type Parser = struct {
     # Parser accumulates Argument declarations for one program. Create one with
     # new, register arguments with add before parsing, then call parse once per
     # argv to parse and validate that argv. help renders a usage summary listing

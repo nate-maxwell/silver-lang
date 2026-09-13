@@ -5,14 +5,14 @@
 # and returns response headers with lowercase names. HTTPS, redirects, chunked
 # transfer encoding, and connection pooling are not provided.
 
-struct Request {
+type Request = struct {
     method: str
     url: str
     headers: map
     body: str
 }
 
-struct Response {
+type Response = struct {
     # status contains the numeric code and reason, such as "200 OK".
     status: str
     status_code: int
@@ -21,7 +21,7 @@ struct Response {
     body: str
 }
 
-struct ClientError {
+type ClientError = struct {
     # ClientError reports an invalid URL or HTTP message, or wraps a socket
     # connection, read, or write failure.
     message: str

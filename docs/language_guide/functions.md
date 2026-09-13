@@ -159,7 +159,7 @@ supplied callable. This matters for callable struct fields because named paramet
 [method receivers](objects.md#methods-are-callable-fields):
 
 ```silver
-struct Counter {
+type Counter = struct {
     value: int
     increment: call(self: Counter, amount: int) int
 }
@@ -172,12 +172,12 @@ Use [type aliases](types.md#type-aliases) to give long signatures a reusable nam
 element type with `array[T]`:
 
 ```silver
-struct Token { text: str }
-struct Node { value: int }
+type Token = struct { text: str }
+type Node = struct { value: int }
 
-let Lex = <call(str) array[Token]>
-let Parse = <call(array[Token]) array[Node]>
-let Eval = <call(array[Node]) int>
+type Lex = call(str) array[Token]
+type Parse = call(array[Token]) array[Node]
+type Eval = call(array[Node]) int
 
 let parse_program = fn(l: Lex, p: Parse, e: Eval, source: str) int {
     return e(p(l(source)))
@@ -193,7 +193,6 @@ promise `array[int]` contents.
 
 - [`return`](control_flow.md#returns-and-errors) can leave loops and nested conditional blocks inside a function.
 - [`defer`](control_flow.md#deferred-calls) schedules cleanup for function exit, including error propagation.
-- [Tasks](concurrency.md) accept zero-argument functions and retain their results or errors.
 - [Template strings](template_strings.md) capture scope and reevaluate their interpolations when `.eval()` is called.
 
 [Language guide](language_guide.md) | [Documentation index](../table_of_contents.md)

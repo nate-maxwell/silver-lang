@@ -9,12 +9,12 @@ Any struct can be used as an application error type. A `message: str` field is c
 built-in error types, but application errors may carry any additional fields they need:
 
 ```silver
-struct NotFound {
+type NotFound = struct {
     message: str
     path: str
 }
 
-struct PermissionProblem {
+type PermissionProblem = struct {
     message: str
 }
 ```
@@ -124,7 +124,6 @@ Interpreter failures are instances of built-in nominal structs with a `message: 
 | `SyntaxError` | Source that cannot be parsed. |
 | `KeyError` | A missing map key read through bracket syntax. |
 | `IndexError` | An out-of-range sequence index or empty sequence operation. |
-| `TaskError` | Invalid task-handle use or collection state. |
 
 Standard-library APIs add nominal errors such as `IOError`, `FileNotFound`, `PermissionDenied`, `ConnectionError`,
 `ListenError`, `ReadError`, and `WriteError`. Individual modules may define qualified errors too, including
@@ -150,14 +149,10 @@ string.
 Parameter names in a detailed callable annotation are also part of the contract. See
 [Callable annotations](functions.md#callable-annotations).
 
-## Propagation through scopes and tasks
+## Propagation through scopes
 
 An error immediately leaves the current expression and unwinds calls until it reaches a matching `catch`. Deferred
 calls still run while a scope exits; see [`defer`](control_flow.md#deferred-calls).
-
-Tasks retain errors instead of raising them immediately. The error propagates when the handle is collected, so a
-`try` expression should surround `collect` when recovery is required. See
-[Errors are delayed until collection](concurrency.md#errors-are-delayed-until-collection).
 
 ## Runtime diagnostics
 

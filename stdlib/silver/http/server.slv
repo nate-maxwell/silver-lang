@@ -8,7 +8,7 @@ let _net = import("networking")
 let _strings = import("string")
 let _http = import("http")
 
-struct Request {
+type Request = struct {
     method: str
     path: str
     version: str
@@ -17,18 +17,18 @@ struct Request {
     remote_address: str
 }
 
-struct Response {
+type Response = struct {
     status_code: int
     reason: str
     headers: map
     body: str
 }
 
-struct ServerError {
+type ServerError = struct {
     message: str
 }
 
-struct Server {
+type Server = struct {
     address: str
     listener: Listener
     handler: call(self: Server, request: Request) Response

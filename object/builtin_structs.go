@@ -19,7 +19,6 @@ const (
 	RuntimeErrorKindSyntax       RuntimeErrorKind = "syntax"
 	RuntimeErrorKindKey          RuntimeErrorKind = "key"
 	RuntimeErrorKindIndex        RuntimeErrorKind = "index"
-	RuntimeErrorKindTask         RuntimeErrorKind = "task"
 )
 
 var runtimeErrorStructNames = map[RuntimeErrorKind]string{
@@ -34,7 +33,6 @@ var runtimeErrorStructNames = map[RuntimeErrorKind]string{
 	RuntimeErrorKindSyntax:       "SyntaxError",
 	RuntimeErrorKindKey:          "KeyError",
 	RuntimeErrorKindIndex:        "IndexError",
-	RuntimeErrorKindTask:         "TaskError",
 }
 
 // Builtin nominal structs are predeclared alongside primitive types and native

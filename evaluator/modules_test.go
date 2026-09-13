@@ -280,7 +280,7 @@ func writePackageOperatorFixture(t *testing.T, directory string) {
 	writeSilverFile(t, filepath.Join(directory, "foo.slv"), `
 export { Foo, make, apply }
 let operators = import("./foo_operators.slv")
-struct Foo {
+type Foo = struct {
     value: int
     @@: call(self: Foo, other: int) int
 }

@@ -2,7 +2,7 @@
 # while the native module owns the underlying sockets.
 let _native = import("_networking")
 
-enum Network {
+type Network = enum {
     TCP,
     UDP,
 }

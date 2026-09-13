@@ -3,14 +3,14 @@ package object
 import "silver/ast"
 
 // TypeAlias is a reusable contract. Env contains the type bindings captured
-// when the literal was evaluated, so later shadowing cannot change its meaning.
+// when the type was declared, so later shadowing cannot change its meaning.
 type TypeAlias struct {
 	Annotation *ast.TypeAnnotation
 	Env        *Environment
 }
 
 func (t *TypeAlias) Type() ObjectType { return TYPE_OBJ }
-func (t *TypeAlias) Inspect() string  { return "<" + t.Annotation.String() + ">" }
+func (t *TypeAlias) Inspect() string  { return t.Annotation.String() }
 
 // TypeDefinition is a first-class primitive type value. Definitions are
 // singletons so ordinary Silver identity equality can compare type() results
@@ -37,7 +37,6 @@ var (
 	arrayType  = &TypeDefinition{Name: "array", RuntimeType: ARRAY_OBJ}
 	mapType    = &TypeDefinition{Name: "map", RuntimeType: MAP_OBJ}
 	moduleType = &TypeDefinition{Name: "module", RuntimeType: MODULE_OBJ}
-	taskType   = &TypeDefinition{Name: "task", RuntimeType: TASK_OBJ}
 )
 
 var primitiveTypeDefinitions = map[ObjectType]*TypeDefinition{
@@ -51,7 +50,6 @@ var primitiveTypeDefinitions = map[ObjectType]*TypeDefinition{
 	ARRAY_OBJ:    arrayType,
 	MAP_OBJ:      mapType,
 	MODULE_OBJ:   moduleType,
-	TASK_OBJ:     taskType,
 }
 
 var namedTypeDefinitions = map[string]*TypeDefinition{

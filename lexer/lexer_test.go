@@ -463,13 +463,15 @@ func TestLogicalOperatorTokens(t *testing.T) {
 }
 
 func TestStructKeyword(t *testing.T) {
-	l := New(`struct Point { x, y }`)
+	l := New(`type Point = struct { x, y }`)
 	want := []struct {
 		tokenType token.TokenType
 		literal   string
 	}{
-		{token.STRUCT, "struct"},
+		{token.TYPE, "type"},
 		{token.IDENT, "Point"},
+		{token.ASSIGN, "="},
+		{token.STRUCT, "struct"},
 		{token.LBRACE, "{"},
 		{token.IDENT, "x"},
 		{token.COMMA, ","},

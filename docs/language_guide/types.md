@@ -29,7 +29,7 @@ separate compilation phase.
 | `enum`           | `Direction.North`                     | Nominal singleton value from an enum declaration.            |
 | `struct`         | `User{"Ada"}`                         | Instance of a nominal struct declaration.                    |
 
-Structs and enums introduce nominal types. Task handles, built-in errors, and standard-library objects add other
+Structs and enums introduce nominal types. Built-in errors and standard-library objects add other
 runtime value kinds.
 
 Use `any` when an explicitly typed binding or return may contain heterogeneous values. Parameters that accept every
@@ -152,7 +152,7 @@ Maps are mutable reference values. Iteration order and the order returned by `ma
 An enum declaration creates a nominal type and a singleton value for each member:
 
 ```silver
-enum Direction {
+type Direction = enum {
     North,
     East,
     South,
@@ -207,13 +207,46 @@ let working_directory: paths.Path = paths.cwd()
 
 An unknown type name raises `NameError` when the contract is resolved.
 
-## Type aliases
+## Type declarations
 
-Wrap an annotation in `<` and `>` to create a reusable type value:
+Use `type Name = ...` to declare a type in the current lexical scope:
 
 ```silver
-let Names = <array[str]>
-let Announce = <call(str)>
+type Point = struct { x: float, y: float }
+type Direction = enum { North, East, South, West }
+type Names = array[str]
+type Transform = call(Point) Point
+
+let origin: Point = Point{0.0, 0.0}
+let heading: Direction = Direction.North
+let names: Names = ["Ada", "Grace"]
+let transform: Transform = fn(point: Point) Point { return point }
+```
+
+The right-hand side is a struct body, enum body, or type annotation. It cannot be an arbitrary value expression.
+Struct fields and enum members may be separated by commas or newlines; trailing commas and empty bodies are allowed.
+Declarations also work inside functions and may be exported from modules with
+`export { Point, Direction, Names, Transform }`.
+
+Every evaluation of `type Name = struct { ... }` or `type Name = enum { ... }` creates a fresh nominal definition.
+The declared name identifies the struct constructor or enum namespace. Struct fields may reference the type being
+declared, including in callable receiver contracts such as `call(self: Point)`.
+
+Other right-hand sides name reusable contracts: `type Count = int`, `type Names = array[str]`, and
+`type Transform = call(Point) Point` preserve the underlying types. They do not wrap values or create distinct
+nominal array, function, or primitive types. A declaration can reuse a qualified type, such as `type Position = geometry.Point`.
+
+Type declarations share the lexical binding namespace with `let`, and may shadow or replace existing bindings.
+`type` is a reserved keyword. Type definitions must use `type Name = ...`; struct and enum bodies occur only on
+the right-hand side of a type declaration. `core.type(value)` is the API for inspecting a value's type.
+
+## Type aliases
+
+A declaration whose right-hand side is a type annotation creates a reusable type alias:
+
+```silver
+type Names = array[str]
+type Announce = call(str)
 
 let names: Names = ["Ada", "Grace"]
 let announce = fn(shout: Announce, message: str) {
@@ -225,9 +258,11 @@ An alias works anywhere an annotation accepts a type name, including parameters,
 types, and other aliases. It preserves the underlying contract and nominal identities rather than creating a new
 nominal type. Callable aliases preserve parameter names, variadic parameters, return types, and error alternatives.
 
-Alias literals resolve their type dependencies when evaluated and retain those definitions if the original names are
+Aliases resolve their type dependencies when declared and retain those definitions if the original names are
 later rebound or shadowed. Dependencies must already exist; forward references and recursive aliases are not supported.
 Aliases can be exported from modules and used through qualified names such as `contracts.Announce`.
+
+Use a declared type name wherever a type value is needed, for example `let contracts = [int, Names]`.
 
 ## Functions and errors
 
@@ -239,8 +274,8 @@ the nominal structs used by `try`/`catch` are covered in [Errors and diagnostics
 Struct and enum declarations create distinct nominal definitions:
 
 ```silver
-struct UserId { value: int }
-struct ProductId { value: int }
+type UserId = struct { value: int }
+type ProductId = struct { value: int }
 
 let user: UserId = UserId{7}
 # user = ProductId{7} # TypeError despite the identical field layout
@@ -259,7 +294,7 @@ let core = import("core")
 core.type(42) == int
 core.type("hello") == str
 
-struct User { name: str }
+type User = struct { name: str }
 core.type(User{"Ada"}) == User
 ```
 
@@ -273,7 +308,7 @@ strictness. Without an annotation, values are not type strict.
 
 Consider the following struct:
 ```silver
-struct Location {
+type Location = struct {
     x: float
     y
     z: float
@@ -282,13 +317,13 @@ struct Location {
 
 Here, `y` is not type strict. The following code is valid:
 ```silver
-let loc: Location = Location{1, "hello", 3}
+let loc: Location = Location{1.0, "hello", 3.0}
 loc.y = False
 ```
 
 But if y is typed as float:
 ```silver
-struct Location {
+type Location = struct {
     x: float
     y: float
     z: float

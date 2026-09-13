@@ -6,10 +6,10 @@ indexing, and capability-style dependency injection without a separate class sys
 
 ## Declaring and constructing structs
 
-A struct declaration defines a nominal type and an ordered list of fields:
+A `type Name = struct { ... }` declaration defines a nominal type and an ordered list of fields:
 
 ```silver
-struct Location {
+type Location = struct {
     x: float
     y: float
     z: float
@@ -42,11 +42,11 @@ Use `::` in place of `:` when a field's type is another struct and its fields sh
 outer value:
 
 ```silver
-struct Person {
+type Person = struct {
     name: str
 }
 
-struct Details {
+type Details = struct {
     person:: Person
     age: int
 }
@@ -66,7 +66,7 @@ given a `Profile` that embeds `Details`, a parameter named `name` can bind to th
 layers:
 
 ```silver
-struct Profile {
+type Profile = struct {
     details:: Details
 }
 
@@ -82,16 +82,16 @@ Methods are promoted through embedded fields in the same way. A method declared 
 through the outermost struct, and it remains bound to the inner instance that owns the callable field:
 
 ```silver
-struct Person {
+type Person = struct {
     name: str
     shout: call(str)
 }
 
-struct Details {
+type Details = struct {
     person:: Person
 }
 
-struct Profile {
+type Profile = struct {
     details:: Details
 }
 
@@ -115,7 +115,7 @@ Functions bind ordinary positional arguments first. When an argument does not sa
 the argument is a struct or module, Silver offers its named fields or members to the remaining unbound parameters.
 
 ```silver
-struct Location {
+type Location = struct {
     x: float
     y: float
     z: float
@@ -152,7 +152,7 @@ argument immediately, so annotate the field parameters when destructuring is int
 Destructuring can combine with normal positional arguments:
 
 ```silver
-struct Point { x: int, y: int }
+type Point = struct { x: int, y: int }
 
 let encode = fn(offset: int, x: int, y: int) int {
     return offset + x * 10 + y
@@ -183,7 +183,7 @@ A struct field with a detailed `call(...)` annotation is a method slot. When tha
 member access binds the struct instance as the function's first argument:
 
 ```silver
-struct Counter {
+type Counter = struct {
     value: int
     increment: call(self: Counter, amount: int) int
 }
@@ -208,7 +208,7 @@ A field annotated with bare `call` is an ordinary callback. It accepts any calla
 ```silver
 let identity = fn(value: int) int { return value }
 
-struct Box {
+type Box = struct {
     callback: call
 }
 
@@ -227,7 +227,7 @@ works for built-in and user-defined operators alike.
 The left operand provides the method; the right operand becomes its explicit argument:
 
 ```silver
-struct Vector {
+type Vector = struct {
     x: int
     y: int
     +: call(self: Vector, other: Vector) Vector
@@ -256,7 +256,7 @@ body in its package of origin, so an imported struct uses its originating packag
 `get_item` and `set_item` callable fields let a struct support bracket syntax:
 
 ```silver
-struct IntBuffer {
+type IntBuffer = struct {
     values: array
     get_item: call(self: IntBuffer, index: int) int
     set_item: call(self: IntBuffer, index: int, value: int)

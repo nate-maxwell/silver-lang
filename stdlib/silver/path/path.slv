@@ -13,7 +13,7 @@ let _type = _core.type
 let _separator = _io._path_separator
 let _windows = _io._is_windows
 
-struct Path {
+type Path = struct {
     path: str
     anchor: str
     drive: str
@@ -71,7 +71,7 @@ struct Path {
     write_text: call(self: Path, contents: str) int | ValueError
 }
 
-struct _ClassResult {
+type _ClassResult = struct {
     matched: bool
     next: int
 }

@@ -41,20 +41,3 @@ func TestTryRequiresCatch(t *testing.T) {
 		t.Fatal("parser accepted try without catch")
 	}
 }
-
-func TestCollectInsideTryParticipatesInTaskUsageValidation(t *testing.T) {
-	p := New(lexer.New(`
-let work = fn() int { 1 }
-let handle = task work
-try {
-	collect handle
-} catch IOError err {
-	False
-}
-collect handle
-`))
-	p.ParseProgram()
-	if len(p.Errors()) == 0 {
-		t.Fatal("parser did not detect task collected again after try")
-	}
-}

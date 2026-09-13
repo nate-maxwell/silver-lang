@@ -7,7 +7,7 @@ import (
 )
 
 const operatorStructPrelude = `
-struct Number {
+type Number = struct {
     value: int
     +: call(self: Number, other: int) int
     -: call(self: Number, other: int) int
@@ -85,7 +85,7 @@ func TestStructComparisonOperatorMethods(t *testing.T) {
 
 func TestStructOperatorMayReturnStruct(t *testing.T) {
 	evaluated := testEval(`
-struct Vector {
+type Vector = struct {
     x: int
     y: int
     +: call(self: Vector, other: Vector) Vector
@@ -103,7 +103,7 @@ sum.x * 10 + sum.y
 
 func TestStructOperatorRequiresMappedMethod(t *testing.T) {
 	evaluated := testEval(`
-struct Vector { x: int }
+type Vector = struct { x: int }
 Vector{1} + Vector{2}
 `)
 	err, ok := evaluated.(*object.Error)
@@ -119,7 +119,7 @@ Vector{1} + Vector{2}
 
 func TestStructOperatorMethodMustBeCallable(t *testing.T) {
 	evaluated := testEval(`
-struct Invalid { +: int }
+type Invalid = struct { +: int }
 Invalid{1} + 2
 `)
 	err, ok := evaluated.(*object.Error)
@@ -130,7 +130,7 @@ Invalid{1} + 2
 
 func TestStructTruthinessDoesNotLookUpOperatorMethod(t *testing.T) {
 	evaluated := testEval(`
-struct Empty {}
+type Empty = struct {}
 if (Empty{}) { 1 } else { 0 }
 `)
 	testIntegerObject(t, evaluated, 1)
@@ -139,7 +139,7 @@ if (Empty{}) { 1 } else { 0 }
 func TestStructCanOverloadCustomOperatorField(t *testing.T) {
 	evaluated := testEval(`
 operator @@ = fn(left, right) { 0 }
-struct Number {
+type Number = struct {
     value: int
     @@: call(self: Number, other: int) int
 }

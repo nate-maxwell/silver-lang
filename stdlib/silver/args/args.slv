@@ -13,14 +13,14 @@ let _contains = _maps.contains
 let _removeprefix = _strings.removeprefix
 let _startswith = _strings.startswith
 
-enum ArgumentKind {
+type ArgumentKind = enum {
     Option,
     Flag,
     Count,
     Positional,
 }
 
-struct Argument {
+type Argument = struct {
     name: str
     short: str
     help: str
@@ -30,16 +30,16 @@ struct Argument {
     has_default: bool
 }
 
-struct ArgumentError {
+type ArgumentError = struct {
     message: str
 }
 
-struct ParsedArgs {
+type ParsedArgs = struct {
     values: map
     help_requested: bool
 }
 
-struct Parser {
+type Parser = struct {
     program: str
     description: str
     arguments: array

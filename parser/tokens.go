@@ -18,7 +18,7 @@ func (p *Parser) peekTokenIs(t token.TokenType) bool {
 	return p.peekToken.Type == t
 }
 
-// expectPeek advances when lookahead has the requested type; otherwise it
+// expectPeek advances when lookahead matches the requested role; otherwise it
 // records a positioned parser error.
 func (p *Parser) expectPeek(t token.TokenType) bool {
 	if p.peekTokenIs(t) {

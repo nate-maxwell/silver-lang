@@ -7,7 +7,7 @@ import (
 
 func TestCallableStructFieldBindsReceiver(t *testing.T) {
 	evaluated := testEval(`
-struct Scale {
+type Scale = struct {
 	x: float
 	y: float
 	z: float
@@ -17,7 +17,7 @@ let grow = fn(scale: Scale, amount: float) {
 	scale.y = scale.y + amount
 	scale.z = scale.z + amount
 }
-struct Transform {
+type Transform = struct {
 	scale: Scale
 	grow: call(scale: Scale, amount: float)
 }
@@ -30,13 +30,13 @@ actor.scale.x + actor.scale.y + actor.scale.z
 
 func TestBoundCallableFieldUsesItsOwnReceiver(t *testing.T) {
 	evaluated := testEval(`
-struct Scale {
+type Scale = struct {
 	x: int
 }
 let grow = fn(scale: Scale, amount: int) {
 	scale.x = scale.x + amount
 }
-struct Transform {
+type Transform = struct {
 	scale: Scale
 	grow: call(scale: Scale, amount: int)
 }
@@ -50,11 +50,11 @@ first.scale.x * 10 + second.scale.x
 
 func TestCallableStructFieldSignatureChecksParameterNames(t *testing.T) {
 	evaluated := testEval(`
-struct Scale {
+type Scale = struct {
 	x: int
 }
 let wrong = fn(target: Scale, amount: int) {}
-struct Transform {
+type Transform = struct {
 	scale: Scale
 	grow: call(scale: Scale, amount: int)
 }
@@ -72,7 +72,7 @@ Transform{Scale{1}, wrong}
 func TestBareCallStructFieldDoesNotBindReceiver(t *testing.T) {
 	evaluated := testEval(`
 let identity = fn(value: int) int { return value }
-struct Box {
+type Box = struct {
 	callback: call
 }
 let box = Box{identity}

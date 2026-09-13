@@ -73,7 +73,7 @@ definitions. Files without an export declaration therefore retain the original e
 
 ```silver
 # geometry.slv
-struct Point { x: int, y: int }
+type Point = struct { x: int, y: int }
 
 let origin = Point{0, 0}
 let translate = fn(point: Point, amount: int) Point {
@@ -90,7 +90,7 @@ export {
     translate,
 }
 
-struct Point { x: int, y: int }
+type Point = struct { x: int, y: int }
 let origin = Point{0, 0} # Private to this module.
 let translate = fn(point: Point, amount: int) Point {
     return Point{point.x + amount, point.y + amount}

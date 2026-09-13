@@ -3,7 +3,7 @@ let net = import("networking")
 let pathlib = import("path")
 let times = import("time")
 
-enum Level {
+type Level = enum {
     Debug,
     Info,
     Warning,
@@ -11,7 +11,7 @@ enum Level {
     Critical,
 }
 
-struct StreamHandler {
+type StreamHandler = struct {
     stream: IOStream
     handle: call(self: StreamHandler, record: str) | IOError
 }
@@ -24,7 +24,7 @@ let new_stream_handler = fn(stream: IOStream) StreamHandler {
     return StreamHandler{stream, handle}
 }
 
-struct FileHandler {
+type FileHandler = struct {
     path: pathlib.Path
     handle: call(self: FileHandler, record: str)
 }
@@ -41,7 +41,7 @@ let new_file_handler = fn(path: pathlib.Path) FileHandler {
     return FileHandler{path, handle}
 }
 
-struct RotatingFileHandler {
+type RotatingFileHandler = struct {
     path: pathlib.Path
     interval: int
     last_rotation: int
@@ -68,7 +68,7 @@ let new_rotating_file_handler = fn(path: pathlib.Path, interval: int) RotatingFi
     return RotatingFileHandler{path, interval, times.unix(), handle}
 }
 
-struct TCPSocketHandler {
+type TCPSocketHandler = struct {
     address: str
     handle: call(self: TCPSocketHandler, record: str) | ConnectionError | WriteError
 }
@@ -83,7 +83,7 @@ let new_tcp_socket_handler = fn(address: str) TCPSocketHandler {
     return TCPSocketHandler{address, handle}
 }
 
-struct UDPSocketHandler {
+type UDPSocketHandler = struct {
     address: str
     handle: call(self: UDPSocketHandler, record: str) | ConnectionError | WriteError
 }
@@ -98,7 +98,7 @@ let new_udp_socket_handler = fn(address: str) UDPSocketHandler {
     return UDPSocketHandler{address, handle}
 }
 
-struct NullHandler {
+type NullHandler = struct {
     handle: call(self: NullHandler, record: str)
 }
 
@@ -107,13 +107,13 @@ let new_null_handler = fn() NullHandler {
     return NullHandler{handle}
 }
 
-struct Logger {
+type Logger = struct {
     level: Level
     format: TemplateString
     handle: call(self: Logger, message: str)
 }
 
-struct LogContext {
+type LogContext = struct {
     level: Level
     time: str
     message: str

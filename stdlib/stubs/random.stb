@@ -3,8 +3,7 @@
 # A pseudo-random number generator shared by every function in this module
 # (they all draw from the same underlying stream). It is seeded from the
 # current time by default, so results differ between runs unless seed is
-# called; it is not cryptographically secure. All operations are safe to
-# call from multiple concurrent tasks.
+# called; it is not cryptographically secure.
 
 let random = fn() float {
     # Return a pseudo-random float in the half-open range [0.0, 1.0) —

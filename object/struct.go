@@ -58,7 +58,7 @@ func (s *StructInstance) Inspect() string {
 	return s.Struct.Name + " { " + strings.Join(fields, ", ") + " }"
 }
 
-// Get returns one field using synchronization suitable for task sharing.
+// Get returns one field under the instance lock.
 func (s *StructInstance) Get(name string) (Object, bool) {
 	value, _, _, ok := s.ResolveField(name)
 	return value, ok
@@ -106,7 +106,7 @@ func (s *StructInstance) ResolveField(name string) (value Object, owner *StructI
 	return nil, nil, -1, false
 }
 
-// Set replaces one field using synchronization suitable for task sharing.
+// Set replaces one field under the instance lock.
 func (s *StructInstance) Set(name string, value Object) {
 	s.mu.Lock()
 	s.Values[name] = value

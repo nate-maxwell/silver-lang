@@ -7,14 +7,17 @@ import (
 
 // Environment is a lexical scope. outer links closures and nested calls to
 // their parent scope, while sourceDir supplies the base for relative imports.
+// Function calls, modules, and scripts own deferred calls; their lexical child
+// scopes share that owner through deferOwner.
 type Environment struct {
-	mu        sync.RWMutex
-	store     map[string]Object // bindings defined directly in this scope
-	types     map[string]*Contract
-	outer     *Environment // enclosing lexical scope, if any
-	sourceDir string       // directory of the source file being evaluated
-	packageID string       // manifest identity owning this source, if any
-	defers    []DeferredCall
+	mu         sync.RWMutex
+	store      map[string]Object // bindings defined directly in this scope
+	types      map[string]*Contract
+	outer      *Environment // enclosing lexical scope, if any
+	sourceDir  string       // directory of the source file being evaluated
+	packageID  string       // manifest identity owning this source, if any
+	deferOwner *Environment // nil when this environment owns its deferred calls
+	defers     []DeferredCall
 }
 
 // DeferredCall holds a callable and the argument values captured when a
@@ -160,16 +163,23 @@ func (e *Environment) PackageID() string {
 	return ""
 }
 
-// RegisterDefer schedules a captured call for this scope's exit.
+// RegisterDefer schedules a captured call for the enclosing function, module,
+// or script's exit, regardless of the current lexical scope.
 func (e *Environment) RegisterDefer(call DeferredCall) {
+	if e.deferOwner != nil {
+		e = e.deferOwner
+	}
 	e.mu.Lock()
 	e.defers = append(e.defers, call)
 	e.mu.Unlock()
 }
 
-// TakeDefers removes and returns the scope's deferred calls in declaration
-// order. The evaluator invokes the returned calls in reverse order.
+// TakeDefers removes and returns the owner's deferred calls in declaration
+// order. The evaluator invokes them in reverse order when that lifetime ends.
 func (e *Environment) TakeDefers() []DeferredCall {
+	if e.deferOwner != nil {
+		e = e.deferOwner
+	}
 	e.mu.Lock()
 	deferred := append([]DeferredCall(nil), e.defers...)
 	e.defers = nil
@@ -177,8 +187,22 @@ func (e *Environment) TakeDefers() []DeferredCall {
 	return deferred
 }
 
-// NewEnclosedEnvironment constructs a child lexical scope linked to outer.
+// NewEnclosedEnvironment constructs a child lexical scope linked to outer,
+// sharing its deferred-call owner.
 func NewEnclosedEnvironment(outer *Environment) *Environment {
+	env := NewFunctionEnvironment(outer)
+	if outer != nil {
+		env.deferOwner = outer
+		if outer.deferOwner != nil {
+			env.deferOwner = outer.deferOwner
+		}
+	}
+	return env
+}
+
+// NewFunctionEnvironment constructs a function invocation's lexical scope.
+// It captures outer's bindings but owns a fresh list of deferred calls.
+func NewFunctionEnvironment(outer *Environment) *Environment {
 	env := NewEnvironment()
 	env.outer = outer
 	return env

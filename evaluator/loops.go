@@ -57,14 +57,7 @@ func (e *Evaluator) evalForIteration(statement *ast.ForStatement, env *object.En
 	if statement.Value != nil {
 		iterationEnv.Set(statement.Value.Value, value)
 	}
-	result := e.Eval(statement.Body, iterationEnv)
-
-	// A loop is not a defer boundary. Preserve registration order in the
-	// enclosing scope even when the body exits through control flow or an error.
-	for _, call := range iterationEnv.TakeDefers() {
-		env.RegisterDefer(call)
-	}
-	return result
+	return e.Eval(statement.Body, iterationEnv)
 }
 
 func (e *Evaluator) evalWhileStatement(statement *ast.WhileStatement, env *object.Environment) object.Object {

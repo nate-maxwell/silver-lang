@@ -221,5 +221,7 @@ example() # prints "first value"
 ```
 
 Only a call expression may follow `defer`. Deferred calls still run when a return or propagated error leaves the scope.
+Calls deferred inside a catch body or loop wait until the surrounding function, module, or script exits.
+Each function invocation has its own deferred calls, including recursive calls.
 
 [Documentation index](../table_of_contents.md)

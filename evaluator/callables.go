@@ -204,9 +204,10 @@ func nextUnassignedParameter(assigned []bool) int {
 }
 
 // extendFunctionEnv binds evaluated arguments to parameters in a child of the
-// function's captured lexical environment. Arity is validated by applyFunction.
+// function's captured lexical environment with its own deferred-call lifetime.
+// Arity is validated by applyFunction.
 func extendFunctionEnv(fn *object.Function, args []object.Object) *object.Environment {
-	env := object.NewEnclosedEnvironment(fn.Env)
+	env := object.NewFunctionEnvironment(fn.Env)
 
 	for i, param := range fn.Parameters {
 		contract := fn.ParameterTypes[i]

@@ -3,13 +3,12 @@ package evaluator
 import (
 	"fmt"
 	"os"
-	"path/filepath"
-	"runtime"
 	"silver/ast"
 	"silver/astcache"
 	"silver/object"
 	"silver/packages"
 	"silver/parser"
+	"silver/source"
 	"sort"
 	"strings"
 	"sync"
@@ -20,7 +19,7 @@ import (
 type packageState struct {
 	mu       sync.Mutex
 	prepared bool
-	programs map[string]*ast.Program
+	programs map[source.ModuleID]*ast.Program
 	parseErr *object.Error
 }
 
@@ -38,7 +37,7 @@ func (states *packageStateSet) forManifest(manifest *packages.Manifest) *package
 	defer states.mu.Unlock()
 	state := states.values[manifest]
 	if state == nil {
-		state = &packageState{programs: make(map[string]*ast.Program)}
+		state = &packageState{programs: make(map[source.ModuleID]*ast.Program)}
 		states.values[manifest] = state
 	}
 	return state
@@ -62,7 +61,7 @@ func (e *Evaluator) preparePackage(manifest *packages.Manifest) (*packageState, 
 
 	registry := e.operatorScope(manifest.ID()).registry
 	exports := manifest.Exports()
-	inputs := make(map[string][]byte, len(exports))
+	inputs := make(map[source.ModuleID][]byte, len(exports))
 	var declarations []parser.OperatorDeclaration
 	for _, exported := range exports {
 		input, err := os.ReadFile(exported.Path())
@@ -70,7 +69,7 @@ func (e *Evaluator) preparePackage(manifest *packages.Manifest) (*packageState, 
 			state.parseErr = newError(object.RuntimeErrorKindImport, "could not read %q: %s", exported.Path(), err)
 			return state, state.parseErr
 		}
-		inputs[packagePathKey(exported.Path())] = input
+		inputs[source.FileID(exported.Path())] = input
 		for _, declaration := range parser.DiscoverOperatorDeclarations(string(input), exported.Path()) {
 			if message := registry.Predefine(declaration); message != "" {
 				state.parseErr = newError(
@@ -89,9 +88,9 @@ func (e *Evaluator) preparePackage(manifest *packages.Manifest) (*packageState, 
 	}
 	cacheContext := packageCacheContext(declarations)
 	for _, exported := range exports {
-		input := inputs[packagePathKey(exported.Path())]
+		input := inputs[source.FileID(exported.Path())]
 		if program, ok := astcache.LoadWithContext(exported.Path(), input, cacheContext); ok {
-			state.programs[packagePathKey(exported.Path())] = program
+			state.programs[source.FileID(exported.Path())] = program
 			continue
 		}
 		program, parseError := parseSourceWithRegistry(exported.Path(), input, registry)
@@ -99,7 +98,7 @@ func (e *Evaluator) preparePackage(manifest *packages.Manifest) (*packageState, 
 			state.parseErr = parseError
 			return state, parseError
 		}
-		state.programs[packagePathKey(exported.Path())] = program
+		state.programs[source.FileID(exported.Path())] = program
 		// Cache writes are optional; read-only packages must remain importable.
 		_ = astcache.StoreWithContext(exported.Path(), input, cacheContext, program)
 	}
@@ -121,12 +120,4 @@ func packageCacheContext(declarations []parser.OperatorDeclaration) []byte {
 		fmt.Fprintf(&context, "%d:%s\n", len(declaration.Symbol), declaration.Symbol)
 	}
 	return []byte(context.String())
-}
-
-func packagePathKey(path string) string {
-	key := filepath.Clean(path)
-	if runtime.GOOS == "windows" {
-		key = strings.ToLower(key)
-	}
-	return key
 }

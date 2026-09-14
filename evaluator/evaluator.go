@@ -16,15 +16,19 @@ import (
 // NULL is the canonical null singleton used by identity-based truthiness.
 var NULL = &object.Null{}
 
-// Evaluator owns the state shared across one execution session: the standard
-// library, imported-module caches, circular-import state, and traceback
-// contexts. Reuse one evaluator for a REPL or a group of related evaluations.
+// Evaluator combines a shared interpreter session with its execution context.
+// Reuse one evaluator for a REPL or a group of related evaluations.
 type Evaluator struct {
+	*evaluatorSession
+	constants *constantPool
+	contexts  []string // active Silver function/module names
+}
+
+// evaluatorSession is retained by every evaluator fork. Module identity and
+// loading state must outlive any individual template invocation.
+type evaluatorSession struct {
 	standardLibrary *stdlibpkg.Library
-	constants       *constantPool
-	modules         map[string]*object.Module // filepath or standard-library name to module
-	loading         map[string]bool           // module load state | circular import detection
-	contexts        []string                  // active Silver function/module names
+	modules         *moduleStore
 	// nextEnumValueID gives every evaluated enum member a session-unique hash
 	// identity, even when separate modules declare enums with the same names.
 	nextEnumValueID *atomic.Uint64
@@ -102,35 +106,24 @@ func NewWithStreams(in io.Reader, out, errOut io.Writer) *Evaluator {
 
 func newEvaluator(in io.Reader, out, errOut io.Writer) *Evaluator {
 	return &Evaluator{
-		standardLibrary: stdlibpkg.NewWithStreams(in, out, errOut, NULL, TRUE, FALSE),
-		constants:       newConstantPool(),
-		modules:         make(map[string]*object.Module),
-		loading:         make(map[string]bool),
-		contexts:        make([]string, 0),
-		nextEnumValueID: &atomic.Uint64{},
-		operatorScopes:  &operatorScopeSet{values: make(map[string]*operatorScope)},
-		packages:        packages.NewIndex(),
-		packageStates:   newPackageStateSet(),
+		evaluatorSession: &evaluatorSession{
+			standardLibrary: stdlibpkg.NewWithStreams(in, out, errOut, NULL, TRUE, FALSE),
+			modules:         newModuleStore(),
+			nextEnumValueID: &atomic.Uint64{},
+			operatorScopes:  &operatorScopeSet{values: make(map[string]*operatorScope)},
+			packages:        packages.NewIndex(),
+			packageStates:   newPackageStateSet(),
+		},
+		constants: newConstantPool(),
 	}
 }
 
-// fork captures evaluator state for lazy templates while sharing the
-// standard library, output streams, and enum identity source.
+// fork copies execution context for lazy templates and retains the session.
 func (e *Evaluator) fork() *Evaluator {
-	modules := make(map[string]*object.Module, len(e.modules))
-	for path, module := range e.modules {
-		modules[path] = module
-	}
 	return &Evaluator{
-		standardLibrary: e.standardLibrary,
-		constants:       newConstantPool(),
-		modules:         modules,
-		loading:         make(map[string]bool),
-		contexts:        append([]string(nil), e.contexts...),
-		nextEnumValueID: e.nextEnumValueID,
-		operatorScopes:  e.operatorScopes,
-		packages:        e.packages,
-		packageStates:   e.packageStates,
+		evaluatorSession: e.evaluatorSession,
+		constants:        newConstantPool(),
+		contexts:         append([]string(nil), e.contexts...),
 	}
 }
 

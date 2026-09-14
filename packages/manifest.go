@@ -13,6 +13,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"silver/source"
 	"strings"
 
 	"go.yaml.in/yaml/v3"
@@ -86,18 +87,18 @@ func ReadManifest(path string) (*Manifest, error) {
 	root := filepath.Dir(absolute)
 	manifest := &Manifest{
 		name: document.packageName,
-		id:   "package:" + pathKey(absolute),
+		id:   "package:" + source.PathKey(absolute),
 		path: absolute,
 		root: root,
 	}
 
-	seen := make(map[string]bool, len(document.exports))
+	seen := make(map[source.ModuleID]bool, len(document.exports))
 	for _, declared := range document.exports {
 		exported, err := validateExport(path, root, declared)
 		if err != nil {
 			return nil, err
 		}
-		key := pathKey(exported)
+		key := source.FileID(exported)
 		if seen[key] {
 			return nil, fmt.Errorf("invalid package file %q: duplicate export %q", path, declared)
 		}

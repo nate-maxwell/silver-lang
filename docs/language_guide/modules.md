@@ -128,6 +128,10 @@ let second = import("testing")
 first == second # True
 ```
 
+File identity uses the resolved absolute path with normalized separators and dot segments. On Windows, path casing is
+also ignored: `./Identity.slv` and `./identity.slv` return the same module and the same nominal struct and enum definitions.
+Bundled names remain case-sensitive on every platform. Symbolic links and hard links are not resolved for identity.
+
 Consequently, module functions share the top-level bindings they captured during evaluation. This is useful for modules
 such as the stateful [`testing`](../stdlib/testing.md) runner, but libraries should make shared mutation deliberate:
 
@@ -144,8 +148,15 @@ Every importer of `counter.slv` observes the same sequence through `next()`. Rea
 by the module's closures; it does not replace the value already exposed as `counter.count`. Mutating an exposed array,
 map, or struct is visible through every import because those importers hold the same value.
 
+Lazy template evaluations share this session state, including modules first imported after the template was created:
+
+````silver
+let template = ```{import("./counter.slv").next()}```
+[template.eval(), template.eval()] # ["1", "2"]
+````
+
 A module is not cached when its evaluation fails. An import cycle detected while modules are loading raises
-`ImportError` rather than exposing a partially initialized namespace.
+`ImportError` rather than exposing a partially initialized namespace, including when the import runs inside a template.
 
 ## Module values and qualified types
 

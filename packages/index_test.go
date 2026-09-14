@@ -3,6 +3,8 @@ package packages
 import (
 	"os"
 	"path/filepath"
+	"runtime"
+	"strings"
 	"testing"
 )
 
@@ -110,5 +112,47 @@ func TestIndexRefreshesWhenSearchPathChanges(t *testing.T) {
 	}
 	if path, _, found, err := index.Resolve("second.slv"); err != nil || !found || path != second {
 		t.Fatalf("second search path resolved as %q, %v, %v", path, found, err)
+	}
+}
+
+func TestWindowsPackagePathIdentity(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("Windows path casing policy")
+	}
+	dir := t.TempDir()
+	if err := os.Mkdir(filepath.Join(dir, "Nested"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	exposed := filepath.Join(dir, "Nested", "Identity.slv")
+	manifestPath := filepath.Join(dir, "Package.yaml")
+	writeTestFile(t, exposed, "let value = 42")
+	writeTestFile(t, manifestPath, "package: example\nexport:\n  - Nested/Identity.slv\n")
+	index := NewIndex()
+	if err := index.Refresh(manifestPath); err != nil {
+		t.Fatal(err)
+	}
+	owner := index.ManifestFor(exposed)
+	if owner == nil || index.ManifestFor(strings.ToUpper(exposed)) != owner {
+		t.Fatal("case variant lost its package owner")
+	}
+	for _, request := range []string{"identity.slv", "NESTED/IDENTITY.SLV", `nested\identity.slv`} {
+		path, manifest, found, err := index.Resolve(request)
+		if err != nil || !found || path != exposed || manifest != owner {
+			t.Fatalf("Resolve(%q) = %q, %v, %v, %v; want canonical package export", request, path, manifest, found, err)
+		}
+	}
+	alias, err := ReadManifest(strings.ToUpper(manifestPath))
+	if err != nil || alias.ID() != owner.ID() {
+		t.Fatalf("manifest alias has a different identity: %v, %v", alias, err)
+	}
+	if err := index.Refresh(exposed); err != nil {
+		t.Fatal(err)
+	}
+	if path, _, found, err := index.Resolve("IDENTITY.SLV"); err != nil || !found || path != exposed {
+		t.Fatalf("explicit file alias resolved as %q, %v, %v", path, found, err)
+	}
+	writeTestFile(t, manifestPath, "package: example\nexport:\n  - Nested/Identity.slv\n  - nested/identity.slv\n")
+	if _, err := ReadManifest(manifestPath); err == nil || !strings.Contains(err.Error(), "duplicate export") {
+		t.Fatalf("duplicate case variant export: %v", err)
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"silver/source"
 )
 
 // Resolve searches for explicit source entries and package exports in search-path
@@ -28,7 +29,7 @@ func (index *Index) Resolve(request string) (string, *Manifest, bool, error) {
 		if entry.legacy {
 			candidate := filepath.Clean(filepath.Join(entry.directory, request))
 			if importCandidateExists(candidate) {
-				return candidate, index.byFile[pathKey(candidate)], true, nil
+				return candidate, index.byFile[source.FileID(candidate)], true, nil
 			}
 		}
 		if entry.file != "" && matchesExposedFile(wanted, filepath.Base(entry.file), "") {
@@ -48,7 +49,8 @@ func (index *Index) Resolve(request string) (string, *Manifest, bool, error) {
 // matchesExposedFile reports whether an import request matches an exposed
 // file's basename or its manifest-declared relative path.
 func matchesExposedFile(wanted, base, declared string) bool {
-	return wanted == cleanImportName(base) || declared != "" && wanted == cleanImportName(declared)
+	wantedKey := source.PathKey(wanted)
+	return wantedKey == source.PathKey(base) || declared != "" && wantedKey == source.PathKey(declared)
 }
 
 // importCandidateExists reports whether a legacy import candidate exists. It

@@ -11,6 +11,7 @@ import (
 	"silver/object"
 	"silver/packages"
 	"silver/parser"
+	"silver/source"
 	"strings"
 )
 
@@ -47,11 +48,9 @@ func (e *Evaluator) EvalFile(path string, env *object.Environment) object.Object
 // name or canonical absolute path.
 func (e *Evaluator) importModule(path string, env *object.Environment) object.Object {
 	if module, ok := e.standardLibrary.LookupModule(path); ok {
-		if cached, exists := e.modules[path]; exists {
-			return cached
-		}
-		e.modules[path] = module
-		return module
+		return e.modules.load(source.BundledID(path), path, func() (*object.Module, *object.Error) {
+			return module, nil
+		})
 	}
 	if source, sourceName, cache, ok := e.standardLibrary.LookupSourceModule(path); ok {
 		return e.importSourceModule(path, sourceName, source, cache)
@@ -62,19 +61,16 @@ func (e *Evaluator) importModule(path string, env *object.Environment) object.Ob
 		return newError(object.RuntimeErrorKindImport, "could not resolve import %q: %s", path, err)
 	}
 
-	if module, ok := e.modules[absolutePath]; ok {
-		return module
-	}
-	if e.loading[absolutePath] {
-		return newError(object.RuntimeErrorKindImport, "circular import detected while loading %q", absolutePath)
-	}
+	id := source.FileID(absolutePath)
+	return e.modules.load(id, absolutePath, func() (*object.Module, *object.Error) {
+		return e.evaluateFileModule(id, absolutePath, manifest)
+	})
+}
 
-	e.loading[absolutePath] = true
-	defer delete(e.loading, absolutePath)
-
+func (e *Evaluator) evaluateFileModule(id source.ModuleID, absolutePath string, manifest *packages.Manifest) (*object.Module, *object.Error) {
 	program, parseError := e.parseFile(absolutePath, manifest)
 	if parseError != nil {
-		return parseError
+		return nil, parseError
 	}
 
 	moduleEnv := object.NewEnvironment()
@@ -85,35 +81,29 @@ func (e *Evaluator) importModule(path string, env *object.Environment) object.Ob
 	e.pushContext("<module>")
 	defer e.popContext()
 	result := e.Eval(program, moduleEnv)
-	if isError(result) {
-		return result
+	if failure, ok := result.(*object.Error); ok {
+		return nil, failure
 	}
 
 	exports, exportError := e.moduleExports(program, moduleEnv)
 	if exportError != nil {
-		return exportError
+		return nil, exportError
 	}
-	module := &object.Module{Path: absolutePath, Exports: exports}
-	e.modules[absolutePath] = module
-	return module
+	return &object.Module{ID: id, Path: absolutePath, Exports: exports}, nil
 }
 
 // importSourceModule evaluates one embedded Silver standard-library module.
 // It deliberately uses the same isolated environment, cache, and circular
 // import protection as file modules, while retaining its bare import name as
 // the module identity.
-func (e *Evaluator) importSourceModule(name, sourceName, source string, cache []byte) object.Object {
-	if module, ok := e.modules[name]; ok {
-		return module
-	}
-	if e.loading[name] {
-		return newError(object.RuntimeErrorKindImport, "circular import detected while loading %q", name)
-	}
+func (e *Evaluator) importSourceModule(name, sourceName, input string, cache []byte) object.Object {
+	return e.modules.load(source.BundledID(name), name, func() (*object.Module, *object.Error) {
+		return e.evaluateSourceModule(name, sourceName, input, cache)
+	})
+}
 
-	e.loading[name] = true
-	defer delete(e.loading, name)
-
-	sourceBytes := []byte(source)
+func (e *Evaluator) evaluateSourceModule(name, sourceName, input string, cache []byte) (*object.Module, *object.Error) {
+	sourceBytes := []byte(input)
 	program, cached := astcache.LoadBytes(sourceName, sourceBytes, cache)
 	packageID := "stdlib"
 	registry := e.operatorScope(packageID).registry
@@ -124,7 +114,7 @@ func (e *Evaluator) importSourceModule(name, sourceName, source string, cache []
 		var parseError *object.Error
 		program, parseError = parseSourceWithRegistry(sourceName, sourceBytes, registry)
 		if parseError != nil {
-			return parseError
+			return nil, parseError
 		}
 	}
 
@@ -133,17 +123,15 @@ func (e *Evaluator) importSourceModule(name, sourceName, source string, cache []
 	e.pushContext("<module>")
 	defer e.popContext()
 	result := e.Eval(program, moduleEnv)
-	if isError(result) {
-		return result
+	if failure, ok := result.(*object.Error); ok {
+		return nil, failure
 	}
 
 	exports, exportError := e.moduleExports(program, moduleEnv)
 	if exportError != nil {
-		return exportError
+		return nil, exportError
 	}
-	module := &object.Module{Path: name, Exports: exports}
-	e.modules[name] = module
-	return module
+	return &object.Module{ID: source.BundledID(name), Path: name, Exports: exports}, nil
 }
 
 // moduleExports returns every top-level binding unless the program contains
@@ -227,7 +215,7 @@ func (e *Evaluator) parseFile(path string, manifest *packages.Manifest) (*ast.Pr
 		if parseError != nil {
 			return nil, parseError
 		}
-		if program := state.programs[packagePathKey(path)]; program != nil {
+		if program := state.programs[source.FileID(path)]; program != nil {
 			return program, nil
 		}
 	}

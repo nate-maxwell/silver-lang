@@ -113,6 +113,10 @@ value.eval() # "call 1"
 value.eval() # "call 2"
 ````
 
+Imports inside interpolations use the interpreter session's shared module store. A module first loaded by one `.eval()`
+call retains its state and nominal types for later calls and ordinary imports. Module loading and cycle detection also
+remain shared; creating or evaluating a template does not reset them.
+
 ## Literal braces
 
 Double braces produce literal brace characters in template text:

@@ -9,6 +9,7 @@ import (
 	"path"
 	"silver/ast"
 	"silver/object"
+	"silver/source"
 )
 
 // silverModuleFiles contains the Silver-authored portion of the standard
@@ -136,7 +137,7 @@ func newLibrary(definitions map[string][]definition, sourceDefinitions []sourceD
 			}
 			exports[definition.name] = &object.Builtin{Fn: definition.fn, Signature: signature}
 		}
-		modules[name] = &object.Module{Path: name, Exports: exports}
+		modules[name] = &object.Module{ID: source.BundledID(name), Path: name, Exports: exports}
 	}
 
 	sourceModules := loadSourceModules(modules, sourceDefinitions)

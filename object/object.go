@@ -3,6 +3,7 @@ package object
 import (
 	"bytes"
 	"silver/ast"
+	"silver/source"
 	"strings"
 )
 
@@ -48,8 +49,10 @@ type Destructurable interface {
 }
 
 // Module represents one evaluated source file and its exported top-level
-// bindings. Path is the canonical path used by the evaluator's module cache.
+// bindings. ID is its canonical identity; Path retains a readable source path
+// or bundled name for diagnostics.
 type Module struct {
+	ID      source.ModuleID
 	Path    string
 	Exports map[string]Object
 }

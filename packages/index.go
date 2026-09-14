@@ -3,6 +3,7 @@ package packages
 import (
 	"os"
 	"path/filepath"
+	"silver/source"
 	"strings"
 	"sync"
 )
@@ -19,7 +20,7 @@ type Index struct {
 	initialized bool
 	searchPath  string
 	entries     []indexEntry
-	byFile      map[string]*Manifest
+	byFile      map[source.ModuleID]*Manifest
 	err         error
 }
 
@@ -36,7 +37,7 @@ type indexEntry struct {
 // NewIndex returns an empty package index. The caller must call Refresh before
 // the first call to Resolve.
 func NewIndex() *Index {
-	return &Index{byFile: make(map[string]*Manifest)}
+	return &Index{byFile: make(map[source.ModuleID]*Manifest)}
 }
 
 // Refresh loads the entries in the platform-separated searchPath.
@@ -56,7 +57,7 @@ func (index *Index) Refresh(searchPath string) error {
 	index.initialized = true
 	index.searchPath = searchPath
 	index.entries = nil
-	index.byFile = make(map[string]*Manifest)
+	index.byFile = make(map[source.ModuleID]*Manifest)
 	index.err = nil
 
 	for _, rawEntry := range filepath.SplitList(searchPath) {
@@ -135,7 +136,7 @@ func isManifestPath(path string) bool {
 // addManifest records ownership of every file exported by manifest.
 func (index *Index) addManifest(manifest *Manifest) {
 	for _, exported := range manifest.exports {
-		index.byFile[pathKey(exported.path)] = manifest
+		index.byFile[source.FileID(exported.path)] = manifest
 	}
 }
 
@@ -144,5 +145,5 @@ func (index *Index) addManifest(manifest *Manifest) {
 func (index *Index) ManifestFor(path string) *Manifest {
 	index.mu.RLock()
 	defer index.mu.RUnlock()
-	return index.byFile[pathKey(path)]
+	return index.byFile[source.FileID(path)]
 }

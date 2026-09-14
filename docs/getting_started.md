@@ -22,7 +22,7 @@ Running Silver without arguments starts the REPL; passing one source path runs t
 silver [file]
 ```
 
-Silver also provides formatting, cache generation, package initialization, and version commands. See the
+Silver also provides cache generation, package initialization, and version commands. See the
 [command-line interface reference](cli.md) for the complete list.
 
 To parse source without running it and explicitly generate AST caches, use `astgen` with a source file or directory:

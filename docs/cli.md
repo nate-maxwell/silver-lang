@@ -6,7 +6,6 @@ The examples below use `silver` as if the executable is on `PATH`. When running 
 ```text
 silver [file]
 silver astgen <path>
-silver frmt <file>
 silver package init <package_name>
 silver version
 ```
@@ -40,15 +39,6 @@ generates caches for every `.slv` file below it. The command prints the path of 
 
 AST caches are implementation details and can be safely regenerated. Normal file execution also creates or refreshes
 a cache when needed.
-
-## Format a source file
-
-```console
-silver frmt <file>
-```
-
-`frmt` formats one source file in place. It prints the file path when the file changes and produces no output when the
-file is already formatted.
 
 ## Initialize a package
 

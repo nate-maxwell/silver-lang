@@ -2,6 +2,7 @@ package evaluator
 
 import (
 	"silver/object"
+	"strings"
 	"testing"
 )
 
@@ -25,6 +26,55 @@ func TestHashIndexExpressions(t *testing.T) {
 		} else {
 			testNullObject(t, evaluated)
 		}
+	}
+}
+
+func TestMapLiteralRejectsDuplicateComputedKeys(t *testing.T) {
+	for _, input := range []string{
+		"let key = 1\nlet t = {key: 10, 1: 20}",
+		"let key = 1.0\nlet t = {1: 10, key: 20}",
+		"let key = True\nlet t = {key: 10, True: 20}",
+		"let key = \"same\"\nlet t = {key: 10, key: 20}",
+		`let t = {"sa" + "me": 10, "same": 20}`,
+		`let t = {1 + 1: 10, 2: 20}`,
+		"let key = fn() int { return 1 }\nlet t = {key(): 10, key(): 20}",
+	} {
+		t.Run(input, func(t *testing.T) {
+			program, parseErr := ParseSource("duplicate.slv", []byte(input))
+			if parseErr != nil {
+				t.Fatalf("parse error: %s", parseErr.Inspect())
+			}
+			err := assertErrorStruct(t, New().Eval(program, object.NewEnvironment()), "ValueError")
+			if !strings.Contains(err.MessageText(), "duplicate map key") {
+				t.Fatalf("unexpected error: %s", err.MessageText())
+			}
+		})
+	}
+}
+
+func TestMapLiteralEvaluatesRepeatedCallsAsDistinctKeys(t *testing.T) {
+	program, parseErr := ParseSource("distinct.slv", []byte(`
+let count = 0
+let next = fn() int {
+    count = count + 1
+    return count
+}
+{next(): 10, next(): 10}
+`))
+	if parseErr != nil {
+		t.Fatalf("parse error: %s", parseErr.Inspect())
+	}
+	result := New().Eval(program, object.NewEnvironment())
+	mapping, ok := result.(*object.Map)
+	if !ok || mapping.Len() != 2 {
+		t.Fatalf("result is %#v, want map with two distinct keys", result)
+	}
+	for _, key := range []int64{1, 2} {
+		pair, ok := mapping.Get((&object.Integer{Value: key}).HashKey())
+		if !ok {
+			t.Fatalf("map is missing key %d", key)
+		}
+		testIntegerObject(t, pair.Value, 10)
 	}
 }
 

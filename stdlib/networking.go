@@ -8,11 +8,10 @@ import (
 	"sync"
 )
 
-// networkingDefinitions contains the protocol-specific native operations
-// wrapped by the Silver-authored networking module. Connections themselves
-// are ordinary Silver structs whose call fields close over the native socket.
+// networkingDefinitions supplies the native bindings of import("networking").
+// Its Silver entry file adds the protocol enum and generic dial function.
 func networkingDefinitions(null *object.Null) []definition {
-	return []definition{
+	definitions := []definition{
 		{name: "dial_tcp", fn: builtinDialTCP(null), signature: callSignature(
 			[]string{"address"},
 			[]*ast.TypeAnnotation{namedType("str")},
@@ -32,6 +31,11 @@ func networkingDefinitions(null *object.Null) []definition {
 			"ListenError",
 		)},
 	}
+	for _, name := range []string{"Connection", "Listener", "ReadFromResult", "ConnectionError", "ListenError", "ReadError", "WriteError"} {
+		value, _ := object.BuiltinStructDefinitionByName(name)
+		definitions = append(definitions, definition{name: name, value: value})
+	}
+	return definitions
 }
 
 // nativeConnection is shared by the callable fields of a Connection value.

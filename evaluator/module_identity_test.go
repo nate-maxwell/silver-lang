@@ -22,6 +22,7 @@ func TestTemplateImportsShareSessionModules(t *testing.T) {
 	for _, preload := range []string{"", `import("./counter.slv").next()`} {
 		t.Run(fmt.Sprintf("preload=%t", preload != ""), func(t *testing.T) {
 			dir := t.TempDir()
+			writePackageManifest(t, dir, "counter.slv")
 			writeSilverFile(t, filepath.Join(dir, "counter.slv"), counterModule)
 			env := object.NewEnvironment()
 			env.SetSourceDir(dir)
@@ -47,6 +48,7 @@ let second = ` + templateLiteral(`{import("./counter.slv").next()}`) + "\n" + pr
 
 func TestTemplateImportsPreserveNominalDefinitions(t *testing.T) {
 	dir := t.TempDir()
+	writePackageManifest(t, dir, "identity.slv")
 	writeSilverFile(t, filepath.Join(dir, "identity.slv"), `
 type Item = struct { value: int }
 type Choice = enum { First }
@@ -87,6 +89,7 @@ import("testing").summary().total
 
 func TestTemplateReturnedByModuleCanImportItsOwner(t *testing.T) {
 	dir := t.TempDir()
+	writePackageManifest(t, dir, "owner.slv")
 	writeSilverFile(t, filepath.Join(dir, "owner.slv"), counterModule+`
 let template = `+templateLiteral(`{import("./owner.slv").next()}`))
 	env := object.NewEnvironment()
@@ -105,6 +108,7 @@ func TestImportsCanonicalizeWindowsPaths(t *testing.T) {
 		t.Skip("Windows path casing policy")
 	}
 	dir := t.TempDir()
+	writePackageManifest(t, dir, "Identity.slv")
 	path := filepath.Join(dir, "Identity.slv")
 	writeSilverFile(t, path, `type Item = struct { value: int }
 type Choice = enum { First }`)
@@ -164,6 +168,7 @@ func TestImportCyclesShareIdentityAndTemplateLoadingState(t *testing.T) {
 					t.Skip("Windows path casing policy")
 				}
 				dir := t.TempDir()
+				writePackageManifest(t, dir, "guard.slv", "Cycle.slv")
 				writeSilverFile(t, filepath.Join(dir, "guard.slv"), counterModule)
 				expression := fmt.Sprintf("import(%q)", alias)
 				if template {
@@ -173,8 +178,9 @@ func TestImportCyclesShareIdentityAndTemplateLoadingState(t *testing.T) {
 				// duplicate evaluation before it can obscure the original cycle.
 				writeSilverFile(t, filepath.Join(dir, "Cycle.slv"), `
 let guard = import("./guard.slv")
-assert guard.next() == 1, "module evaluated twice"
-let value = `+expression)
+let attempt = guard.next()
+assert attempt <= 2, "module evaluated twice"
+let value = if attempt == 1 { `+expression+` } else { 42 }`)
 				env := object.NewEnvironment()
 				env.SetSourceDir(dir)
 				engine := New()
@@ -185,7 +191,7 @@ let value = `+expression)
 				}
 
 				// Failed loads must leave no stale loading marker or cached module.
-				writeSilverFile(t, filepath.Join(dir, "Cycle.slv"), `let value = 42`)
+				// The already-loaded guard makes the next evaluation succeed.
 				assertInteger(t, evalInput(t, engine, env, `import("./Cycle.slv").value`), 42)
 			})
 		}

@@ -27,6 +27,8 @@ silver program.slv
 
 A single argument that is not a command name is treated as a source path. Silver evaluates the file and writes only
 output requested by the program to standard output. Uncaught errors and tracebacks are written to standard error.
+The entry script can run on its own, but every file it imports must be listed in a package YAML manifest's `members`
+or `export` list. Missing manifests cause `ImportError` and a nonzero exit status.
 
 ## Generate AST caches
 
@@ -53,12 +55,14 @@ For example, `silver package init my_library` creates:
 
 ```yaml
 package: my_library
+members: []
 export: []
 ```
 
-Add relative `.slv` paths to the `export` list to expose modules from the package. See
+Add relative `.slv` paths to `export` for public entry points and to `members` for internal files that share the package's
+operators. Exported files are automatically members. See
 [Modules and imports](language_guide/modules.md#packages-and-yaml-manifests) for manifest rules and the
-[package example](../examples/packages/package_b/demo.slv) for a complete consumer.
+[package example](../examples/packages/README.md) for runnable consumers.
 
 ## Print the version
 

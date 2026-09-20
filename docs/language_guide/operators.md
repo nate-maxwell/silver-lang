@@ -17,10 +17,15 @@ Operator functions must have exactly two non-variadic parameters. Their paramete
 error alternatives use the ordinary function syntax. Unlike an ordinary unannotated function, an unannotated operator
 function preserves its returned value, allowing the concise pipe declaration above.
 
-Operator declarations are read in source order. Using a symbol before its declaration is a syntax error. Once declared,
-the symbol belongs to the interpreter session rather than a lexical scope or module export list, so sources parsed later
-can use it. A declaration executed inside a function or block becomes globally callable afterward. Declaring the same
-symbol more than once is an error; operators already supplied by the language cannot be redefined either.
+In standalone files, operator declarations are read in source order. Using a symbol before its declaration is a syntax
+error. Once declared, the symbol belongs to the standalone interpreter session, so standalone sources parsed later can
+use it. In a [manifest package](modules.md#packages-and-yaml-manifests), declarations are discovered across all package
+members before parsing. Internal members share this grammar even when they are omitted from the manifest's `export`
+list. Other packages have separate operator scopes.
+
+A declaration's runtime definition becomes callable when that declaration executes, including inside a function or
+block. Declaring the same symbol more than once in one operator scope is an error; operators already supplied by the
+language cannot be redefined either.
 
 ## Precedence
 

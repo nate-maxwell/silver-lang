@@ -9,6 +9,7 @@ import (
 	"silver/packages"
 	"silver/parser"
 	"silver/source"
+	"silver/stdlib"
 	"sort"
 	"strings"
 	"sync"
@@ -25,20 +26,25 @@ type packageState struct {
 
 type packageStateSet struct {
 	mu     sync.Mutex
-	values map[*packages.Manifest]*packageState
+	values map[packageStateKey]*packageState
+}
+
+type packageStateKey struct {
+	manifest  *packages.Manifest
+	bundledID string
 }
 
 func newPackageStateSet() *packageStateSet {
-	return &packageStateSet{values: make(map[*packages.Manifest]*packageState)}
+	return &packageStateSet{values: make(map[packageStateKey]*packageState)}
 }
 
-func (states *packageStateSet) forManifest(manifest *packages.Manifest) *packageState {
+func (states *packageStateSet) forPackage(key packageStateKey) *packageState {
 	states.mu.Lock()
 	defer states.mu.Unlock()
-	state := states.values[manifest]
+	state := states.values[key]
 	if state == nil {
 		state = &packageState{programs: make(map[source.ModuleID]*ast.Program)}
-		states.values[manifest] = state
+		states.values[key] = state
 	}
 	return state
 }
@@ -47,11 +53,11 @@ func (e *Evaluator) refreshPackageIndex() error {
 	return e.packages.Refresh(os.Getenv(importPathEnvironment))
 }
 
-// preparePackage parses every export with one operator registry. This makes
+// preparePackage parses every member with one operator registry. This makes
 // operator spellings visible throughout their package without leaking them
 // into standalone sources or other packages.
 func (e *Evaluator) preparePackage(manifest *packages.Manifest) (*packageState, *object.Error) {
-	state := e.packageStates.forManifest(manifest)
+	state := e.packageStates.forPackage(packageStateKey{manifest: manifest})
 	state.mu.Lock()
 	defer state.mu.Unlock()
 	if state.prepared {
@@ -60,10 +66,10 @@ func (e *Evaluator) preparePackage(manifest *packages.Manifest) (*packageState, 
 	state.prepared = true
 
 	registry := e.operatorScope(manifest.ID()).registry
-	exports := manifest.Exports()
-	inputs := make(map[source.ModuleID][]byte, len(exports))
+	members := manifest.Members()
+	inputs := make(map[source.ModuleID][]byte, len(members))
 	var declarations []parser.OperatorDeclaration
-	for _, exported := range exports {
+	for _, exported := range members {
 		input, err := os.ReadFile(exported.Path())
 		if err != nil {
 			state.parseErr = newError(object.RuntimeErrorKindImport, "could not read %q: %s", exported.Path(), err)
@@ -87,13 +93,13 @@ func (e *Evaluator) preparePackage(manifest *packages.Manifest) (*packageState, 
 		}
 	}
 	cacheContext := packageCacheContext(declarations)
-	for _, exported := range exports {
+	for _, exported := range members {
 		input := inputs[source.FileID(exported.Path())]
 		if program, ok := astcache.LoadWithContext(exported.Path(), input, cacheContext); ok {
 			state.programs[source.FileID(exported.Path())] = program
 			continue
 		}
-		program, parseError := parseSourceWithRegistry(exported.Path(), input, registry)
+		program, parseError := ParseSourceWithRegistry(exported.Path(), input, registry)
 		if parseError != nil {
 			state.parseErr = parseError
 			return state, parseError
@@ -105,7 +111,44 @@ func (e *Evaluator) preparePackage(manifest *packages.Manifest) (*packageState, 
 	return state, nil
 }
 
-// packageCacheContext identifies the grammar shared by a manifest's exports.
+// prepareSourcePackage gives each embedded package its own grammar, including
+// declarations in internal members and in members imported later at runtime.
+func (e *Evaluator) prepareSourcePackage(module stdlib.SourceModule) (*packageState, *object.Error) {
+	state := e.packageStates.forPackage(packageStateKey{bundledID: module.PackageID})
+	state.mu.Lock()
+	defer state.mu.Unlock()
+	if state.prepared {
+		return state, state.parseErr
+	}
+	state.prepared = true
+	registry := e.operatorScope(module.PackageID).registry
+	members := e.standardLibrary.SourceMembers(module.PackageID)
+	for _, member := range members {
+		for _, declaration := range parser.DiscoverOperatorDeclarations(member.Source, member.SourceName) {
+			if message := registry.Predefine(declaration); message != "" {
+				state.parseErr = newError(object.RuntimeErrorKindSyntax, "could not parse %q:\n%s:%d:%d: %s",
+					member.SourceName, declaration.Position.Source, declaration.Position.Line, declaration.Position.Column, message)
+				return state, state.parseErr
+			}
+		}
+	}
+	for _, member := range members {
+		program, cached := astcache.LoadBytes(member.SourceName, []byte(member.Source), member.Cache)
+		// Existing embedded caches contain no package grammar fingerprint.
+		if !cached || registry.HasUserOperators() {
+			var parseError *object.Error
+			program, parseError = ParseSourceWithRegistry(member.SourceName, []byte(member.Source), registry)
+			if parseError != nil {
+				state.parseErr = parseError
+				return state, parseError
+			}
+		}
+		state.programs[source.BundledID(member.Name)] = program
+	}
+	return state, nil
+}
+
+// packageCacheContext identifies the grammar shared by a manifest's members.
 // An empty context deliberately remains compatible with ordinary file caches.
 func packageCacheContext(declarations []parser.OperatorDeclaration) []byte {
 	if len(declarations) == 0 {

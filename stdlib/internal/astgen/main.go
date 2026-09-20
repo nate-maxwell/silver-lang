@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"silver/astcache"
 	"silver/evaluator"
+	"silver/packages"
+	"silver/parser"
 )
 
 func main() {
@@ -26,28 +28,51 @@ func main() {
 		if walkErr != nil {
 			return walkErr
 		}
-		if entry.IsDir() || filepath.Ext(sourcePath) != ".slv" {
+		if entry.IsDir() || entry.Name() != "package.yaml" {
 			return nil
 		}
 
-		source, err := os.ReadFile(sourcePath)
+		manifest, err := packages.ReadManifestFS(os.DirFS("."), filepath.ToSlash(sourcePath))
 		if err != nil {
 			return err
 		}
-		logicalPath := filepath.ToSlash(sourcePath)
-		program, parseError := evaluator.ParseSource(logicalPath, source)
-		if parseError != nil {
-			return fmt.Errorf("parse %s: %s", logicalPath, parseError.MessageText())
-		}
-		if err := astcache.Store(logicalPath, source, program); err != nil {
-			return fmt.Errorf("cache %s: %w", logicalPath, err)
-		}
-		fmt.Println("generated", astcache.Path(logicalPath))
-		return nil
+		return generatePackage(manifest)
 	})
 	if err != nil {
 		fatal(err)
 	}
+}
+
+// generatePackage discovers operators in every member before parsing any file,
+// matching runtime package preparation even when a definition is internal.
+func generatePackage(manifest *packages.Manifest) error {
+	registry := parser.NewInfixRegistry()
+	inputs := make(map[string][]byte)
+	for _, member := range manifest.Members() {
+		input, err := os.ReadFile(member.Path())
+		if err != nil {
+			return err
+		}
+		inputs[member.Path()] = input
+		for _, declaration := range parser.DiscoverOperatorDeclarations(string(input), member.Path()) {
+			if message := registry.Predefine(declaration); message != "" {
+				return fmt.Errorf("%s:%d:%d: %s", declaration.Position.Source, declaration.Position.Line, declaration.Position.Column, message)
+			}
+		}
+	}
+	for _, member := range manifest.Members() {
+		logicalPath := member.Path()
+		input := inputs[logicalPath]
+		program, parseError := evaluator.ParseSourceWithRegistry(logicalPath, input, registry)
+		if parseError != nil {
+			return fmt.Errorf("parse %s: %s", logicalPath, parseError.MessageText())
+		}
+		if err := astcache.Store(logicalPath, input, program); err != nil {
+			return fmt.Errorf("cache %s: %w", logicalPath, err)
+		}
+		fmt.Println("generated", astcache.Path(logicalPath))
+	}
+	return nil
 }
 
 func fatal(err error) {

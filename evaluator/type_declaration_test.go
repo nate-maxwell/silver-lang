@@ -102,6 +102,7 @@ func TestTypeDeclarationFailures(t *testing.T) {
 
 func TestExportedTypeDeclarations(t *testing.T) {
 	dir := t.TempDir()
+	writePackageManifest(t, dir, "library.slv")
 	libraryPath, mainPath := filepath.Join(dir, "library.slv"), filepath.Join(dir, "main.slv")
 	writeSilverFile(t, libraryPath, `export { Point, Direction, Names, Transform, Read }
 type Point = struct { x: float, y: float }

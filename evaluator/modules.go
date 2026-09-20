@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"silver/ast"
 	"silver/astcache"
@@ -12,6 +13,7 @@ import (
 	"silver/packages"
 	"silver/parser"
 	"silver/source"
+	"silver/stdlib"
 	"strings"
 )
 
@@ -28,7 +30,10 @@ func (e *Evaluator) EvalFile(path string, env *object.Environment) object.Object
 	if err := e.refreshPackageIndex(); err != nil {
 		return newError(object.RuntimeErrorKindImport, "could not load SILVER_PATH: %s", err)
 	}
-	manifest := e.packages.ManifestFor(absolutePath)
+	manifest, err := e.packages.DiscoverFor(absolutePath)
+	if err != nil {
+		return newError(object.RuntimeErrorKindImport, "could not load package for %q: %s", absolutePath, err)
+	}
 
 	program, parseError := e.parseFile(absolutePath, manifest)
 	if parseError != nil {
@@ -52,13 +57,32 @@ func (e *Evaluator) importModule(path string, env *object.Environment) object.Ob
 			return module, nil
 		})
 	}
-	if source, sourceName, cache, ok := e.standardLibrary.LookupSourceModule(path); ok {
-		return e.importSourceModule(path, sourceName, source, cache)
+	if module, ok := e.standardLibrary.LookupSource(path); ok {
+		return e.importSourceModule(module)
+	}
+	if strings.HasPrefix(env.PackageID(), "stdlib:") {
+		if module, ok := e.standardLibrary.LookupRelativeSource(path, env.SourceDir()); ok {
+			return e.importSourceModule(module)
+		}
 	}
 
 	absolutePath, manifest, err := e.resolveImportPath(path, env.SourceDir())
 	if err != nil {
 		return newError(object.RuntimeErrorKindImport, "could not resolve import %q: %s", path, err)
+	}
+	if manifest == nil {
+		if _, err := os.Stat(absolutePath); err != nil {
+			return newError(object.RuntimeErrorKindImport, "could not read %q: %s", absolutePath, err)
+		}
+		return newError(object.RuntimeErrorKindImport,
+			"cannot import %q: a package YAML manifest is required; list the file in members or export in package.yaml", absolutePath)
+	}
+	// Check before consulting the module cache: moving or removing a manifest
+	// must not leave an already-indexed package importable as a standalone file.
+	if info, err := os.Stat(manifest.Path()); err != nil {
+		return newError(object.RuntimeErrorKindImport, "cannot import %q: required package YAML manifest %q is unavailable: %s", absolutePath, manifest.Path(), err)
+	} else if !info.Mode().IsRegular() {
+		return newError(object.RuntimeErrorKindImport, "cannot import %q: required package YAML manifest %q is not a regular file", absolutePath, manifest.Path())
 	}
 
 	id := source.FileID(absolutePath)
@@ -75,9 +99,7 @@ func (e *Evaluator) evaluateFileModule(id source.ModuleID, absolutePath string, 
 
 	moduleEnv := object.NewEnvironment()
 	moduleEnv.SetSourceDir(filepath.Dir(absolutePath))
-	if manifest != nil {
-		moduleEnv.SetPackageID(manifest.ID())
-	}
+	moduleEnv.SetPackageID(manifest.ID())
 	e.pushContext("<module>")
 	defer e.popContext()
 	result := e.Eval(program, moduleEnv)
@@ -96,30 +118,25 @@ func (e *Evaluator) evaluateFileModule(id source.ModuleID, absolutePath string, 
 // It deliberately uses the same isolated environment, cache, and circular
 // import protection as file modules, while retaining its bare import name as
 // the module identity.
-func (e *Evaluator) importSourceModule(name, sourceName, input string, cache []byte) object.Object {
-	return e.modules.load(source.BundledID(name), name, func() (*object.Module, *object.Error) {
-		return e.evaluateSourceModule(name, sourceName, input, cache)
+func (e *Evaluator) importSourceModule(module stdlib.SourceModule) object.Object {
+	return e.modules.load(source.BundledID(module.Name), module.Name, func() (*object.Module, *object.Error) {
+		return e.evaluateSourceModule(module)
 	})
 }
 
-func (e *Evaluator) evaluateSourceModule(name, sourceName, input string, cache []byte) (*object.Module, *object.Error) {
-	sourceBytes := []byte(input)
-	program, cached := astcache.LoadBytes(sourceName, sourceBytes, cache)
-	packageID := "stdlib"
-	registry := e.operatorScope(packageID).registry
-	if registry.HasUserOperators() || bytes.Contains(sourceBytes, []byte("operator")) {
-		cached = false
+func (e *Evaluator) evaluateSourceModule(module stdlib.SourceModule) (*object.Module, *object.Error) {
+	state, parseError := e.prepareSourcePackage(module)
+	if parseError != nil {
+		return nil, parseError
 	}
-	if !cached {
-		var parseError *object.Error
-		program, parseError = parseSourceWithRegistry(sourceName, sourceBytes, registry)
-		if parseError != nil {
-			return nil, parseError
-		}
-	}
+	program := state.programs[source.BundledID(module.Name)]
 
 	moduleEnv := object.NewEnvironment()
-	moduleEnv.SetPackageID(packageID)
+	moduleEnv.SetPackageID(module.PackageID)
+	moduleEnv.SetSourceDir(path.Dir(module.SourceName))
+	for name, binding := range module.NativeBindings {
+		moduleEnv.Set(name, binding)
+	}
 	e.pushContext("<module>")
 	defer e.popContext()
 	result := e.Eval(program, moduleEnv)
@@ -131,7 +148,7 @@ func (e *Evaluator) evaluateSourceModule(name, sourceName, input string, cache [
 	if exportError != nil {
 		return nil, exportError
 	}
-	return &object.Module{ID: source.BundledID(name), Path: name, Exports: exports}, nil
+	return &object.Module{ID: source.BundledID(module.Name), Path: module.Name, Exports: exports}, nil
 }
 
 // moduleExports returns every top-level binding unless the program contains
@@ -163,15 +180,15 @@ func (e *Evaluator) moduleExports(program *ast.Program, env *object.Environment)
 }
 
 // resolveImportPath checks the importer directory first, then package
-// manifests, explicit source files, and legacy directory entries in
-// SILVER_PATH.
+// manifest exports in SILVER_PATH.
 func (e *Evaluator) resolveImportPath(path, sourceDir string) (string, *packages.Manifest, error) {
 	if err := e.refreshPackageIndex(); err != nil {
 		return "", nil, fmt.Errorf("could not load SILVER_PATH: %w", err)
 	}
 	if filepath.IsAbs(path) {
 		absolute := filepath.Clean(path)
-		return absolute, e.packages.ManifestFor(absolute), nil
+		manifest, err := e.packages.DiscoverFor(absolute)
+		return absolute, manifest, err
 	}
 	if sourceDir == "" {
 		var err error
@@ -186,7 +203,8 @@ func (e *Evaluator) resolveImportPath(path, sourceDir string) (string, *packages
 	}
 	localPath = filepath.Clean(localPath)
 	if importCandidateExists(localPath) {
-		return localPath, e.packages.ManifestFor(localPath), nil
+		manifest, err := e.packages.DiscoverFor(localPath)
+		return localPath, manifest, err
 	}
 	if exposed, manifest, ok, err := e.packages.Resolve(path); err != nil {
 		return "", nil, err
@@ -227,7 +245,7 @@ func (e *Evaluator) parseFile(path string, manifest *packages.Manifest) (*ast.Pr
 	if program, ok := astcache.Load(path, input); ok && !registry.HasUserOperators() && !bytes.Contains(input, []byte("operator")) {
 		return program, nil
 	}
-	program, parseError := parseSourceWithRegistry(path, input, registry)
+	program, parseError := ParseSourceWithRegistry(path, input, registry)
 	if parseError != nil {
 		return nil, parseError
 	}
@@ -247,7 +265,10 @@ func ParseSource(sourceName string, input []byte) (*ast.Program, *object.Error) 
 	return finishParse(sourceName, p)
 }
 
-func parseSourceWithRegistry(sourceName string, input []byte, registry *parser.InfixRegistry) (*ast.Program, *object.Error) {
+// ParseSourceWithRegistry parses and optimizes a source with a shared package
+// operator registry. Package tooling must predefine all member declarations
+// before parsing the first file, just as runtime package preparation does.
+func ParseSourceWithRegistry(sourceName string, input []byte, registry *parser.InfixRegistry) (*ast.Program, *object.Error) {
 	p := parser.NewWithInfixRegistry(lexer.NewWithSource(string(input), sourceName), registry)
 	return finishParse(sourceName, p)
 }

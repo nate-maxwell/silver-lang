@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"testing/fstest"
 )
 
 func TestReadManifest(t *testing.T) {
@@ -80,6 +81,8 @@ func TestDecodeManifestRejectsInvalidYAML(t *testing.T) {
 		{name: "package is not a string", input: "package: true\nexport: []", message: "must be a string"},
 		{name: "export is not a list", input: "package: example\nexport: source.slv", message: "cannot unmarshal"},
 		{name: "export path is not a string", input: "package: example\nexport: [42]", message: "must be a string"},
+		{name: "members is not a list", input: "package: example\nexport: []\nmembers: helper.slv", message: "cannot unmarshal"},
+		{name: "member path is not a string", input: "package: example\nexport: []\nmembers: [42]", message: "must be a string"},
 		{name: "multiple documents", input: "package: example\nexport: []\n---\npackage: other\nexport: []", message: "multiple YAML documents"},
 	}
 
@@ -91,6 +94,51 @@ func TestDecodeManifestRejectsInvalidYAML(t *testing.T) {
 			}
 			if !strings.Contains(err.Error(), test.message) {
 				t.Fatalf("error is %q, want %q", err, test.message)
+			}
+		})
+	}
+}
+
+func TestManifestSeparatesMembersFromExports(t *testing.T) {
+	files := fstest.MapFS{
+		"library/package.yaml": {Data: []byte("package: library\nmembers: [api.slv, helper.slv]\nexport: [api.slv]\n")},
+		"library/api.slv":      {Data: []byte("let value = 42")},
+		"library/helper.slv":   {Data: []byte("let value = 21")},
+	}
+	manifest, err := ReadManifestFS(files, "library/package.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := manifest.Exports(); len(got) != 1 || got[0].Path() != "library/api.slv" {
+		t.Fatalf("exports = %#v, want only api.slv", got)
+	}
+	members := manifest.Members()
+	if len(members) != 2 || members[1].Path() != "library/helper.slv" {
+		t.Fatalf("members = %#v, want api.slv and helper.slv once each", members)
+	}
+	members[0] = File{}
+	if manifest.Members()[0].Path() != "library/api.slv" {
+		t.Fatal("Members exposed mutable manifest state")
+	}
+}
+
+func TestReadManifestRejectsInvalidMembers(t *testing.T) {
+	dir := t.TempDir()
+	writeTestFile(t, filepath.Join(dir, "source.slv"), "let value = 1")
+	writeTestFile(t, filepath.Join(dir, "wrong.txt"), "not Silver")
+	for _, test := range []struct{ name, members, message string }{
+		{"outside root", "[../outside.slv]", "leaves the package root"},
+		{"absolute", "[" + filepath.ToSlash(filepath.Join(dir, "source.slv")) + "]", "must be relative"},
+		{"missing", "[missing.slv]", "could not access member"},
+		{"wrong extension", "[wrong.txt]", "is not a .slv file"},
+		{"directory", "[.]", "not a regular file"},
+		{"duplicate", "[source.slv, ./source.slv]", "duplicate member"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			filename := filepath.Join(dir, "package.yaml")
+			writeTestFile(t, filename, "package: example\nexport: []\nmembers: "+test.members+"\n")
+			if _, err := ReadManifest(filename); err == nil || !strings.Contains(err.Error(), test.message) {
+				t.Fatalf("ReadManifest error = %v, want %q", err, test.message)
 			}
 		})
 	}

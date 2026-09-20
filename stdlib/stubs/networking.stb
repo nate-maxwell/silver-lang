@@ -48,7 +48,7 @@ type Connection = struct {
     # Connection represents one connected TCP stream or UDP socket. write_to and
     # read_from are only valid on UDP connections created with Network.UDP;
     # calling them on a TCP connection returns WriteError/ReadError. address is
-    # this connection's own local address as a string.
+    # the remote TCP address or this UDP socket's usable local address.
     address: str
     read: call(bytes: int) str | ReadError
     write: call(data: str) | WriteError
@@ -79,4 +79,12 @@ let listen = fn(address: str) Listener | ListenError {
     # ":port" to listen on all interfaces). Call Listener.accept in a loop
     # to receive incoming Connection values; each call blocks until a client
     # connects.
+}
+
+let dial_tcp = fn(address: str) Connection | ConnectionError {
+    # Connect over TCP, equivalent to dial(Network.TCP, address).
+}
+
+let dial_udp = fn(address: str) Connection | ConnectionError {
+    # Create a UDP socket, equivalent to dial(Network.UDP, address).
 }

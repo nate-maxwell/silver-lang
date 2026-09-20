@@ -69,6 +69,7 @@ func TestUnknownType(t *testing.T) {
 
 func TestModuleTypeAnnotationAcceptsImportedModules(t *testing.T) {
 	dir := t.TempDir()
+	writePackageManifest(t, dir, "library.slv")
 	libraryPath := filepath.Join(dir, "library.slv")
 	mainPath := filepath.Join(dir, "main.slv")
 	writeSilverFile(t, libraryPath, `let double = fn(value: int) int { return value * 2 }`)

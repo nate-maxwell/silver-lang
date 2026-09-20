@@ -1,0 +1,8 @@
+package: http
+members: []
+export:
+  - ./client.slv
+  - ./cookiejar.slv
+  - ./cookies.slv
+  - ./http.slv
+  - ./server.slv

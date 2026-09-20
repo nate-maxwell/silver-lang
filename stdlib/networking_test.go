@@ -9,10 +9,40 @@ import (
 const networkingImport = `let net = import("networking")
 `
 
+func TestNetworkingExportsDocumentedTypes(t *testing.T) {
+	evaluated := testEval(`import("networking")`)
+	module, ok := evaluated.(*object.Module)
+	if !ok {
+		t.Fatalf("import failed: %s", evaluated.Inspect())
+	}
+	for _, name := range []string{"Connection", "Listener", "ReadFromResult", "ConnectionError", "ListenError", "ReadError", "WriteError"} {
+		definition, _ := object.BuiltinStructDefinitionByName(name)
+		if module.Exports[name] != definition {
+			t.Errorf("networking.%s does not expose the socket's nominal type", name)
+		}
+	}
+	if _, exists := module.Exports["_native"]; exists {
+		t.Fatal("implementation module leaked into public exports")
+	}
+	testBooleanObject(t, testEval(networkingImport+`
+let same_module = import("networking")
+assert net == same_module
+let legacy = import("_networking")
+assert legacy == net
+assert legacy.Network == net.Network
+assert legacy.dial_tcp == net.dial_tcp
+try {
+    net.dial_tcp("not-an-address")
+    False
+} catch net.ConnectionError err {
+    err.message != ""
+}`), true)
+}
+
 func TestNetworkingTCPRoundTrip(t *testing.T) {
-	input := `let listener: Listener = net.listen("127.0.0.1:0")
-let connection: Connection = net.dial(net.Network.TCP, listener.address)
-let peer: Connection = listener.accept()
+	input := `let listener: net.Listener = net.listen("127.0.0.1:0")
+let connection: net.Connection = net.dial(net.Network.TCP, listener.address)
+let peer: net.Connection = listener.accept()
 connection.write("hello over tcp")
 let data = peer.read(1024)
 peer.write(data)
@@ -22,12 +52,18 @@ connection.close()
 listener.close()
 response`
 
-	result, ok := testEval(networkingImport + input).(*object.String)
-	if !ok {
-		t.Fatalf("result is %T (%v), want a string", result, result)
-	}
-	if got, want := result.Value, "hello over tcp"; got != want {
-		t.Fatalf("response is %q, want %q", got, want)
+	for name, dial := range map[string]string{
+		"generic": `net.dial(net.Network.TCP, listener.address)`,
+		"tcp":     `net.dial_tcp(listener.address)`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			program := strings.Replace(input, `net.dial(net.Network.TCP, listener.address)`, dial, 1)
+			evaluated := testEval(networkingImport + program)
+			result, ok := evaluated.(*object.String)
+			if !ok || result.Value != "hello over tcp" {
+				t.Fatalf("response is %s, want hello over tcp", evaluated.Inspect())
+			}
+		})
 	}
 }
 
@@ -35,17 +71,23 @@ func TestNetworkingUDPRoundTrip(t *testing.T) {
 	input := `let receiver = net.dial(net.Network.UDP, "127.0.0.1:9")
 let sender = net.dial(net.Network.UDP, "127.0.0.1:9")
 sender.write_to("hello over udp", receiver.address)
-let packet: ReadFromResult = receiver.read_from(1024)
+let packet: net.ReadFromResult = receiver.read_from(1024)
 sender.close()
 receiver.close()
 packet.data`
 
-	result, ok := testEval(networkingImport + input).(*object.String)
-	if !ok {
-		t.Fatalf("result is %T (%v), want a string", result, result)
-	}
-	if got, want := result.Value, "hello over udp"; got != want {
-		t.Fatalf("packet data is %q, want %q", got, want)
+	for name, dial := range map[string]string{
+		"generic": `net.dial(net.Network.UDP, `,
+		"udp":     `net.dial_udp(`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			program := strings.ReplaceAll(input, `net.dial(net.Network.UDP, `, dial)
+			evaluated := testEval(networkingImport + program)
+			result, ok := evaluated.(*object.String)
+			if !ok || result.Value != "hello over udp" {
+				t.Fatalf("packet data is %s, want hello over udp", evaluated.Inspect())
+			}
+		})
 	}
 }
 
@@ -76,14 +118,16 @@ packet.data`
 }
 
 func TestNetworkingExposesDeclaredSignatures(t *testing.T) {
-	input := `let dialer: call(network: net.Network, address: str) Connection | ConnectionError = net.dial
-let listener_factory: call(address: str) Listener | ListenError = net.listen
+	input := `let dialer: call(network: net.Network, address: str) net.Connection | net.ConnectionError = net.dial
+let tcp_dialer: call(address: str) net.Connection | net.ConnectionError = net.dial_tcp
+let udp_dialer: call(address: str) net.Connection | net.ConnectionError = net.dial_udp
+let listener_factory: call(address: str) net.Listener | net.ListenError = net.listen
 let connection = net.dial(net.Network.UDP, "127.0.0.1:9")
-let reader: call(bytes: int) str | ReadError = connection.read
-let writer: call(data: str) | WriteError = connection.write
-let write_to: call(data: str, address: str) | WriteError = connection.write_to
-let read_from: call(bytes: int) ReadFromResult | ReadError = connection.read_from
-let closer: call() | ConnectionError = connection.close
+let reader: call(bytes: int) str | net.ReadError = connection.read
+let writer: call(data: str) | net.WriteError = connection.write
+let write_to: call(data: str, address: str) | net.WriteError = connection.write_to
+let read_from: call(bytes: int) net.ReadFromResult | net.ReadError = connection.read_from
+let closer: call() | net.ConnectionError = connection.close
 connection.close()
 True`
 	testBooleanObject(t, testEval(networkingImport+input), true)
@@ -161,7 +205,7 @@ func TestNetworkingRejectsInvalidArguments(t *testing.T) {
 	}{
 		{input: `net.dial(net.Network.TCP)`, message: "wrong number of arguments. got=1, want=2"},
 		{input: `net.dial("tcp", "localhost:80")`, message: `type mismatch for parameter "network": expected Network, got str`},
-		{input: `net.listen(1)`, message: `type mismatch for parameter "address": expected str, got int`},
+		{input: `net.listen(1)`, message: "argument 1 to `listen` must be STRING, got INTEGER"},
 		{input: `let connection = net.dial(net.Network.UDP, "127.0.0.1:9")
 connection.read(-1)`, message: "argument to `Connection.read` must be nonnegative"},
 	}

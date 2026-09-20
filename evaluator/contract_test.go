@@ -262,6 +262,7 @@ let f: call(str) int | ValueError = codepoint`, `binding "f": expected call(str)
 
 func TestQualifiedContractsSurviveModuleRebinding(t *testing.T) {
 	dir := t.TempDir()
+	writePackageManifest(t, dir, "box.slv")
 	writeSilverFile(t, filepath.Join(dir, "box.slv"), `export { Box }
 type Box = struct { x: int }`)
 	mainPath := filepath.Join(dir, "main.slv")

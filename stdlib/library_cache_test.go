@@ -10,7 +10,7 @@ import (
 func TestEmbeddedSilverModuleCacheIsCurrent(t *testing.T) {
 	library := New(io.Discard, &object.Null{}, &object.Boolean{Value: true}, &object.Boolean{Value: false})
 	for name, module := range library.sourceModules {
-		if _, ok := astcache.LoadBytes(module.sourceName, []byte(module.source), module.cache); !ok {
+		if _, ok := astcache.LoadBytes(module.SourceName, []byte(module.Source), module.Cache); !ok {
 			t.Errorf("embedded AST cache for Silver module %q is missing or stale; run go generate ./stdlib", name)
 		}
 	}
@@ -37,7 +37,7 @@ func TestJSONIsSilverAuthoredModule(t *testing.T) {
 		t.Fatal("json is registered as a native Go module")
 	}
 	module, silver := library.sourceModules["json"]
-	if !silver || module.sourceName != "stdlib/silver/json/json.slv" {
+	if !silver || module.SourceName != "stdlib/silver/json/json.slv" {
 		t.Fatalf("json Silver source module is %#v, present=%t", module, silver)
 	}
 }
@@ -48,7 +48,7 @@ func TestPathIsSilverAuthoredModule(t *testing.T) {
 		t.Fatal("path is registered as a native Go module")
 	}
 	module, silver := library.sourceModules["path"]
-	if !silver || module.sourceName != "stdlib/silver/path/path.slv" {
+	if !silver || module.SourceName != "stdlib/silver/path/path.slv" {
 		t.Fatalf("path Silver source module is %#v, present=%t", module, silver)
 	}
 }

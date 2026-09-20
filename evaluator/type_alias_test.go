@@ -158,6 +158,7 @@ func TestArrayCallableCompatibility(t *testing.T) {
 
 func TestExportedTypeAlias(t *testing.T) {
 	dir := t.TempDir()
+	writePackageManifest(t, dir, "library.slv")
 	libraryPath, mainPath := filepath.Join(dir, "library.slv"), filepath.Join(dir, "main.slv")
 	writeSilverFile(t, libraryPath, `export { Read, make }
 type Item = struct { value: int }

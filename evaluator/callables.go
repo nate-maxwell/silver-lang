@@ -75,19 +75,19 @@ func (e *Evaluator) applyUserFunction(fn *object.Function, args []object.Object,
 	// replace a pending return or error, and that replacement must pass through
 	// the same declared-error checks as a failure from the body.
 	evaluated = e.runDefers(extendedEnv, evaluated)
-	if error, ok := evaluated.(*object.Error); ok {
-		if error.IsRuntimeError() {
-			return error
+	if err, ok := evaluated.(*object.Error); ok {
+		if err.IsRuntimeError() {
+			return err
 		}
-		if !matchesDeclaredError(fn.ErrorTypes, error.Value) {
+		if !matchesDeclaredError(fn.ErrorTypes, err.Value) {
 			return newError(
 				object.RuntimeErrorKindRuntime,
 				"error %s escaped %q but is not declared in its return union",
-				error.Value.Struct.Name,
+				err.Value.Struct.Name,
 				contextName,
 			)
 		}
-		return error
+		return err
 	}
 	returned, didReturn := evaluated.(*object.ReturnValue)
 	if didReturn {

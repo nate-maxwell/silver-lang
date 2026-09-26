@@ -8,10 +8,10 @@ import (
 	"testing"
 )
 
-const jsonImport = "let json = import(\"json\")\n"
+const jsonImport = "let json = import(\"core:json\")\n"
 
 func TestJSONLoadsBuildsNestedSilverValues(t *testing.T) {
-	input := `let maps = import("maps")
+	input := `let maps = import("core:maps")
 let value = json.loads("{\"project\":{\"name\":\"Silver\",\"active\":true},\"versions\":[1,2.5,null]}")
 let project = maps.get(value, "project")
 let versions = maps.get(value, "versions")
@@ -97,7 +97,7 @@ func TestJSONLoadsRejectsEmptyAndTrailingData(t *testing.T) {
 }
 
 func TestJSONDumpsRoundTripsNestedValues(t *testing.T) {
-	input := `let maps = import("maps")
+	input := `let maps = import("core:maps")
 let source = json.loads("{\"nested\":{\"values\":[1,true,null]}}")
 let encoded = json.dumps(source)
 let decoded = json.loads(encoded)
@@ -139,7 +139,7 @@ func TestJSONDumpsRejectsCircularValuesAndNonFiniteFloats(t *testing.T) {
 		{input: `let value = [0]
 value[0] = value
 json.dumps(value)`, message: "circular reference detected while encoding JSON"},
-		{input: `json.dumps(import("math").nan)`, message: "out of range float values are not JSON compliant"},
+		{input: `json.dumps(import("core:math").nan)`, message: "out of range float values are not JSON compliant"},
 	}
 	for _, tt := range tests {
 		result, ok := testEval(jsonImport + tt.input).(*object.Error)
@@ -178,8 +178,8 @@ func TestJSONLoadAndDumpUseFiles(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	input := `let io = import("io")
-let maps = import("maps")
+	input := `let io = import("core:io")
+let maps = import("core:maps")
 let file = io.open(` + silverString(path) + `)
 json.dump({"nested": {"answer": 42}}, file, 2)
 let value = json.load(file)

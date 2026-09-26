@@ -1,5 +1,5 @@
-# Editor stub for import("core"). These three functions are commonly used
-# enough that many programs alias them locally, e.g. `let len = import("core").len`.
+# Editor stub for import("core:core"). These three functions are commonly used
+# enough that many programs alias them locally, e.g. `let len = import("core:core").len`.
 
 let len = fn(value) int {
     # Return the number of array elements, map pairs, or string bytes in

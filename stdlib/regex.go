@@ -7,7 +7,7 @@ import (
 )
 
 // regexDefinitions contains the regular-expression functions exported by
-// import("regex"). Patterns use Go's RE2 syntax, which guarantees linear-time
+// import("core:regex"). Patterns use Go's RE2 syntax, which guarantees linear-time
 // matching and supports both numbered and named capture groups.
 func regexDefinitions(null *object.Null) []definition {
 	matchType, expressionType := newRegexStructDefinitions()

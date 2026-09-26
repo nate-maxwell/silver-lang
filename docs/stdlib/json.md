@@ -4,7 +4,7 @@
 Parsing and encoding are implemented in Silver; `load` and `dump` delegate only file reads and writes to `io`.
 
 ```silver
-let json = import("json")
+let json = import("core:json")
 
 let value = json.loads("{\"name\":\"Silver\",\"ready\":true}")
 let pretty = json.dumps(value, 2)

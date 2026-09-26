@@ -2,12 +2,12 @@
 # Requests use plain HTTP URLs; TLS/HTTPS and redirects are intentionally left
 # to callers.
 
-let _arrays = import("arrays")
-let _core = import("core")
-let _maps = import("maps")
-let _net = import("networking")
-let _strings = import("string")
-let _http = import("http")
+let _arrays = import("core:arrays")
+let _core = import("core:core")
+let _maps = import("core:maps")
+let _net = import("core:networking")
+let _strings = import("core:string")
+let _http = import("core:http")
 
 type Request = struct {
     method: str

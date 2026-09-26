@@ -1,4 +1,4 @@
-# Editor stub for import("args").
+# Editor stub for import("core:args").
 #
 # A command-line argument parser implemented entirely in Silver. Build a
 # Parser with new, register Argument values with Parser.add, then call

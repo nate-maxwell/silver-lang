@@ -142,15 +142,15 @@ HA{A{20}}.value.x + HB{B{22}}.value.x`,
 let saved = Box{42}
 let factory = fn() Box { return saved }
 Box = 1
-let values = import("collections").defaultmap(factory)
+let values = import("core:collections").defaultmap(factory)
 values[0].x`,
-		"native nominal return": `let time = import("time")
+		"native nominal return": `let time = import("core:time")
 let now: call() time.Time = time.now
 time = 1
 now = now
 now()
 42`,
-		"native error shadowing": `let string = import("string")
+		"native error shadowing": `let string = import("core:string")
 let BuiltinError = ValueError
 let codepoint: call(str) int | ValueError = string.codepoint
 let ValueError = 1
@@ -242,7 +242,7 @@ let T = A
 let f = fn() | T { return B{2} }
 T = B
 f()`, `return value of "f": expected null | T, got B`},
-		{"native error identity", `let codepoint = import("string").codepoint
+		{"native error identity", `let codepoint = import("core:string").codepoint
 type ValueError = struct { message: str }
 let f: call(str) int | ValueError = codepoint`, `binding "f": expected call(str) int | ValueError, got call`},
 	} {
@@ -266,7 +266,7 @@ func TestQualifiedContractsSurviveModuleRebinding(t *testing.T) {
 	writeSilverFile(t, filepath.Join(dir, "box.slv"), `export { Box }
 type Box = struct { x: int }`)
 	mainPath := filepath.Join(dir, "main.slv")
-	writeSilverFile(t, mainPath, `let library = import("./box.slv")
+	writeSilverFile(t, mainPath, `let library = import("fixture:box")
 let value: library.Box = library.Box{42}
 type Boxes = array[library.Box]
 type Holder = struct { value: library.Box }

@@ -10,7 +10,7 @@ import (
 	"unicode/utf8"
 )
 
-// stringDefinitions contains the functions exported by import("string").
+// stringDefinitions contains the functions exported by import("core:string").
 func stringDefinitions(trueValue, falseValue *object.Boolean) []definition {
 	return []definition{
 		{name: "capitalize", fn: stringCapitalize},

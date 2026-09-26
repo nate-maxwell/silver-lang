@@ -4,7 +4,7 @@
 is desired.
 
 ```silver
-let maps = import("maps")
+let maps = import("core:maps")
 let original = {"name": "Silver"}
 let updated = maps.set(original, "year", 2026)
 

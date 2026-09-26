@@ -24,7 +24,7 @@ func TestSuccessfulBlocksWithoutValuesProduceNull(t *testing.T) {
 		t.Run(expression, func(t *testing.T) {
 			testNullObject(t, evalInput(t, New(), object.NewEnvironment(), expression))
 			for _, annotation := range []string{"", ": null", ": any"} {
-				input := "let value" + annotation + " = " + expression + "\nimport(\"core\").type(value) == null && !value"
+				input := "let value" + annotation + " = " + expression + "\nimport(\"core:core\").type(value) == null && !value"
 				testBooleanObject(t, evalInput(t, New(), object.NewEnvironment(), input), true)
 			}
 		})
@@ -50,9 +50,9 @@ func TestValueExpressionRejectsEscapingControlFlow(t *testing.T) {
 		{"return operand", `return VALUE`},
 		{"assert condition", `assert VALUE`},
 		{"assert message", `assert False, VALUE`},
-		{"call argument", `import("core").type(VALUE)`},
+		{"call argument", `import("core:core").type(VALUE)`},
 		{"call target", `(VALUE)()`},
-		{"defer argument", `defer import("core").type(VALUE)`},
+		{"defer argument", `defer import("core:core").type(VALUE)`},
 		{"defer target", `defer (VALUE)()`},
 		{"import path", `import(VALUE)`},
 		{"member receiver", `(VALUE).value`},

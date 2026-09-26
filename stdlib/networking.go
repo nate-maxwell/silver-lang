@@ -8,7 +8,7 @@ import (
 	"sync"
 )
 
-// networkingDefinitions supplies the native bindings of import("networking").
+// networkingDefinitions supplies the native bindings of import("core:networking").
 // Its Silver entry file adds the protocol enum and generic dial function.
 func networkingDefinitions(null *object.Null) []definition {
 	definitions := []definition{

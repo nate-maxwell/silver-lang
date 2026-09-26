@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-const collectionsImport = "let collections = import(\"collections\")\n"
+const collectionsImport = "let collections = import(\"core:collections\")\n"
 
 func TestDequeOperations(t *testing.T) {
 	result := testEval(collectionsImport + `let values = collections.deque(8)
@@ -129,7 +129,7 @@ copied.append(4)
 }
 
 func TestDefaultMapSetAndNominalType(t *testing.T) {
-	result := testEval(collectionsImport + `let core = import("core")
+	result := testEval(collectionsImport + `let core = import("core:core")
 let make_count = fn() int { return 0 }
 let counts = collections.defaultmap(make_count)
 counts["silver"] = counts["silver"] + 1

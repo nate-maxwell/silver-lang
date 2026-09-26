@@ -3,7 +3,7 @@
 `io` exposes the evaluator's process streams, printing, and read/write files.
 
 ```silver
-let io = import("io")
+let io = import("core:io")
 
 io.print("hello", "Silver")   # arguments separated by spaces, no newline
 io.println("!")               # same formatting, then one newline

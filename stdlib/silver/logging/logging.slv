@@ -1,7 +1,7 @@
-let io = import("io")
-let net = import("networking")
-let pathlib = import("path")
-let times = import("time")
+let io = import("core:io")
+let net = import("core:networking")
+let pathlib = import("core:path")
+let times = import("core:time")
 
 type Level = enum {
     Debug,

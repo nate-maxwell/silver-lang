@@ -2,17 +2,22 @@ package packages
 
 import (
 	"fmt"
-	"path/filepath"
-	"silver/source"
+	"path"
+	"strings"
 )
 
-// Resolve searches for package exports in search-path
-// order. An exported file may be addressed by its declared path or basename.
-//
-// A successful lookup always has a manifest. If no entry matches, Resolve returns an
-// empty path, a nil Manifest, false, and a nil error. Resolve returns an error
-// when the index has not been refreshed or its latest refresh failed.
+// Resolve finds an exported <package>:<module> in registered package manifests.
 func (index *Index) Resolve(request string) (string, *Manifest, bool, error) {
+	return index.ResolveFrom(request, "")
+}
+
+// ResolveFrom also permits a package to import its own declared internal members.
+// The first registered manifest with a matching name owns the entire namespace.
+func (index *Index) ResolveFrom(request, importerPackageID string) (string, *Manifest, bool, error) {
+	packageName, moduleName, err := ParseImport(request)
+	if err != nil {
+		return "", nil, false, err
+	}
 	index.mu.RLock()
 	defer index.mu.RUnlock()
 	if !index.initialized {
@@ -21,23 +26,20 @@ func (index *Index) Resolve(request string) (string, *Manifest, bool, error) {
 	if index.err != nil {
 		return "", nil, false, index.err
 	}
-
-	wanted := cleanImportName(request)
-	for _, entry := range index.entries {
-		for _, manifest := range entry.manifests {
-			for _, exported := range manifest.exports {
-				if matchesExposedFile(wanted, filepath.Base(exported.path), exported.declared) {
-					return exported.path, index.byFile[source.FileID(exported.path)], true, nil
-				}
+	for _, manifest := range index.entries {
+		if manifest.Name() != packageName {
+			continue
+		}
+		files := manifest.exports
+		if manifest.ID() == importerPackageID {
+			files = manifest.members
+		}
+		for _, file := range files {
+			if strings.TrimSuffix(file.declared, path.Ext(file.declared)) == moduleName {
+				return file.path, manifest, true, nil
 			}
 		}
+		return "", nil, false, nil
 	}
 	return "", nil, false, nil
-}
-
-// matchesExposedFile reports whether an import request matches an exposed
-// file's basename or its manifest-declared relative path.
-func matchesExposedFile(wanted, base, declared string) bool {
-	wantedKey := source.PathKey(wanted)
-	return wantedKey == source.PathKey(base) || declared != "" && wantedKey == source.PathKey(declared)
 }

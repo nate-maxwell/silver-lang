@@ -1,7 +1,9 @@
 package stdlib_test
 
 import (
+	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
 	"silver/internal/version"
 	"silver/object"
@@ -9,7 +11,7 @@ import (
 	"testing"
 )
 
-const systemImport = `let system = import("system")
+const systemImport = `let system = import("core:system")
 `
 
 func TestSystemVersion(t *testing.T) {
@@ -90,7 +92,7 @@ func TestSystemEnvironmentFunctions(t *testing.T) {
 		t.Fatalf("getenv returned %T (%v), want after", value, value)
 	}
 
-	input := `let maps = import("maps")
+	input := `let maps = import("core:maps")
 maps.get(system.environment(), "` + key + `")`
 	value, ok = testEval(systemImport + input).(*object.String)
 	if !ok || value.Value != "after" {
@@ -117,16 +119,29 @@ func TestSystemSilverPathHelpers(t *testing.T) {
 	}
 
 	t.Setenv(silverPathName, "")
-	testNullObject(t, testEval(systemImport+`system.append_path("first")`))
-	if value := os.Getenv(silverPathName); value != "first" {
-		t.Fatalf("append_path on an empty value produced %q, want first", value)
+	var paths []string
+	for i := 0; i < 2; i++ {
+		filename := filepath.Join(t.TempDir(), "package.yaml")
+		if err := os.WriteFile(filename, []byte(fmt.Sprintf("package: example%d\nexport: []\n", i)), 0644); err != nil {
+			t.Fatal(err)
+		}
+		paths = append(paths, filename)
+		testNullObject(t, testEval(systemImport+fmt.Sprintf("system.append_path(%q)", filename)))
+		if value, want := os.Getenv(silverPathName), strings.Join(paths, string(os.PathListSeparator)); value != want {
+			t.Fatalf("append_path = %q, want %q", value, want)
+		}
+	}
+	for _, invalid := range []string{filepath.Dir(paths[0]), "", filepath.Join(t.TempDir(), "package.yaml"), "module.slv"} {
+		before := os.Getenv(silverPathName)
+		result := testEval(systemImport + fmt.Sprintf("system.append_path(%q)", invalid))
+		if _, ok := result.(*object.Error); !ok {
+			t.Fatalf("accepted invalid entry %q", invalid)
+		}
+		if os.Getenv(silverPathName) != before {
+			t.Fatal("failed registration mutated SILVER_PATH")
+		}
 	}
 
-	separatorText := string(os.PathListSeparator)
-	testNullObject(t, testEval(systemImport+`system.append_path("second")`))
-	if value, want := os.Getenv(silverPathName), "first"+separatorText+"second"; value != want {
-		t.Fatalf("append_path produced %q, want %q", value, want)
-	}
 }
 
 func TestSystemFunctionErrors(t *testing.T) {

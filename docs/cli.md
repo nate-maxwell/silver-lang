@@ -42,14 +42,17 @@ For example, `silver package init my_library` creates:
 
 ```yaml
 package: my_library
+authors: []
 members: []
 export: []
 ```
 
 Add relative `.slv` paths to `export` for public entry points and to `members` for internal files that share the package's
-operators. Exported files are automatically members. See
+operators. Exported files are automatically members. Register the manifest path with
+`import("core:system").append_path("./package.yaml")`, then import an exported `api.slv` as
+`import("my_library:api")`. See
 [Modules and imports](language_guide/modules.md#packages-and-yaml-manifests) for manifest rules and the
-[package example](../examples/packages/README.md) for runnable consumers.
+[package example](examples/packages/README.md) for a runnable consumer.
 
 ## Print the version
 

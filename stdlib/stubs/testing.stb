@@ -1,4 +1,4 @@
-# Editor stub for import("testing").
+# Editor stub for import("core:testing").
 #
 # A small stateful test runner implemented entirely in Silver. Assertion
 # helpers (fail, check, is_true, and so on) raise Silver's built-in

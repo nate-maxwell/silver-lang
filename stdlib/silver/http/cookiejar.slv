@@ -1,10 +1,10 @@
 # In-memory cookie storage and URL matching for HTTP clients.
 
-let _arrays = import("arrays")
-let _cookies = import("http/cookies")
-let _core = import("core")
-let _strings = import("string")
-let _time = import("time")
+let _arrays = import("core:arrays")
+let _cookies = import("core:http/cookies")
+let _core = import("core:core")
+let _strings = import("core:string")
+let _time = import("core:time")
 
 type JarError = struct {
     message: str

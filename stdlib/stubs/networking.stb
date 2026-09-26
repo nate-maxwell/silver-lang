@@ -1,4 +1,4 @@
-# Editor stub for import("networking").
+# Editor stub for import("core:networking").
 #
 # Blocking TCP and UDP sockets. Connection and Listener are struct values
 # whose call fields close over an underlying OS socket; every read or write

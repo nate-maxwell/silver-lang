@@ -6,7 +6,7 @@ import (
 )
 
 // Environment is a lexical scope. outer links closures and nested calls to
-// their parent scope, while sourceDir supplies the base for relative imports.
+// their parent scope, while sourceDir records the source location.
 // Function calls, modules, and scripts own deferred calls; their lexical child
 // scopes share that owner through deferOwner.
 type Environment struct {

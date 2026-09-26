@@ -6,6 +6,7 @@ import (
 	"runtime"
 	"silver/internal/version"
 	"silver/object"
+	"silver/packages"
 	"strings"
 	"sync"
 )
@@ -15,7 +16,7 @@ const silverPathEnvironmentName = "SILVER_PATH"
 var systemEnvironmentMu sync.Mutex
 
 // systemDefinitions contains host and process-environment information exposed
-// by import("system"). Queries return empty strings when the host cannot
+// by import("core:system"). Queries return empty strings when the host cannot
 // provide a value.
 func systemDefinitions(null *object.Null) []definition {
 	return []definition{
@@ -52,6 +53,10 @@ func systemAppendPath(null *object.Null) object.BuiltinFunction {
 		entry, err := requireString("append_path", 0, args[0])
 		if err != nil {
 			return err
+		}
+
+		if _, failure := packages.ReadRegisteredManifest(entry); failure != nil {
+			return newError(object.RuntimeErrorKindImport, "%s", failure)
 		}
 
 		systemEnvironmentMu.Lock()

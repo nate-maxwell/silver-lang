@@ -3,7 +3,7 @@
 `http/cookies` parses and serializes HTTP `Cookie` and `Set-Cookie` header values.
 
 ```silver
-let cookies = import("http/cookies")
+let cookies = import("core:http/cookies")
 
 let session = cookies.parse_set_cookie(
     "session=abc123; Path=/account; Max-Age=3600; HttpOnly; SameSite=Lax"

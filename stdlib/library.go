@@ -8,7 +8,6 @@ import (
 	"io"
 	"io/fs"
 	"path"
-	"path/filepath"
 	"silver/ast"
 	"silver/object"
 	"silver/packages"
@@ -222,15 +221,17 @@ func sourceImportName(packageName, declared string) string {
 	return path.Join(packageName, entry)
 }
 
-// LookupModule returns the standard-library module with the given bare import
-// name, such as "math".
+// LookupModule returns a native module using its core: qualified import name.
 func (l *Library) LookupModule(name string) (*object.Module, bool) {
-	module, ok := l.modules[name]
+	pkg, moduleName, err := packages.ParseImport(name)
+	if err != nil || pkg != "core" {
+		return nil, false
+	}
+	module, ok := l.modules[moduleName]
 	return module, ok
 }
 
-// LookupSourceModule returns an embedded Silver implementation registered for
-// the bare import name. Evaluation remains the evaluator's responsibility.
+// LookupSourceModule returns a public embedded Silver implementation.
 func (l *Library) LookupSourceModule(name string) (source, sourceName string, ok bool) {
 	module, ok := l.LookupSource(name)
 	if !ok {
@@ -239,25 +240,25 @@ func (l *Library) LookupSourceModule(name string) (source, sourceName string, ok
 	return module.Source, module.SourceName, true
 }
 
-// LookupSource returns a public entry declared by a bundled package manifest.
 func (l *Library) LookupSource(name string) (SourceModule, bool) {
-	// Keep the former native import as an alias of the complete public module.
-	// Returning its canonical Name also preserves evaluator cache/type identity.
-	if name == "_networking" {
-		name = "networking"
-	}
-	module, ok := l.sourceModules[name]
-	return module, ok
+	return l.LookupSourceFrom(name, "")
 }
 
-// LookupRelativeSource permits embedded members, including internal helpers,
-// to be imported relative to another embedded source's directory.
-func (l *Library) LookupRelativeSource(request, sourceDir string) (SourceModule, bool) {
-	if path.IsAbs(request) || filepath.IsAbs(request) {
+// LookupSourceFrom permits qualified internal imports within their owning group.
+func (l *Library) LookupSourceFrom(name, importerPackageID string) (SourceModule, bool) {
+	pkg, moduleName, err := packages.ParseImport(name)
+	if err != nil || pkg != "core" {
 		return SourceModule{}, false
 	}
-	module, ok := l.sourceFiles[path.Join(sourceDir, request)]
-	return module, ok
+	if module, ok := l.sourceModules[moduleName]; ok {
+		return module, true
+	}
+	for _, member := range l.sourcePackages[importerPackageID] {
+		if member.Name == moduleName {
+			return member, true
+		}
+	}
+	return SourceModule{}, false
 }
 
 // SourceMembers returns every source sharing the bundled package's grammar.

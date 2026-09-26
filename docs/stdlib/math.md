@@ -5,7 +5,7 @@ uses `inputs → result`; `numeric` means either `int` or `float`. Floating-poin
 math functions, so an operation such as `sqrt(-1)` produces NaN rather than a catchable domain exception.
 
 ```silver
-let math = import("math")
+let math = import("core:math")
 
 math.factorial(5)       # 120
 math.gcd([18, 24, 30])  # 6

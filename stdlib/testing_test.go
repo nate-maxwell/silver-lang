@@ -12,9 +12,9 @@ import (
 
 func TestSilverTestingModuleRunsTestsAndSuites(t *testing.T) {
 	result, output := evalTesting(t, `
-let t = import("testing")
-let strings = import("string")
-let math = import("math")
+let t = import("core:testing")
+let strings = import("core:string")
+let math = import("core:math")
 
 let add = fn(left: int, right: int) int { return left + right }
 
@@ -57,7 +57,7 @@ t.summary()
 
 func TestSilverTestingModuleRecordsAssertionHelpersAndReports(t *testing.T) {
 	result, output := evalTesting(t, `
-let t = import("testing")
+let t = import("core:testing")
 
 t.run("passing helper", fn() {
     t.is_true(True, "value should be true")
@@ -88,7 +88,7 @@ t.report()
 
 func TestSilverTestingModuleExposesResultsAndReset(t *testing.T) {
 	result, _ := evalTesting(t, `
-let t = import("testing")
+let t = import("core:testing")
 t.run("before reset", fn() { assert False, "broken" })
 let recorded = t.results()
 assert recorded[0].name == "before reset"
@@ -109,7 +109,7 @@ t.summary()
 
 func TestSilverTestingSuiteRestoresNestedNames(t *testing.T) {
 	_, output := evalTesting(t, `
-let t = import("testing")
+let t = import("core:testing")
 t.suite("outer", fn() {
     t.suite("inner", fn() {
         t.run("nested", fn() {})
@@ -132,8 +132,8 @@ t.run("top level", fn() {})
 
 func TestSilverTestingModuleCoexistsWithStandardStreams(t *testing.T) {
 	p := parser.New(lexer.New(`
-let t = import("testing")
-let io = import("io")
+let t = import("core:testing")
+let io = import("core:io")
 
 t.run("standard streams", fn() {
     t.equal(io.stdin.read(), "input", "stdin should remain available")

@@ -20,14 +20,9 @@ type Index struct {
 	mu          sync.RWMutex
 	initialized bool
 	searchPath  string
-	entries     []indexEntry
+	entries     []*Manifest
 	byFile      map[source.ModuleID]*Manifest
 	err         error
-}
-
-// indexEntry contains the manifests found in one search-path component.
-type indexEntry struct {
-	manifests []*Manifest
 }
 
 // NewIndex returns an empty package index. The caller must call Refresh before
@@ -38,8 +33,7 @@ func NewIndex() *Index {
 
 // Refresh loads the entries in the platform-separated searchPath.
 //
-// Directory entries expose only manifest exports. Manifest files may also be
-// listed directly; individual source-file entries are rejected. Refresh is a
+// Every entry must point to an existing package.yaml file. Refresh is a
 // no-op when searchPath has not changed and returns the result of the previous
 // load in that case.
 func (index *Index) Refresh(searchPath string) error {
@@ -59,75 +53,34 @@ func (index *Index) Refresh(searchPath string) error {
 		if strings.TrimSpace(rawEntry) == "" {
 			continue
 		}
-		entry, err := loadIndexEntry(rawEntry)
+		manifest, err := ReadRegisteredManifest(rawEntry)
 		if err != nil {
 			index.err = err
 			return err
 		}
-		index.entries = append(index.entries, entry)
-		for _, manifest := range entry.manifests {
-			if err := index.addManifest(manifest); err != nil {
-				index.err = err
-				return err
-			}
+		index.entries = append(index.entries, manifest)
+		if err := index.addManifest(manifest); err != nil {
+			index.err = err
+			return err
 		}
 	}
 	return nil
 }
 
-// loadIndexEntry classifies and loads one search-path entry.
-func loadIndexEntry(path string) (indexEntry, error) {
-	absolute, err := filepath.Abs(path)
+// ReadRegisteredManifest validates a SILVER_PATH entry. Only an existing
+// package.yaml file may be registered; directories and source files are errors.
+func ReadRegisteredManifest(filename string) (*Manifest, error) {
+	if source.PathKey(filepath.Base(filename)) != source.PathKey(manifestFilename) {
+		return nil, fmt.Errorf("search-path entry %q must be a package YAML manifest named package.yaml", filename)
+	}
+	info, err := os.Stat(filename)
 	if err != nil {
-		return indexEntry{}, err
+		return nil, fmt.Errorf("required package YAML manifest %q is unavailable: %w", filename, err)
 	}
-	absolute = filepath.Clean(absolute)
-	info, err := os.Stat(absolute)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return indexEntry{}, nil
-		}
-		return indexEntry{}, err
+	if !info.Mode().IsRegular() {
+		return nil, fmt.Errorf("search-path entry %q must be a regular package.yaml file", filename)
 	}
-
-	if info.IsDir() {
-		return loadDirectoryEntry(absolute)
-	}
-	if isManifestPath(absolute) {
-		manifest, err := ReadManifest(absolute)
-		if err != nil {
-			return indexEntry{}, err
-		}
-		return indexEntry{manifests: []*Manifest{manifest}}, nil
-	}
-	return indexEntry{}, fmt.Errorf("search-path entry %q must be a package YAML manifest or a directory containing manifests", absolute)
-}
-
-// loadDirectoryEntry loads every manifest immediately inside directory.
-// A directory without manifests exposes no files.
-func loadDirectoryEntry(directory string) (indexEntry, error) {
-	entry := indexEntry{}
-	candidates, err := os.ReadDir(directory)
-	if err != nil {
-		return indexEntry{}, err
-	}
-	for _, candidate := range candidates {
-		if candidate.IsDir() || !isManifestPath(candidate.Name()) {
-			continue
-		}
-		manifest, err := ReadManifest(filepath.Join(directory, candidate.Name()))
-		if err != nil {
-			return indexEntry{}, err
-		}
-		entry.manifests = append(entry.manifests, manifest)
-	}
-	return entry, nil
-}
-
-// isManifestPath reports whether path has a supported YAML manifest suffix.
-func isManifestPath(path string) bool {
-	extension := filepath.Ext(path)
-	return strings.EqualFold(extension, ".yaml") || strings.EqualFold(extension, ".yml")
+	return ReadManifest(filename)
 }
 
 // addManifest records ownership of every member and rejects ambiguous ownership.
@@ -158,10 +111,10 @@ func (index *Index) ManifestFor(path string) *Manifest {
 	return index.byFile[source.FileID(path)]
 }
 
-// DiscoverFor finds a file's package even when it is run or imported directly
+// DiscoverFor finds an entry script's package when it is run directly
 // without SILVER_PATH. The nearest package.yaml is the local package boundary;
-// only its declared members acquire package identity. Other manifest filenames
-// are supported through explicit search-path registration.
+// only its declared members acquire package identity. This does not register
+// the package for imports; its package.yaml must still be on SILVER_PATH.
 func (index *Index) DiscoverFor(path string) (*Manifest, error) {
 	index.mu.Lock()
 	defer index.mu.Unlock()

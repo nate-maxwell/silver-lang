@@ -1,10 +1,10 @@
 # A small publish/subscribe system. Each key in subscriptions is an event
 # namespace, and each value is an array of functions listening to that event.
 
-let arrays = import("arrays")
-let collections = import("collections")
-let core = import("core")
-let io = import("io")
+let arrays = import("core:arrays")
+let collections = import("core:collections")
+let core = import("core:core")
+let io = import("core:io")
 
 let new_listener_list = fn() array { return [] }
 let subscriptions = collections.defaultmap(new_listener_list)

@@ -12,7 +12,7 @@ import (
 const manifestFilename = "package.yaml"
 
 // Init creates package.yaml in directory for packageName and returns its path.
-// The new manifest contains empty members and export lists. Init refuses to overwrite an
+// The new manifest contains empty authors, members, and export lists. Init refuses to overwrite an
 // existing package.yaml and removes a partially written file on write failure.
 func Init(directory, packageName string) (string, error) {
 	if !validPackageName(packageName) {
@@ -28,7 +28,7 @@ func Init(directory, packageName string) (string, error) {
 		return "", fmt.Errorf("could not create %s: %w", path, err)
 	}
 
-	contents := fmt.Sprintf("package: %s\nmembers: []\nexport: []\n", packageName)
+	contents := fmt.Sprintf("package: %s\nauthors: []\nmembers: []\nexport: []\n", packageName)
 	if _, err := file.WriteString(contents); err != nil {
 		file.Close()
 		os.Remove(path)

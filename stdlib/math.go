@@ -6,7 +6,7 @@ import (
 	"silver/object"
 )
 
-// mathDefinitions contains the Go implementations exported by import("math").
+// mathDefinitions contains the Go implementations exported by import("core:math").
 func mathDefinitions() []definition {
 	return []definition{
 		{name: "factorial", fn: mathFactorial},

@@ -3,8 +3,8 @@
 `http/server` is a blocking HTTP/1.1 server. A handler receives a parsed `Request` and returns a `Response`.
 
 ```silver
-let http = import("http")
-let server = import("http/server")
+let http = import("core:http")
+let server = import("core:http/server")
 
 let handle = fn(request: server.Request) server.Response {
     if request.method == http.MethodGet && request.path == "/" {

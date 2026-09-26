@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-const arrayImport = "let arrays = import(\"arrays\")\n"
+const arrayImport = "let arrays = import(\"core:arrays\")\n"
 
 func TestArrayModuleFunctions(t *testing.T) {
 	tests := []struct {

@@ -1,4 +1,4 @@
-# Editor stub for import("http/cookies").
+# Editor stub for import("core:http/cookies").
 #
 # Cookie and Set-Cookie parsing and serialization. Cookie attributes use
 # empty strings, zero, or False when they were not supplied.

@@ -1,4 +1,4 @@
-# Editor stub for import("string").
+# Editor stub for import("core:string").
 #
 # String helpers beyond the built-in + operator and indexing. Positions and
 # counts (find, rfind, count, len from "core") are UTF-8 byte offsets, not

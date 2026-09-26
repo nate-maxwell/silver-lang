@@ -10,7 +10,7 @@ import (
 	stdtime "time"
 )
 
-// timeDefinitions contains the Go implementations exported by import("time").
+// timeDefinitions contains the Go implementations exported by import("core:time").
 // Time and Duration are module-local nominal types, rather than maps, so their
 // fields can be used with normal Silver member access and type annotations.
 func timeDefinitions(null *object.Null, trueValue, falseValue *object.Boolean) []definition {

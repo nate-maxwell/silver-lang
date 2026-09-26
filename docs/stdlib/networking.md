@@ -2,12 +2,12 @@
 
 `networking` provides blocking TCP/UDP connections and TCP listeners. Native sockets are wrapped in ordinary Silver
 structs with typed callable fields. All functions and types on this page are
-available from `import("networking")`.
+available from `import("core:networking")`.
 
-Existing `import("_networking")` calls resolve to this same module as a compatibility alias.
+Import it as `import("core:networking")`; `_networking` is not an importable module.
 
 ```silver
-let net = import("networking")
+let net = import("core:networking")
 
 let connection: net.Connection = net.dial_tcp("example.com:80")
 defer connection.close()
@@ -31,7 +31,7 @@ The module also exports `net.Connection`, `net.Listener`, `net.ReadFromResult`, 
 `net.ListenError`, `net.ReadError`, and `net.WriteError`. Use these names in type annotations and catch clauses:
 
 ```silver
-let net = import("networking")
+let net = import("core:networking")
 let message = try {
     net.dial_tcp("not-an-address")
     "connected"

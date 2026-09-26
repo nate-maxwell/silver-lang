@@ -7,9 +7,9 @@ import (
 	"testing"
 )
 
-const httpImport = `let http = import("http")
-let client = import("http/client")
-let server_module = import("http/server")
+const httpImport = `let http = import("core:http")
+let client = import("core:http/client")
+let server_module = import("core:http/server")
 `
 
 func TestHTTPClientAndServerRoundTrip(t *testing.T) {

@@ -1,7 +1,6 @@
 package evaluator
 
 import (
-	"fmt"
 	"os"
 	"path"
 	"path/filepath"
@@ -18,7 +17,7 @@ import (
 const importPathEnvironment = "SILVER_PATH"
 
 // EvalFile parses and evaluates path in env. It also sets env's source
-// directory so relative imports resolve beside the entry file.
+// directory for diagnostics and discovers its package operator scope.
 func (e *Evaluator) EvalFile(path string, env *object.Environment) object.Object {
 	absolutePath, err := filepath.Abs(path)
 	if err != nil {
@@ -45,44 +44,38 @@ func (e *Evaluator) EvalFile(path string, env *object.Environment) object.Object
 	return e.Eval(program, env)
 }
 
-// importModule first resolves bundled standard-library names, including
-// embedded Silver implementations, then loads user file modules in an isolated
-// top-level environment. Successful modules are cached by standard-library
-// name or canonical absolute path.
-func (e *Evaluator) importModule(path string, env *object.Environment) object.Object {
-	if module, ok := e.standardLibrary.LookupModule(path); ok {
-		return e.modules.load(source.BundledID(path), path, func() (*object.Module, *object.Error) {
-			return module, nil
-		})
+// importModule loads a package-qualified module. Files are reachable only through
+// their registered manifest, and internal members only from their owning package.
+func (e *Evaluator) importModule(request string, env *object.Environment) object.Object {
+	packageName, _, err := packages.ParseImport(request)
+	if err != nil {
+		return newError(object.RuntimeErrorKindImport, "%s", err)
 	}
-	if module, ok := e.standardLibrary.LookupSource(path); ok {
-		return e.importSourceModule(module)
-	}
-	if strings.HasPrefix(env.PackageID(), "stdlib:") {
-		if module, ok := e.standardLibrary.LookupRelativeSource(path, env.SourceDir()); ok {
+	if packageName == "core" {
+		if module, ok := e.standardLibrary.LookupModule(request); ok {
+			return e.modules.load(module.ID, module.Path, func() (*object.Module, *object.Error) { return module, nil })
+		}
+		if module, ok := e.standardLibrary.LookupSourceFrom(request, env.PackageID()); ok {
 			return e.importSourceModule(module)
 		}
+		return newError(object.RuntimeErrorKindImport, "standard-library module %q does not exist", request)
 	}
-
-	absolutePath, manifest, err := e.resolveImportPath(path, env.SourceDir())
+	if err := e.refreshPackageIndex(); err != nil {
+		return newError(object.RuntimeErrorKindImport, "could not load SILVER_PATH: %s", err)
+	}
+	absolutePath, manifest, found, err := e.packages.ResolveFrom(request, env.PackageID())
 	if err != nil {
-		return newError(object.RuntimeErrorKindImport, "could not resolve import %q: %s", path, err)
+		return newError(object.RuntimeErrorKindImport, "could not resolve import %q: %s", request, err)
 	}
-	if manifest == nil {
-		if _, err := os.Stat(absolutePath); err != nil {
-			return newError(object.RuntimeErrorKindImport, "could not read %q: %s", absolutePath, err)
-		}
-		return newError(object.RuntimeErrorKindImport,
-			"cannot import %q: a package YAML manifest is required; list the file in members or export in package.yaml", absolutePath)
+	if !found {
+		return newError(object.RuntimeErrorKindImport, "package module %q not found; register its package.yaml in SILVER_PATH and list the module in export", request)
 	}
-	// Check before consulting the module cache: moving or removing a manifest
-	// must not leave an already-indexed package importable as a standalone file.
+	// Validate the owning manifest before returning a cached module.
 	if info, err := os.Stat(manifest.Path()); err != nil {
-		return newError(object.RuntimeErrorKindImport, "cannot import %q: required package YAML manifest %q is unavailable: %s", absolutePath, manifest.Path(), err)
+		return newError(object.RuntimeErrorKindImport, "cannot import %q: required package YAML manifest %q is unavailable: %s", request, manifest.Path(), err)
 	} else if !info.Mode().IsRegular() {
-		return newError(object.RuntimeErrorKindImport, "cannot import %q: required package YAML manifest %q is not a regular file", absolutePath, manifest.Path())
+		return newError(object.RuntimeErrorKindImport, "cannot import %q: required package YAML manifest %q is not a regular file", request, manifest.Path())
 	}
-
 	id := source.FileID(absolutePath)
 	return e.modules.load(id, absolutePath, func() (*object.Module, *object.Error) {
 		return e.evaluateFileModule(id, absolutePath, manifest)
@@ -114,7 +107,7 @@ func (e *Evaluator) evaluateFileModule(id source.ModuleID, absolutePath string, 
 
 // importSourceModule evaluates one embedded Silver standard-library module.
 // It deliberately uses the same isolated environment, cache, and circular
-// import protection as file modules, while retaining its bare import name as
+// import protection as file modules, while retaining its bundled name as
 // the module identity.
 func (e *Evaluator) importSourceModule(module stdlib.SourceModule) object.Object {
 	return e.modules.load(source.BundledID(module.Name), module.Name, func() (*object.Module, *object.Error) {
@@ -175,52 +168,6 @@ func (e *Evaluator) moduleExports(program *ast.Program, env *object.Environment)
 		exports[name.Value] = value
 	}
 	return exports, nil
-}
-
-// resolveImportPath checks the importer directory first, then package
-// manifest exports in SILVER_PATH.
-func (e *Evaluator) resolveImportPath(path, sourceDir string) (string, *packages.Manifest, error) {
-	if err := e.refreshPackageIndex(); err != nil {
-		return "", nil, fmt.Errorf("could not load SILVER_PATH: %w", err)
-	}
-	if filepath.IsAbs(path) {
-		absolute := filepath.Clean(path)
-		manifest, err := e.packages.DiscoverFor(absolute)
-		return absolute, manifest, err
-	}
-	if sourceDir == "" {
-		var err error
-		sourceDir, err = os.Getwd()
-		if err != nil {
-			return "", nil, err
-		}
-	}
-	localPath, err := filepath.Abs(filepath.Join(sourceDir, path))
-	if err != nil {
-		return "", nil, err
-	}
-	localPath = filepath.Clean(localPath)
-	if importCandidateExists(localPath) {
-		manifest, err := e.packages.DiscoverFor(localPath)
-		return localPath, manifest, err
-	}
-	if exposed, manifest, ok, err := e.packages.Resolve(path); err != nil {
-		return "", nil, err
-	} else if ok {
-		return exposed, manifest, nil
-	}
-	return localPath, nil, nil
-}
-
-// importCandidateExists treats errors other than non-existence as a match so
-// parseFile can report the underlying permission or file-type error instead of
-// silently continuing to a different module with the same name.
-func importCandidateExists(path string) bool {
-	_, err := os.Stat(path)
-	if err == nil {
-		return true
-	}
-	return !os.IsNotExist(err)
 }
 
 // parseFile reads a source file and parses it with its absolute path attached

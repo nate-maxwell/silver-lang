@@ -7,8 +7,8 @@ import (
 )
 
 func TestArgsParsesOptionsFlagsCountsAndPositionals(t *testing.T) {
-	input := `let args = import("args")
-let maps = import("maps")
+	input := `let args = import("core:args")
+let maps = import("core:maps")
 let parser = args.new("build", "Build a project")
 parser.add(args.positional("source", "Source file"))
 parser.add(args.optional_positional("output", "Output file", "app.exe"))
@@ -35,7 +35,7 @@ True`
 }
 
 func TestArgsSupportsOptionTerminatorAndHelpRequest(t *testing.T) {
-	input := `let args = import("args")
+	input := `let args = import("core:args")
 let parser = args.new("show", "")
 parser.add(args.positional("value", "Value to show"))
 let parsed = parser.parse(["--", "--literal"])
@@ -57,7 +57,7 @@ func TestArgsReturnsTypedParseErrors(t *testing.T) {
 	}{
 		{
 			name: "missing required option",
-			source: `let args = import("args")
+			source: `let args = import("core:args")
 let parser = args.new("build", "")
 parser.add(args.required_option("target", "t", "Target"))
 parser.parse([])`,
@@ -65,13 +65,13 @@ parser.parse([])`,
 		},
 		{
 			name: "unknown option",
-			source: `let args = import("args")
+			source: `let args = import("core:args")
 args.new("build", "").parse(["--unknown"])`,
 			message: "unknown option: --unknown",
 		},
 		{
 			name: "missing option value",
-			source: `let args = import("args")
+			source: `let args = import("core:args")
 let parser = args.new("build", "")
 parser.add(args.option("output", "o", "Output"))
 parser.parse(["-o"])`,
@@ -94,14 +94,14 @@ parser.parse(["-o"])`,
 }
 
 func TestArgsValidatesDefinitionsAndBuildsHelp(t *testing.T) {
-	failure, ok := testEval(`let args = import("args")
+	failure, ok := testEval(`let args = import("core:args")
 let parser = args.new("build", "")
 parser.add(args.flag("help", "x", "Conflict"))`).(*object.Error)
 	if !ok || failure.MessageText() != "-h and --help are reserved for parser help" {
 		t.Fatalf("result is %v, want reserved help ArgumentError", failure)
 	}
 
-	result := testEval(`let args = import("args")
+	result := testEval(`let args = import("core:args")
 let parser = args.new("build", "Build a Silver project.")
 parser.add(args.positional("source", "Source file"))
 parser.add(args.option_with_default("mode", "m", "Build mode", "debug"))

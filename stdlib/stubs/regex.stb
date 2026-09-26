@@ -1,4 +1,4 @@
-# Editor stub for import("regex").
+# Editor stub for import("core:regex").
 #
 # Regular expressions using Go's RE2 syntax (as in Go's regexp package),
 # which guarantees linear-time matching but does not support backreferences

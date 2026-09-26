@@ -14,7 +14,7 @@ type randomGenerator struct {
 	rng *rand.Rand
 }
 
-// randomDefinitions contains the functions exported by import("random").
+// randomDefinitions contains the functions exported by import("core:random").
 func randomDefinitions(null *object.Null) []definition {
 	generator := &randomGenerator{rng: rand.New(rand.NewSource(time.Now().UnixNano()))}
 	return []definition{

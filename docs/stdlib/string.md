@@ -4,7 +4,7 @@
 strings explicitly; Silver does not add methods to `str` values.
 
 ```silver
-let strings = import("string")
+let strings = import("core:string")
 
 strings.upper("Silver")                    # "SILVER"
 strings.split("one,two,three", ",")        # ["one", "two", "three"]

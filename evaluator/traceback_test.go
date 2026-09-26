@@ -57,7 +57,7 @@ let run = fn() {
     fail()
 }
 `)
-	writeSilverFile(t, mainPath, `let library = import("./library.slv")
+	writeSilverFile(t, mainPath, `let library = import("fixture:library")
 library.run()
 `)
 

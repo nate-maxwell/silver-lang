@@ -1,4 +1,4 @@
-# Editor stub for import("arrays").
+# Editor stub for import("core:arrays").
 #
 # Pure array helpers. Every function here returns a new array (or element)
 # and leaves its input untouched; there is no in-place mutation, so results

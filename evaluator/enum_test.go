@@ -76,7 +76,7 @@ func TestEnumExportedFromModule(t *testing.T) {
 	mainPath := filepath.Join(dir, "main.slv")
 	writeSilverFile(t, libraryPath, `type Status = enum { Ready, Busy }`)
 	writeSilverFile(t, mainPath, `
-let library = import("./library.slv")
+let library = import("fixture:library")
 library.Status.Ready
 `)
 

@@ -4,7 +4,7 @@
 automatically; call `seed` when a repeatable sequence is needed.
 
 ```silver
-let random = import("random")
+let random = import("core:random")
 
 random.seed(42)
 random.random()                 # float in [0.0, 1.0)

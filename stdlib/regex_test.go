@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-const regexImport = `let regex = import("regex")
+const regexImport = `let regex = import("core:regex")
 `
 
 func TestRegexMatchSearchAndFullMatch(t *testing.T) {
@@ -51,7 +51,7 @@ func TestRegexMatchObject(t *testing.T) {
 		})
 	}
 
-	groupMap := `let maps = import("maps")
+	groupMap := `let maps = import("core:maps")
 ` + input + `maps.get(match.groupmap(), "label")`
 	if got := testEval(regexImport + groupMap).Inspect(); got != "id" {
 		t.Fatalf("named group is %q, want id", got)

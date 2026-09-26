@@ -88,7 +88,7 @@ let run: Action = fn() {}
 run()
 42`,
 		"native callable": `type Codepoint = call(str) int | ValueError
-let codepoint: Codepoint = import("string").codepoint
+let codepoint: Codepoint = import("core:string").codepoint
 codepoint("*")`,
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -166,7 +166,7 @@ type Items = array[Item]
 type Read = call() Items
 let make = fn() Items { return [Item{42}] }
 `)
-	writeSilverFile(t, mainPath, `let library = import("./library.slv")
+	writeSilverFile(t, mainPath, `let library = import("fixture:library")
 type Reader = library.Read
 let read: Reader = library.make
 read()[0].value
@@ -176,5 +176,5 @@ read()[0].value
 
 func TestTypeAliasIsATypeValue(t *testing.T) {
 	testBooleanObject(t, testEval(`type Alias = array[str]
-import("core").type(Alias) == Alias`), true)
+import("core:core").type(Alias) == Alias`), true)
 }

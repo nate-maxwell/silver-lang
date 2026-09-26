@@ -152,7 +152,7 @@ type Point = struct {
 }
 `)
 	writeSilverFile(t, mainPath, `
-let library = import("./library.slv")
+let library = import("fixture:library")
 let point: library.Point = library.Point{8, 9}
 point.y
 `)

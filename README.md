@@ -56,7 +56,7 @@ Struct methods extend this idea: functions can be data too. Add a callable field
 the values it acts on:
 
 ```silver
-let print = import("io").print
+let print = import("core:io").print
 
 type MovableLocation = struct {
     x: float
@@ -222,6 +222,20 @@ go build -o silver .
 Run a source file with `./silver program.slv` (or `silver.exe program.slv` on Windows). During development,
 `go run . program.slv` works too. Initialize a package manifest in the current directory with
 `./silver package init <package_name>`.
+
+Public imports use `import("<package>:<module>")`, with `/` for nested modules:
+
+```silver
+let println = import("core:io").println
+let cookiejar = import("core:http/cookiejar")
+let system = import("core:system")
+system.append_path("./my_library/package.yaml")
+let library = import("my_library:that_module")
+```
+
+The package manifest's `export` list declares the importable `.slv` files. See
+[Modules and imports](docs/language_guide/modules.md) and the
+[runnable package example](docs/examples/packages/README.md).
 
 ## Project status and contributing
 

@@ -8,47 +8,50 @@ Imported source files must be `.slv` members of a package declared by a YAML man
 ## Importing modules
 
 `import(expression)` evaluates its argument, requires a string, loads the corresponding module, and returns a value of
-type `module`:
+type `module`. All imports use `<package>:<module>[/<optional_sub_namespace>]`:
 
 ```silver
-let io = import("io")
-let helpers = import("./helpers.slv")
+let io = import("core:io")
+let logging = import("core:logging")
+let cookiejar = import("core:http/cookiejar")
+let println = import("core:io").println
 
-io.println(helpers.answer)
+println("hello")
 ```
 
 The path can be computed at runtime:
 
 ```silver
-let module_path = "./helpers.slv"
+let module_path = "my_library:helpers"
 let helpers = import(module_path)
 ```
 
 A non-string path raises `TypeError`. A module that cannot be read or resolved raises `ImportError`.
-Every file import requires an owning package manifest, including relative and absolute paths. A file absent from both
-`members` and `export`, or a file whose manifest is missing, raises `ImportError` before evaluation or a cached module
-can be returned.
+Every imported source file must belong to a registered package. Bare names such as `import("io")` and
+filesystem imports such as `import("./helpers.slv")` are invalid. Use `import("core:io")` or
+`import("my_library:helpers")`.
 
 ## Path resolution
 
-Silver resolves module names in this order:
+The package name selects the namespace; the remaining path selects an exported module:
 
 | Import form                                   | Resolution                                                                      |
 |-----------------------------------------------|---------------------------------------------------------------------------------|
-| Bundled standard-library name, such as `"io"` | Load the module embedded in the interpreter.                                    |
-| Absolute filesystem path                      | Load that exact path.                                                           |
-| Relative or bare path in a `.slv` file        | Check the directory containing that `.slv` file.                                |
-| Relative or bare path entered in the REPL     | Check the process working directory.                                            |
-| Unresolved source path                        | Check manifest exports in `SILVER_PATH` using the platform's path-list separator. |
+| `core:io`, `core:http/cookiejar` | Load the named standard-library module embedded in the interpreter. |
+| `my_library:that_module` | Find `package: my_library` on `SILVER_PATH`, then its `that_module.slv` export. |
+| `my_library:that_other/module` | Find the same package's `that_other/module.slv` export. |
 
-Use an explicit relative path such as `./testing.slv` when a user file has the same name as a bundled module.
+Qualified names are case-sensitive on every platform and omit `.slv`. Use `/` for namespace separators; empty,
+`.` and `..` components are invalid. Qualified imports never fall back to neighboring files or exports from another
+package. `core` is reserved for the bundled standard library, including `core:core` for `len`, `type`, and `range`.
 
 ## Packages and YAML manifests
 
-A package requires a YAML manifest. Use `package.yaml` at the package root and add that directory to `SILVER_PATH`:
+A package requires a YAML manifest. Use `package.yaml` at the package root and register the path to that file:
 
 ```yaml
 package: my_library
+authors: []
 members:
   - ./internal/helper.slv
 export:
@@ -57,16 +60,33 @@ export:
   - ./that_other/module.slv
 ```
 
-The manifest is a single YAML document with a required `package` string and `export` list, plus an optional `members`
-list. Unknown fields are rejected. Every exported file is automatically a package member; `members` adds files that
-share the package's language context without exposing them through search-path lookup. A file may appear in both lists,
+The manifest is a single YAML document with a required `package` string and `export` list, plus optional `authors`
+and `members` lists. Authors are strings. Unknown fields are rejected. Every exported file is automatically a package
+member; `members` adds files that share the package's language context without exposing them through search-path lookup.
+A file may appear in both lists,
 but duplicate entries within either list and ownership by multiple manifests are errors.
 
-Each exported file becomes importable by its declared relative path or filename. Silver resolves these as canonical full
-paths internally; it does not rewrite the process environment. A `SILVER_PATH` directory exposes only exports from the
-`.yaml` or `.yml` manifests immediately inside it. A manifest file can also be added directly. Directories without
-manifests expose nothing, and individual `.slv` files are no longer accepted as `SILVER_PATH` entries. To migrate an
-existing search directory, add a manifest listing its public files in `export`.
+Each exported file becomes importable as `<package>:<declared-path-without-.slv>`. The leading `./` is optional in
+the manifest. Nested paths retain their namespace: `my_library:module` does not match `./that_other/module.slv`.
+
+```silver
+let system = import("core:system")
+system.append_path("D:/my_library/package.yaml")
+
+let that_module = import("my_library:that_module")
+let foo = import("my_library:that_module").foo
+let nested = import("my_library:that_other/module")
+that_module.foo()
+```
+
+`system.append_path` adds the manifest path to the process's `SILVER_PATH`; subsequent imports see the addition immediately.
+Relative search-path entries resolve against the process working directory. You can also set `SILVER_PATH` before
+starting Silver, separating entries with the os path separator character. If multiple registered manifests declare the
+same package name, the first one owns that entire namespace; later manifests do not supply missing exports.
+
+Every `SILVER_PATH` entry must point to an existing file named `package.yaml`. Directories, individual `.slv`
+files, other YAML filenames, and missing manifest files are errors. `system.append_path` validates the manifest
+before adding it and leaves `SILVER_PATH` unchanged if validation fails.
 
 Member and export paths must be relative `.slv` files inside the package root and must exist when the manifest is loaded. The
 manifest's file exports are separate from a source module's `export { Name }` declaration: the manifest controls which
@@ -77,7 +97,7 @@ all members before the package is parsed, regardless of list order or which file
 still execute normally when the declaring module is imported. Package preparation parses every member, so syntax errors
 in any member prevent the package from loading.
 
-For example, an API can import `./ops.slv` and `./helper.slv`, and the helper can use an operator defined in `ops.slv`:
+For example, an API can import `library:ops` and `library:helper`, and the helper can use an operator defined in `ops.slv`:
 
 ```yaml
 package: library
@@ -88,17 +108,17 @@ export:
   - ./api.slv
 ```
 
-The helper cannot be discovered through `SILVER_PATH`, but explicit filesystem imports can load it because it is a
-declared package member. Silver first checks registered package membership, then looks for the nearest enclosing
-`package.yaml`. Other manifest filenames must be registered through `SILVER_PATH`. Moving or deleting the owning
-manifest makes subsequent imports fail, including imports of already-cached modules.
+The helper is an internal member: `import("library:helper")` works only inside modules belonging to this
+registered package. Other packages can import only its `export` files. Running a member directly discovers the
+nearest enclosing `package.yaml` for its operator scope; the manifest must still be explicitly registered for imports.
+Moving or deleting a registered manifest makes subsequent imports fail, including imports of already-cached modules.
 
 A script passed directly to the CLI may run without a manifest, but every source file it imports must belong to a
 manifest package. An import never falls back to treating a file as standalone.
 
-The bundled standard library also uses one `package.yaml` per package. For example, `http` and its `http/client`,
-`http/server`, and cookie modules share the HTTP package, while `json` has its own package and operator scope. Existing
-bundled import names are unchanged. See the [standard-library layout](../../stdlib/README.md).
+The bundled standard library keeps internal manifests for each implementation group. `core:http`,
+`core:http/client`, `core:http/server`, and the cookie modules share the HTTP operator scope; `core:json` has its
+own scope. All are publicly imported through `core`. See the [standard-library layout](../../stdlib/README.md).
 
 ## Module members and exports
 
@@ -138,7 +158,7 @@ Only one export block is allowed, and it is not valid inside a function or anoth
 Importers access those bindings through member syntax:
 
 ```silver
-let geometry = import("./geometry.slv")
+let geometry = import("my_library:geometry")
 let point: geometry.Point = geometry.translate(geometry.origin, 5)
 ```
 
@@ -157,14 +177,14 @@ A successful module is evaluated once per interpreter session and cached by its 
 path. Repeated imports return the same module object:
 
 ```silver
-let first = import("testing")
-let second = import("testing")
+let first = import("core:testing")
+let second = import("core:testing")
 first == second # True
 ```
 
 File identity uses the resolved absolute path with normalized separators and dot segments. On Windows, path casing is
-also ignored: `./Identity.slv` and `./identity.slv` return the same module and the same nominal struct and enum definitions.
-Bundled names remain case-sensitive on every platform. Symbolic links and hard links are not resolved for identity.
+also ignored when registering a manifest. Package and module names remain case-sensitive on every platform;
+`my_library:Identity` and `my_library:identity` are distinct names. Symbolic links and hard links are not resolved for identity.
 
 Consequently, module functions share the top-level bindings they captured during evaluation. This is useful for modules
 such as the stateful [`testing`](../stdlib/testing.md) runner, but libraries should make shared mutation deliberate:
@@ -185,7 +205,7 @@ map, or struct is visible through every import because those importers hold the 
 Lazy template evaluations share this session state, including modules first imported after the template was created:
 
 ````silver
-let template = ```{import("./counter.slv").next()}```
+let template = ```{import("my_library:counter").next()}```
 [template.eval(), template.eval()] # ["1", "2"]
 ````
 
@@ -201,13 +221,13 @@ let announce = fn(library: module) {
     library.print("ready")
 }
 
-announce(import("io"))
+announce(import("core:io"))
 ```
 
 Nominal definitions belonging to a module are named through the binding that holds the module:
 
 ```silver
-let paths = import("path")
+let paths = import("core:path")
 let current: paths.Path = paths.cwd()
 ```
 
@@ -224,7 +244,7 @@ let announce = fn(print: call) {
     print("ready")
 }
 
-announce(import("io"))
+announce(import("core:io"))
 ```
 
 An argument that satisfies a `module` parameter remains intact and is not destructured. The complete binding algorithm

@@ -1,8 +1,8 @@
-# Editor stub for import("http").
+# Editor stub for import("core:http").
 #
 # Common HTTP methods, status constants, descriptions, and status classes.
-# Import the implementations separately with import("http/client") or
-# import("http/server").
+# Import the implementations separately with import("core:http/client") or
+# import("core:http/server").
 
 let StatusContinue: int = 100 # Continue (RFC 9110)
 let StatusSwitchingProtocols: int = 101 # Switching Protocols (RFC 9110)

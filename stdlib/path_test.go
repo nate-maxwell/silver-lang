@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-const pathImport = `let paths = import("path")
+const pathImport = `let paths = import("core:path")
 `
 
 func TestPathConstructorAndNominalType(t *testing.T) {
@@ -181,7 +181,7 @@ directory.rglob("*.txt")[0].path`
 		t.Fatalf("rglob match is %T (%v), want %q", match, match, file)
 	}
 
-	input = `let maps = import("maps")
+	input = `let maps = import("core:maps")
 let file = paths.new(` + silverString(file) + `)
 maps.get(file.stat(), "size")`
 	testIntegerObject(t, testEval(pathImport+input), 5)

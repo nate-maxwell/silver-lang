@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-const stringImport = `let strings = import("string")
+const stringImport = `let strings = import("core:string")
 `
 
 func TestStringTransformFunctions(t *testing.T) {

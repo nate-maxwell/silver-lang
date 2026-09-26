@@ -4,7 +4,7 @@
 expressions. It uses Go's RE2 engine, so matching runs in linear time with respect to the input.
 
 ```silver
-let regex = import("regex")
+let regex = import("core:regex")
 
 let match = regex.search("(?P<name>[A-Za-z]+):(?P<value>[0-9]+)", "port:8080")
 match.group("name")  # "port"

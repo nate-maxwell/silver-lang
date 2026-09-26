@@ -1,4 +1,4 @@
-# Editor stub for import("http/server").
+# Editor stub for import("core:http/server").
 #
 # The server accepts HTTP/1.1 requests over a blocking TCP listener. It handles
 # one request per connection, normalizes incoming header names to lowercase,

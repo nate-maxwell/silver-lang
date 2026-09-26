@@ -5,7 +5,7 @@ input. Control sequences require an ANSI/VT-compatible terminal; run terminal ap
 than an IDE Output or Debug Console.
 
 ```silver
-let terminal = import("terminal")
+let terminal = import("core:terminal")
 
 terminal.alternate_screen()
 defer terminal.main_screen()

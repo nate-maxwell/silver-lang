@@ -1,4 +1,4 @@
-# Editor stub for import("collections").
+# Editor stub for import("core:collections").
 #
 # Mutable sequence and map types layered on top of array and map. Unlike
 # arrays.* and maps.*, the functions below mutate their first argument in

@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-const coreImport = "let core = import(\"core\")\n"
+const coreImport = "let core = import(\"core:core\")\n"
 
 func TestRangeBuiltin(t *testing.T) {
 	tests := []struct {

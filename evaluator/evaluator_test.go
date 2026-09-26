@@ -67,7 +67,7 @@ func TestBuiltinFunctions(t *testing.T) {
 
 func TestPrintBuiltinsUseEvaluatorOutput(t *testing.T) {
 	var out bytes.Buffer
-	result := evalInput(t, NewWithOutput(&out), object.NewEnvironment(), `let io = import("io")
+	result := evalInput(t, NewWithOutput(&out), object.NewEnvironment(), `let io = import("core:io")
 io.print()
 io.print("hello", 42)
 io.println("!")

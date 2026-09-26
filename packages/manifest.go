@@ -27,6 +27,7 @@ import (
 // Callers cannot modify a Manifest after it has been read.
 type Manifest struct {
 	name    string
+	authors []string
 	id      string
 	path    string
 	root    string
@@ -45,6 +46,11 @@ type Export = File
 
 // Name returns the package name declared in the manifest's package field.
 func (manifest *Manifest) Name() string { return manifest.name }
+
+// Authors returns a copy of the optional author metadata.
+func (manifest *Manifest) Authors() []string {
+	return append([]string(nil), manifest.authors...)
+}
 
 // ID returns the package's stable runtime identity. The identity is derived
 // from the manifest's canonical path, so packages with the same declared name
@@ -121,10 +127,11 @@ func readManifestFS(filesystem fs.FS, filename string, pathKey func(string) stri
 	}
 	root := path.Dir(filename)
 	manifest := &Manifest{
-		name: document.packageName,
-		id:   "package:" + filename,
-		path: filename,
-		root: root,
+		name:    document.packageName,
+		authors: document.authors,
+		id:      "package:" + filename,
+		path:    filename,
+		root:    root,
 	}
 	all := make(map[string]bool)
 	for _, list := range []struct {
@@ -159,6 +166,7 @@ func readManifestFS(filesystem fs.FS, filename string, pathKey func(string) stri
 // required field was omitted.
 type manifestDocument struct {
 	Package *manifestString   `yaml:"package"`
+	Authors []manifestString  `yaml:"authors"`
 	Export  *[]manifestString `yaml:"export"`
 	Members []manifestString  `yaml:"members"`
 }
@@ -166,6 +174,7 @@ type manifestDocument struct {
 // decodedManifest is the filesystem-independent result of schema validation.
 type decodedManifest struct {
 	packageName string
+	authors     []string
 	exports     []string
 	members     []string
 }
@@ -222,7 +231,11 @@ func decodeManifest(path string, input []byte) (decodedManifest, error) {
 	for index, declared := range document.Members {
 		members[index] = string(declared)
 	}
-	return decodedManifest{packageName: packageName, exports: exports, members: members}, nil
+	authors := make([]string, len(document.Authors))
+	for index, author := range document.Authors {
+		authors[index] = string(author)
+	}
+	return decodedManifest{packageName: packageName, authors: authors, exports: exports, members: members}, nil
 }
 
 // validateSource resolves one declared file relative to root and ensures it

@@ -1,4 +1,4 @@
-# Editor stub for import("random").
+# Editor stub for import("core:random").
 #
 # A pseudo-random number generator shared by every function in this module
 # (they all draw from the same underlying stream). It is seeded from the

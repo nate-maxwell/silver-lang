@@ -21,6 +21,7 @@ func TestReadManifest(t *testing.T) {
 	writeTestFile(t, manifestPath, `
 # Package comments are ignored.
 package: example_2
+authors: [Ada, "Grace Hopper"]
 export:
   - ./first.slv
   - nested/second.slv # Export comments are ignored too.
@@ -32,6 +33,14 @@ export:
 	}
 	if got, want := manifest.Name(), "example_2"; got != want {
 		t.Fatalf("name is %q, want %q", got, want)
+	}
+	authors := manifest.Authors()
+	if len(authors) != 2 || authors[0] != "Ada" || authors[1] != "Grace Hopper" {
+		t.Fatalf("unexpected authors: %v", authors)
+	}
+	authors[0] = "changed"
+	if manifest.Authors()[0] != "Ada" {
+		t.Fatal("Authors exposed mutable manifest state")
 	}
 	if got, want := manifest.Path(), filepath.Clean(manifestPath); got != want {
 		t.Fatalf("path is %q, want %q", got, want)
@@ -82,6 +91,8 @@ func TestDecodeManifestRejectsInvalidYAML(t *testing.T) {
 		{name: "export is not a list", input: "package: example\nexport: source.slv", message: "cannot unmarshal"},
 		{name: "export path is not a string", input: "package: example\nexport: [42]", message: "must be a string"},
 		{name: "members is not a list", input: "package: example\nexport: []\nmembers: helper.slv", message: "cannot unmarshal"},
+		{name: "authors is not a list", input: "package: example\nexport: []\nauthors: Ada", message: "cannot unmarshal"},
+		{name: "author is not a string", input: "package: example\nexport: []\nauthors: [42]", message: "must be a string"},
 		{name: "member path is not a string", input: "package: example\nexport: []\nmembers: [42]", message: "must be a string"},
 		{name: "multiple documents", input: "package: example\nexport: []\n---\npackage: other\nexport: []", message: "multiple YAML documents"},
 	}

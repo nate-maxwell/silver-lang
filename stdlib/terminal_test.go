@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-const terminalImport = "let terminal = import(\"terminal\")\n"
+const terminalImport = "let terminal = import(\"core:terminal\")\n"
 
 func TestTerminalControlOutput(t *testing.T) {
 	var output bytes.Buffer

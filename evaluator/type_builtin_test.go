@@ -84,8 +84,8 @@ func TestTypeBuiltinReturnsModuleType(t *testing.T) {
 	libraryPath := filepath.Join(dir, "library.slv")
 	mainPath := filepath.Join(dir, "main.slv")
 	writeSilverFile(t, libraryPath, `let answer = 42`)
-	writeSilverFile(t, mainPath, `let core = import("core")
-let library = import("./library.slv")
+	writeSilverFile(t, mainPath, `let core = import("core:core")
+let library = import("fixture:library")
 core.type(library) == module`)
 
 	evaluated := New().EvalFile(mainPath, object.NewEnvironment())

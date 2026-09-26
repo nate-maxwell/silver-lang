@@ -34,8 +34,10 @@ The final parameter may be variadic. Write `...` after its type; the annotation 
 argument. A variadic parameter also accepts zero values:
 
 ```silver
+let println = import("core:io").println
+
 let print_all = fn(parts: str...) {
-    import("io").println(parts)
+    println(parts)
 }
 
 print_all("one", "two", "three") # prints: one two three
@@ -61,7 +63,7 @@ An annotation can name a primitive type, struct, enum, built-in nominal type, or
 [module](modules.md#module-values-and-qualified-types):
 
 ```silver
-let paths = import("path")
+let paths = import("core:path")
 
 let describe = fn(value: paths.Path) str {
     return value.path
@@ -94,10 +96,10 @@ An unannotated function always returns null. Its body still runs, and an express
 but that value is discarded at the function boundary:
 
 ```silver
-let print = import("io").print
+let print = import("core:io").print
 
 let announce = fn(message: str) {
-    import("io").print(message)
+    print(message)
     return 42
 }
 

@@ -19,7 +19,7 @@ separate compilation phase.
 | `array`          | `[1, 2, 3]`                           | Ordered, mutable, zero-indexed sequence.                     |
 | `map`            | `{"name": "Ada", 1: True}`            | Mutable hash map.                                            |
 | `call`           | `fn(value) { value }`                 | Silver function or native callable.                          |
-| `module`         | `import("io")`                        | Imported module namespace.                                   |
+| `module`         | `import("core:io")`                        | Imported module namespace.                                   |
 | `TemplateString` | ```` ```Hello, {name}!``` ````        | Delayed template whose `.eval()` method returns a `str`.     |
 
 ### Nominal
@@ -219,7 +219,7 @@ Annotations can name primitive types, structs, enums, built-in nominal types, or
 modules:
 
 ```silver
-let paths = import("path")
+let paths = import("core:path")
 let working_directory: paths.Path = paths.cwd()
 ```
 
@@ -307,7 +307,7 @@ from the exact definition named by the annotation.
 Primitive type names and nominal definitions are runtime values. `core.type(value)` returns the applicable definition:
 
 ```silver
-let core = import("core")
+let core = import("core:core")
 
 core.type(42) == int
 core.type("hello") == str

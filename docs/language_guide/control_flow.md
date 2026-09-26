@@ -56,7 +56,7 @@ let label = if score >= 90 {
 
 ```silver
 if ready {
-    import("io").print("starting")
+    import("core:io").print("starting")
 }
 ```
 
@@ -161,7 +161,7 @@ Deferred calls registered inside a loop still run at the end of the surrounding 
 ```silver
 let count = 3
 while count > 0 {
-    import("io").print(count)
+    import("core:io").print(count)
     count = count - 1
 }
 ```
@@ -195,7 +195,7 @@ and assertions are documented in [Errors and diagnostics](errors.md).
 `defer` schedules a call for the end of the surrounding function, module, or script:
 
 ```silver
-let file = import("io").open("data.txt")
+let file = import("core:io").open("data.txt")
 defer file.close()
 
 let contents = file.read()
@@ -205,7 +205,7 @@ Deferred calls run in last-in-first-out order. Silver captures the callable and 
 it reaches `defer`; it does not reevaluate the argument expressions during scope exit.
 
 ```silver
-let io = import("io")
+let io = import("core:io")
 
 let show = fn(message: str) {
     io.println(message)

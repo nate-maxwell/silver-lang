@@ -1,13 +1,11 @@
 package evaluator
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 	"path"
 	"path/filepath"
 	"silver/ast"
-	"silver/astcache"
 	"silver/lexer"
 	"silver/object"
 	"silver/packages"
@@ -242,24 +240,11 @@ func (e *Evaluator) parseFile(path string, manifest *packages.Manifest) (*ast.Pr
 		return nil, newError(object.RuntimeErrorKindImport, "could not read %q: %s", path, err)
 	}
 	registry := e.operatorScope("").registry
-	if program, ok := astcache.Load(path, input); ok && !registry.HasUserOperators() && !bytes.Contains(input, []byte("operator")) {
-		return program, nil
-	}
-	program, parseError := ParseSourceWithRegistry(path, input, registry)
-	if parseError != nil {
-		return nil, parseError
-	}
-	// A cache is an optimization only. Read-only directories and other cache
-	// write failures must not prevent valid source from running.
-	if !registry.HasUserOperators() {
-		_ = astcache.Store(path, input, program)
-	}
-	return program, nil
+	return ParseSourceWithRegistry(path, input, registry)
 }
 
 // ParseSource parses and optimizes source with a diagnostic name that need not
-// refer to a filesystem path. Embedded standard-library cache generation uses
-// the same pipeline as ordinary file parsing through this entry point.
+// refer to a filesystem path.
 func ParseSource(sourceName string, input []byte) (*ast.Program, *object.Error) {
 	p := parser.New(lexer.NewWithSource(string(input), sourceName))
 	return finishParse(sourceName, p)

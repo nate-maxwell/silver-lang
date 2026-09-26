@@ -44,5 +44,4 @@ reported during library setup.
 
 Each package has its own operator scope: HTTP modules share one scope, and JSON
 has another. Adding a Silver entry point requires updating its manifest, not a
-Go registration list. Run `go generate ./stdlib` after changing Silver sources,
-then run `go test ./...`.
+Go registration list. Run `go test ./...` after changing Silver sources.

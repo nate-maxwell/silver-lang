@@ -1,17 +1,13 @@
 package evaluator
 
 import (
-	"fmt"
 	"os"
 	"silver/ast"
-	"silver/astcache"
 	"silver/object"
 	"silver/packages"
 	"silver/parser"
 	"silver/source"
 	"silver/stdlib"
-	"sort"
-	"strings"
 	"sync"
 )
 
@@ -68,7 +64,6 @@ func (e *Evaluator) preparePackage(manifest *packages.Manifest) (*packageState, 
 	registry := e.operatorScope(manifest.ID()).registry
 	members := manifest.Members()
 	inputs := make(map[source.ModuleID][]byte, len(members))
-	var declarations []parser.OperatorDeclaration
 	for _, exported := range members {
 		input, err := os.ReadFile(exported.Path())
 		if err != nil {
@@ -89,24 +84,16 @@ func (e *Evaluator) preparePackage(manifest *packages.Manifest) (*packageState, 
 				)
 				return state, state.parseErr
 			}
-			declarations = append(declarations, declaration)
 		}
 	}
-	cacheContext := packageCacheContext(declarations)
 	for _, exported := range members {
 		input := inputs[source.FileID(exported.Path())]
-		if program, ok := astcache.LoadWithContext(exported.Path(), input, cacheContext); ok {
-			state.programs[source.FileID(exported.Path())] = program
-			continue
-		}
 		program, parseError := ParseSourceWithRegistry(exported.Path(), input, registry)
 		if parseError != nil {
 			state.parseErr = parseError
 			return state, parseError
 		}
 		state.programs[source.FileID(exported.Path())] = program
-		// Cache writes are optional; read-only packages must remain importable.
-		_ = astcache.StoreWithContext(exported.Path(), input, cacheContext, program)
 	}
 	return state, nil
 }
@@ -133,34 +120,12 @@ func (e *Evaluator) prepareSourcePackage(module stdlib.SourceModule) (*packageSt
 		}
 	}
 	for _, member := range members {
-		program, cached := astcache.LoadBytes(member.SourceName, []byte(member.Source), member.Cache)
-		// Existing embedded caches contain no package grammar fingerprint.
-		if !cached || registry.HasUserOperators() {
-			var parseError *object.Error
-			program, parseError = ParseSourceWithRegistry(member.SourceName, []byte(member.Source), registry)
-			if parseError != nil {
-				state.parseErr = parseError
-				return state, parseError
-			}
+		program, parseError := ParseSourceWithRegistry(member.SourceName, []byte(member.Source), registry)
+		if parseError != nil {
+			state.parseErr = parseError
+			return state, parseError
 		}
 		state.programs[source.BundledID(member.Name)] = program
 	}
 	return state, nil
-}
-
-// packageCacheContext identifies the grammar shared by a manifest's members.
-// An empty context deliberately remains compatible with ordinary file caches.
-func packageCacheContext(declarations []parser.OperatorDeclaration) []byte {
-	if len(declarations) == 0 {
-		return nil
-	}
-	sort.Slice(declarations, func(left, right int) bool {
-		return declarations[left].Symbol < declarations[right].Symbol
-	})
-	var context strings.Builder
-	context.WriteString("package-operators-v2\n")
-	for _, declaration := range declarations {
-		fmt.Fprintf(&context, "%d:%s\n", len(declaration.Symbol), declaration.Symbol)
-	}
-	return []byte(context.String())
 }

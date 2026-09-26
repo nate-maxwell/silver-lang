@@ -4,7 +4,6 @@ package stdlib
 
 import (
 	"embed"
-	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -21,10 +20,6 @@ import (
 // library. Embedding the directory recursively allows each module to choose
 // its own internal layout. Package manifests declare the public entry files.
 //
-// Regenerate the embedded .astc files after changing any Silver source or the
-// AST cache format.
-//
-//go:generate go run ./internal/astgen
 //go:embed silver all:native
 var silverModuleFiles embed.FS
 
@@ -51,7 +46,6 @@ type SourceModule struct {
 	Name       string
 	Source     string
 	SourceName string
-	Cache      []byte
 	PackageID  string
 	// NativeBindings supplies Go implementations to a Silver entry file in the
 	// same package. The source's export declaration controls their visibility.
@@ -176,14 +170,11 @@ func loadPackageManifests(filesystem fs.FS, nativeModules map[string]*object.Mod
 			if err != nil {
 				return err
 			}
-			cache, err := fs.ReadFile(filesystem, member.Path()+".astc")
-			if err != nil && !errors.Is(err, fs.ErrNotExist) {
-				return err
-			}
 			module := SourceModule{
-				Name:   sourceImportName(manifest.Name(), member.Declared()),
-				Source: string(input), SourceName: path.Join("stdlib", member.Path()),
-				Cache: cache, PackageID: packageID,
+				Name:       sourceImportName(manifest.Name(), member.Declared()),
+				Source:     string(input),
+				SourceName: path.Join("stdlib", member.Path()),
+				PackageID:  packageID,
 			}
 			if native != nil && module.Name == manifest.Name() {
 				module.NativeBindings = native.Exports
@@ -240,12 +231,12 @@ func (l *Library) LookupModule(name string) (*object.Module, bool) {
 
 // LookupSourceModule returns an embedded Silver implementation registered for
 // the bare import name. Evaluation remains the evaluator's responsibility.
-func (l *Library) LookupSourceModule(name string) (source, sourceName string, cache []byte, ok bool) {
+func (l *Library) LookupSourceModule(name string) (source, sourceName string, ok bool) {
 	module, ok := l.LookupSource(name)
 	if !ok {
-		return "", "", nil, false
+		return "", "", false
 	}
-	return module.Source, module.SourceName, module.Cache, true
+	return module.Source, module.SourceName, true
 }
 
 // LookupSource returns a public entry declared by a bundled package manifest.

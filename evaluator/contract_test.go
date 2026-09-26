@@ -278,11 +278,9 @@ library = 1
 value = value
 let values: Boxes = [value]
 Holder{f(values[0])}.value.x`)
-	for range 2 { // Resolved contracts belong to evaluations, not cached ASTs.
-		value := New().EvalFile(mainPath, object.NewEnvironment())
-		if err, ok := value.(*object.Error); ok {
-			t.Fatal(err.Inspect())
-		}
-		testIntegerObject(t, value, 42)
+	value := New().EvalFile(mainPath, object.NewEnvironment())
+	if err, ok := value.(*object.Error); ok {
+		t.Fatal(err.Inspect())
 	}
+	testIntegerObject(t, value, 42)
 }

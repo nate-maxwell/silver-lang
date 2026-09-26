@@ -14,7 +14,7 @@ Silver exists to maximize code reuse without the drawbacks of inheritance, while
 - users can define custom operators that are accessible package-wide;
 - structs can overload builtin and custom operators.
 
-The implementation is written in Go and includes a REPL, source modules, cached ASTs, tracebacks, and a standard
+The implementation is written in Go and includes a REPL, source modules, tracebacks, and a standard
 library implemented in both Go and Silver. Silver is currently a young language: it is a good place to experiment
 and learn, but its syntax and APIs may still evolve.
 

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"silver/astcache"
 	"silver/object"
 	"strings"
 	"testing"
@@ -16,16 +15,7 @@ func TestEveryFilesystemImportRequiresManifest(t *testing.T) {
 			t.Setenv(importPathEnvironment, "")
 			dir := t.TempDir()
 			modulePath := filepath.Join(dir, "module.slv")
-			input := []byte("let value = 42")
-			writeSilverFile(t, modulePath, string(input))
-			// A valid standalone AST cache must not bypass the import requirement.
-			program, err := ParseSource(modulePath, input)
-			if err != nil {
-				t.Fatal(err.Inspect())
-			}
-			if err := astcache.Store(modulePath, input, program); err != nil {
-				t.Fatal(err)
-			}
+			writeSilverFile(t, modulePath, "let value = 42")
 			env := object.NewEnvironment()
 			env.SetSourceDir(dir)
 			request := "./module.slv"
@@ -89,7 +79,7 @@ func TestMovingManifestInvalidatesCachedImports(t *testing.T) {
 				t.Fatal(err)
 			}
 			assertManifestImportError(t, evalInput(t, engine, env, request), "required package YAML manifest")
-			// Fresh sessions must also reject it, regardless of generated AST caches.
+			// Fresh sessions must also reject the missing manifest.
 			freshEnv := object.NewEnvironment()
 			freshEnv.SetSourceDir(dir)
 			assertManifestImportError(t, evalInput(t, New(), freshEnv, `import("./module.slv")`), "package YAML manifest is required")

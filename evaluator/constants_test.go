@@ -63,7 +63,7 @@ func TestFloatPoolUsesExactBits(t *testing.T) {
 	}
 }
 
-func TestFoldedCachedConstantsArePooled(t *testing.T) {
+func TestFoldedFileConstantsArePooled(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "main.slv")
 	writeSilverFile(t, path, "40 + 2")
 	engine := New()
@@ -71,7 +71,7 @@ func TestFoldedCachedConstantsArePooled(t *testing.T) {
 	first := engine.EvalFile(path, object.NewEnvironment())
 	second := engine.EvalFile(path, object.NewEnvironment())
 	if first != second {
-		t.Fatal("folded constant loaded from the AST cache was not pooled")
+		t.Fatal("folded constant from repeated file evaluation was not pooled")
 	}
 	assertInteger(t, first, 42)
 }

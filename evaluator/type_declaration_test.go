@@ -120,9 +120,7 @@ let transform: library.Transform = fn(p: library.Point) library.Point { return p
 let read: library.Read = fn() array[library.Point] { return [point] }
 names[0] == "Ada" && heading == library.Direction.North && transform(point).x == read()[0].x
 `)
-	for range 2 { // Source parsing and cached AST evaluation must agree.
-		testBooleanObject(t, New().EvalFile(mainPath, object.NewEnvironment()), true)
-	}
+	testBooleanObject(t, New().EvalFile(mainPath, object.NewEnvironment()), true)
 }
 
 func TestTypeInspectionMember(t *testing.T) {

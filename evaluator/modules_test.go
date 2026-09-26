@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"silver/ast"
-	"silver/astcache"
 	"silver/lexer"
 	"silver/object"
 	"silver/parser"
@@ -45,60 +44,58 @@ math.double(21)
 	}
 }
 
-func TestEvalFileCreatesAndRefreshesASTCache(t *testing.T) {
+func TestEvalFileReadsCurrentSourceWithoutWritingFiles(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "main.slv")
-	source := []byte("let answer = 41\nanswer")
-	writeSilverFile(t, path, string(source))
+	writeSilverFile(t, path, "let answer = 41\nanswer")
+	engine := New()
 
-	result := New().EvalFile(path, object.NewEnvironment())
+	result := engine.EvalFile(path, object.NewEnvironment())
 	assertInteger(t, result, 41)
-	if _, ok := astcache.Load(path, source); !ok {
-		t.Fatal("EvalFile did not create a usable AST cache")
-	}
 
-	changedSource := []byte("let answer = 42\nanswer")
-	writeSilverFile(t, path, string(changedSource))
-	result = New().EvalFile(path, object.NewEnvironment())
+	writeSilverFile(t, path, "let answer = 42\nanswer")
+	result = engine.EvalFile(path, object.NewEnvironment())
 	assertInteger(t, result, 42)
-	if _, ok := astcache.Load(path, changedSource); !ok {
-		t.Fatal("EvalFile did not refresh the AST cache after a source change")
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
 	}
-	if _, ok := astcache.Load(path, source); ok {
-		t.Fatal("refreshed cache still matches the old source")
+	if len(entries) != 1 || entries[0].Name() != "main.slv" {
+		t.Fatalf("EvalFile created files beside the source: %v", entries)
 	}
 }
 
-func TestEvalFileCachesFoldedAST(t *testing.T) {
+func TestParseFileFoldsConstants(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "main.slv")
-	source := []byte("1 + 2 * 3")
-	writeSilverFile(t, path, string(source))
+	writeSilverFile(t, path, "1 + 2 * 3")
 
-	result := New().EvalFile(path, object.NewEnvironment())
-	assertInteger(t, result, 7)
-	program, ok := astcache.Load(path, source)
-	if !ok {
-		t.Fatal("could not load EvalFile's AST cache")
+	program, parseError := New().parseFile(path, nil)
+	if parseError != nil {
+		t.Fatal(parseError.Inspect())
 	}
 	expression := program.Statements[0].(*ast.ExpressionStatement).Expression
 	integer, ok := expression.(*ast.IntegerLiteral)
 	if !ok || integer.Value != 7 {
-		t.Fatalf("cached expression is %T (%v), want folded integer 7", expression, expression)
+		t.Fatalf("parsed expression is %T (%v), want folded integer 7", expression, expression)
 	}
 }
 
-func TestEvalFileRepairsDamagedASTCache(t *testing.T) {
+func TestEvalFileLeavesLegacyASTCacheUntouched(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "main.slv")
-	source := []byte("42")
-	writeSilverFile(t, path, string(source))
-	if err := os.WriteFile(astcache.Path(path), []byte("damaged"), 0600); err != nil {
+	writeSilverFile(t, path, "42")
+	cachePath := path + ".astc"
+	if err := os.WriteFile(cachePath, []byte("legacy cache"), 0600); err != nil {
 		t.Fatal(err)
 	}
 
 	result := New().EvalFile(path, object.NewEnvironment())
 	assertInteger(t, result, 42)
-	if _, ok := astcache.Load(path, source); !ok {
-		t.Fatal("EvalFile did not replace the damaged AST cache")
+	contents, err := os.ReadFile(cachePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(contents) != "legacy cache" {
+		t.Fatalf("EvalFile modified a legacy cache: %q", contents)
 	}
 }
 
@@ -163,31 +160,18 @@ export:
 	}
 }
 
-func TestSilverPathPackageUsesAndCreatesASTCaches(t *testing.T) {
+func TestSilverPathPackageReadsSourcesWithoutWritingFiles(t *testing.T) {
 	sourceDir := t.TempDir()
 	packageDir := t.TempDir()
-	cachedPath := filepath.Join(packageDir, "cached.slv")
-	uncachedPath := filepath.Join(packageDir, "uncached.slv")
-	cachedSource := []byte("let value = 1")
-	uncachedSource := []byte("let value = 42")
-	writeSilverFile(t, cachedPath, string(cachedSource))
-	writeSilverFile(t, uncachedPath, string(uncachedSource))
-
-	// Store an AST whose source hash matches cached.slv but whose value makes
-	// cache use observable. A package import should load this program instead
-	// of reparsing the source.
-	cachedProgram, parseError := ParseSource(cachedPath, []byte("let value = 41"))
-	if parseError != nil {
-		t.Fatal(parseError)
-	}
-	if err := astcache.Store(cachedPath, cachedSource, cachedProgram); err != nil {
-		t.Fatal(err)
-	}
+	modulePath := filepath.Join(packageDir, "module.slv")
+	writeSilverFile(t, modulePath, "let value = 41")
+	writeSilverFile(t, filepath.Join(packageDir, "helper.slv"), "let value = 1")
 	if err := os.WriteFile(filepath.Join(packageDir, "package.yaml"), []byte(`
 package: example
 export:
-  - cached.slv
-  - uncached.slv
+  - module.slv
+members:
+  - helper.slv
 `), 0644); err != nil {
 		t.Fatal(err)
 	}
@@ -195,9 +179,15 @@ export:
 
 	env := object.NewEnvironment()
 	env.SetSourceDir(sourceDir)
-	assertInteger(t, evalInput(t, New(), env, `import("cached.slv").value`), 41)
-	if _, ok := astcache.Load(uncachedPath, uncachedSource); !ok {
-		t.Fatal("package import did not create an AST cache for an uncached export")
+	assertInteger(t, evalInput(t, New(), env, `import("module.slv").value`), 41)
+	writeSilverFile(t, modulePath, "let value = 42")
+	assertInteger(t, evalInput(t, New(), env, `import("module.slv").value`), 42)
+	entries, err := os.ReadDir(packageDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 3 {
+		t.Fatalf("package import created files beside the sources: %v", entries)
 	}
 }
 
@@ -254,16 +244,6 @@ foo.apply(foo.make(4), 2) * 10 + bar.apply(foo.make(4), 2)
 `)
 	result := New().EvalFile(mainPath, object.NewEnvironment())
 	assertInteger(t, result, 427)
-	for _, name := range []string{"foo.slv", "foo_operators.slv", "bar.slv", "bar_operators.slv"} {
-		if _, err := os.Stat(astcache.Path(filepath.Join(packageDir, name))); err != nil {
-			t.Fatalf("package operator cache for %s was not created: %v", name, err)
-		}
-	}
-
-	// A fresh evaluator prepares both packages again and consumes their
-	// context-tagged caches without leaking either operator grammar.
-	result = New().EvalFile(mainPath, object.NewEnvironment())
-	assertInteger(t, result, 427)
 }
 
 func TestImportedPackageOperatorIsNotVisibleToImporter(t *testing.T) {
@@ -308,8 +288,7 @@ value
 			writeSilverFile(t, filepath.Join(packageDir, "package.yaml"), "package: library\nmembers: [helper.slv, ops.slv]\nexport: "+exports+"\n")
 			t.Setenv(importPathEnvironment, packageDir)
 			for run := 0; run < 2; run++ {
-				// The second evaluator consumes caches generated with the full
-				// package grammar, including declarations in internal members.
+				// Each evaluator discovers declarations in internal members.
 				engine := New()
 				env := object.NewEnvironment()
 				env.SetSourceDir(t.TempDir())

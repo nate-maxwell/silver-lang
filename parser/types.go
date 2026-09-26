@@ -90,7 +90,6 @@ func (p *Parser) parseTypeAnnotationFromCurrent() *ast.TypeAnnotation {
 		}
 	}
 	if len(annotation.Parts) == 1 && annotation.Parts[0] == "call" && p.peekTokenIs(token.LPAREN) {
-		annotation.HasSignature = true
 		annotation.ParameterTypes = make([]*ast.TypeAnnotation, 0)
 		annotation.ParameterNames = make([]string, 0)
 		p.nextToken()

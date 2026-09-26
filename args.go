@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"os/user"
-	"silver/astgen"
 	"silver/evaluator"
 	"silver/internal/version"
 	"silver/object"
@@ -14,7 +13,6 @@ import (
 
 const usage = `usage:
   silver [file]
-  silver astgen <path>
   silver package init <package_name>
   silver version`
 
@@ -24,7 +22,6 @@ type command struct {
 }
 
 var commands = []command{
-	{name: "astgen", run: astgen.RunASTGen},
 	{name: "package", run: runPackage},
 	{name: "version", run: runVersion},
 }

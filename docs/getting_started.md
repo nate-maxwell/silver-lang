@@ -22,16 +22,8 @@ Running Silver without arguments starts the REPL; passing one source path runs t
 silver [file]
 ```
 
-Silver also provides cache generation, package initialization, and version commands. See the
+Silver also provides package initialization and version commands. See the
 [command-line interface reference](cli.md) for the complete list.
-
-To parse source without running it and explicitly generate AST caches, use `astgen` with a source file or directory:
-
-```text
-silver astgen <path>
-```
-
-When given a directory, `astgen` recursively generates a sibling `.astc` file for every `.slv` file below it.
 
 Initialize a `package.yaml` manifest in the current directory with a package name and empty membership and export lists:
 
@@ -86,10 +78,6 @@ Run it:
 
 Silver source uses the `.slv` extension. Successful file execution produces only the output requested by the program;
 uncaught errors and tracebacks go to standard error and produce a nonzero exit status.
-
-Silver writes a sibling `.astc` cache after parsing a file. The cache is an implementation detail: it is validated
-against the source and regenerated when missing, stale, or damaged. It does not need to be committed for ordinary user
-programs.
 
 ## Split code into modules
 

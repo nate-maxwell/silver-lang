@@ -171,9 +171,7 @@ type Reader = library.Read
 let read: Reader = library.make
 read()[0].value
 `)
-	for range 2 { // Exercise both source parsing and cached AST evaluation.
-		testIntegerObject(t, New().EvalFile(mainPath, object.NewEnvironment()), 42)
-	}
+	testIntegerObject(t, New().EvalFile(mainPath, object.NewEnvironment()), 42)
 }
 
 func TestTypeAliasIsATypeValue(t *testing.T) {

@@ -13,6 +13,8 @@ import (
 
 // packageState contains evaluator-owned data derived from an immutable
 // package manifest. It is shared by evaluator forks.
+// prepared records an attempted parse, including failure. programs is an AST
+// cache, separate from moduleStore's cache of successfully evaluated modules.
 type packageState struct {
 	mu       sync.Mutex
 	prepared bool
@@ -52,6 +54,8 @@ func (e *Evaluator) refreshPackageIndex() error {
 // preparePackage parses every member with one operator registry. This makes
 // operator spellings visible throughout their package without leaking them
 // into standalone sources or other packages.
+// Discovery and full parsing are separate passes; neither executes operator
+// declarations. A preparation failure is retained for this manifest instance.
 func (e *Evaluator) preparePackage(manifest *packages.Manifest) (*packageState, *object.Error) {
 	state := e.packageStates.forPackage(packageStateKey{manifest: manifest})
 	state.mu.Lock()
@@ -63,6 +67,8 @@ func (e *Evaluator) preparePackage(manifest *packages.Manifest) (*packageState, 
 
 	registry := e.operatorScope(manifest.ID()).registry
 	members := manifest.Members()
+	// Read once and discover all spellings before parsing any expression.
+	// Both passes use the same bytes even if a source file changes mid-load.
 	inputs := make(map[source.ModuleID][]byte, len(members))
 	for _, exported := range members {
 		input, err := os.ReadFile(exported.Path())
@@ -86,6 +92,8 @@ func (e *Evaluator) preparePackage(manifest *packages.Manifest) (*packageState, 
 			}
 		}
 	}
+	// With the complete grammar installed, manifest order no longer decides
+	// whether a member can parse a symbol declared by another member.
 	for _, exported := range members {
 		input := inputs[source.FileID(exported.Path())]
 		program, parseError := ParseSourceWithRegistry(exported.Path(), input, registry)

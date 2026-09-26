@@ -67,6 +67,7 @@ let _domain_matches = fn(host: str, domain: str) bool {
     return host == domain || _strings.endswith(host, "." + domain)
 }
 
+# Require a path boundary after a prefix: /app matches /app/page but not /apple.
 let _path_matches = fn(request_path: str, cookie_path: str) bool {
     return request_path == cookie_path ||
         _strings.startswith(request_path, cookie_path + "/") ||
@@ -91,6 +92,9 @@ let _same_cookie = fn(stored: _StoredCookie, name: str, domain: str, path: str) 
     return stored.cookie.name == name && stored.domain == domain && stored.path == path
 }
 
+# Normalize scope against the origin URL, then replace by name/domain/path.
+# host_only distinguishes an omitted Domain attribute from an explicit domain;
+# only the latter permits matching subdomains. Expiration uses Max-Age here.
 let _set = fn(self: Jar, url: str, cookie: _cookies.Cookie) | JarError {
     let target = _target(url)
     let host_only = cookie.domain == ""
@@ -138,6 +142,9 @@ let _set_from_header = fn(self: Jar, url: str, header: str) | JarError {
     }
 }
 
+# Build the request header while pruning expired entries from the jar. Keep all
+# unexpired cookies in active, including those outside this URL's scope; only
+# selected cookies pass host/domain, path, and Secure checks for this request.
 let _header = fn(self: Jar, url: str) str | JarError {
     let target = _target(url)
     let now = _time.unix()

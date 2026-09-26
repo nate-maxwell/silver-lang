@@ -10,8 +10,9 @@ import (
 	"silver/parser"
 )
 
-// DefaultMap is a standard-library-owned map-like struct. Its get_item method
-// is a Silver closure so it can invoke a user-supplied Silver factory.
+// newDefaultMapStructDefinition creates the nominal layout shared by instances.
+// get_item is installed as a Silver closure so it can invoke the user's factory
+// through the evaluator without introducing an stdlib-to-evaluator dependency.
 func newDefaultMapStructDefinition() *object.Struct {
 	definition := &object.Struct{
 		Name: "DefaultMap",
@@ -27,9 +28,9 @@ func newDefaultMapStructDefinition() *object.Struct {
 	return definition
 }
 
-// newDefaultMap accepts a zero-argument Silver factory. Missing values are
-// created by DefaultMap.get and retained in the ordinary map exposed by
-// DefaultMap.values.
+// newDefaultMap accepts a Silver factory to be called with no arguments on a
+// missing key. get_item retains successful results in the exposed values map;
+// factory arity is checked when that call actually runs.
 func newDefaultMap(definition *object.Struct, null *object.Null) object.BuiltinFunction {
 	return func(args ...object.Object) object.Object {
 		if err := requireArgumentCount(args, 1); err != nil {
@@ -48,6 +49,9 @@ func newDefaultMap(definition *object.Struct, null *object.Null) object.BuiltinF
 			"factory": args[0],
 		}
 		instance := &object.StructInstance{Struct: definition, Values: values}
+		// Reuse the parsed body but capture this factory's resolved result and
+		// error contracts. The template's textual int return type is a parser
+		// placeholder, not the contract imposed on the user's factory result.
 		getter := &object.Function{
 			Name:           "get_item",
 			Parameters:     defaultMapGetTemplate.Parameters,
@@ -86,6 +90,10 @@ func defaultFactoryResult(factory object.Object) (*object.Contract, []*object.Co
 
 var defaultMapGetTemplate = parseDefaultMapGetTemplate()
 
+// parseDefaultMapGetTemplate parses trusted implementation source once during
+// Go initialization. The body checks membership, not a nullable lookup, so a
+// stored null does not trigger the factory again. A factory failure propagates
+// before the assignment, leaving the key absent for a later retry.
 func parseDefaultMapGetTemplate() *ast.FunctionLiteral {
 	const source = `fn(self, key) int {
 	let maps = import("core:maps")

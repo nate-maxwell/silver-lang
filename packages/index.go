@@ -36,6 +36,8 @@ func NewIndex() *Index {
 // Every entry must point to an existing package.yaml file. Refresh is a
 // no-op when searchPath has not changed and returns the result of the previous
 // load in that case.
+// This is keyed by the search-path string, not file modification times: edits
+// to manifests or repairs after a failed load do not invalidate the snapshot.
 func (index *Index) Refresh(searchPath string) error {
 	index.mu.Lock()
 	defer index.mu.Unlock()
@@ -94,6 +96,8 @@ func (index *Index) addManifest(manifest *Manifest) error {
 			return fmt.Errorf("source %q belongs to both package manifests %q and %q", member.path, owner.Path(), manifest.Path())
 		}
 	}
+	// Validate all ownership conflicts before inserting anything from this
+	// manifest, so a rejected manifest cannot leave some members registered.
 	for _, member := range manifest.members {
 		key := source.FileID(member.path)
 		if index.byFile[key] == nil {

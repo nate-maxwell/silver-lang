@@ -50,6 +50,9 @@ func (e *Environment) Get(name string) (Object, bool) {
 }
 
 // Set creates or replaces an untyped binding in the current scope.
+// It removes any previous contract for that local name. Language assignment
+// instead uses AssignmentTarget, evaluator validation, and Assign to preserve
+// the nearest binding's contract and lexical owner.
 func (e *Environment) Set(name string, val Object) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
@@ -88,6 +91,7 @@ func (e *Environment) AssignmentTarget(name string) (*Contract, bool) {
 
 // Assign replaces the nearest existing lexical binding. Callers resolve the
 // target first, so a missing name is not an evaluator-visible condition here.
+// It preserves the stored contract but does not validate val against it.
 func (e *Environment) Assign(name string, val Object) {
 	e.mu.Lock()
 	if _, ok := e.store[name]; ok {
@@ -189,6 +193,8 @@ func (e *Environment) TakeDefers() []DeferredCall {
 
 // NewEnclosedEnvironment constructs a child lexical scope linked to outer,
 // sharing its deferred-call owner.
+// Loop iterations and catch bindings use this to get local names without
+// introducing a new cleanup boundary.
 func NewEnclosedEnvironment(outer *Environment) *Environment {
 	env := NewFunctionEnvironment(outer)
 	if outer != nil {
@@ -201,7 +207,8 @@ func NewEnclosedEnvironment(outer *Environment) *Environment {
 }
 
 // NewFunctionEnvironment constructs a function invocation's lexical scope.
-// It captures outer's bindings but owns a fresh list of deferred calls.
+// It links to outer rather than copying bindings, and owns a fresh list of
+// deferred calls even when outer belongs to a different invocation.
 func NewFunctionEnvironment(outer *Environment) *Environment {
 	env := NewEnvironment()
 	env.outer = outer

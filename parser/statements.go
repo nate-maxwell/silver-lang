@@ -38,8 +38,9 @@ func (p *Parser) parseStatement() ast.Statement {
 }
 
 // parseOperatorStatement parses `operator <symbol> = fn(...)`. Registration
-// happens at the declaration, so only expressions read afterward can use the
-// symbol.
+// happens before the function body is parsed, so the body can use its own
+// symbol. Package preparation may have predefined the spelling already;
+// standalone parsing otherwise exposes it only from this declaration onward.
 func (p *Parser) parseOperatorStatement() *ast.OperatorStatement {
 	statement := &ast.OperatorStatement{Token: p.curToken}
 	if p.peekTokenIs(token.FUNCTION) || p.peekTokenIs(token.ASSIGN) || p.peekTokenIs(token.EOF) {
@@ -49,6 +50,9 @@ func (p *Parser) parseOperatorStatement() *ast.OperatorStatement {
 
 	p.nextToken()
 	var symbol strings.Builder
+	// Until registration, the lexer may split a new spelling into several
+	// built-in or illegal tokens. Join only adjacent symbolic fragments; an
+	// equals sign followed by fn is the declaration separator.
 	for {
 		if !isOperatorFragment(p.curToken.Literal) {
 			p.addError(p.curToken.Position, "operator declaration requires a symbolic operator")

@@ -40,6 +40,8 @@ func networkingDefinitions(null *object.Null) []definition {
 
 // nativeConnection is shared by the callable fields of a Connection value.
 // TCP uses stream; UDP uses packet plus a default peer resolved by dial.
+// The mutex protects the closed flag, not blocking socket operations. Go's
+// socket handles allow Close to interrupt an outstanding read or write.
 type nativeConnection struct {
 	mu             sync.RWMutex
 	network        string
@@ -77,6 +79,9 @@ func builtinDialTCP(null *object.Null) object.BuiltinFunction {
 	}
 }
 
+// builtinDialUDP binds an unconnected datagram socket and remembers a default
+// destination for write. Unlike a connected UDP socket, it can also exchange
+// packets with other peers through write_to/read_from.
 func builtinDialUDP(null *object.Null) object.BuiltinFunction {
 	return func(args ...object.Object) object.Object {
 		if err := requireArgumentCount(args, 1); err != nil {
@@ -193,6 +198,9 @@ func (connection *nativeConnection) value(address string) *object.StructInstance
 	}
 }
 
+// read performs one socket read, not a read-until-size loop. TCP may return a
+// shorter chunk; UDP consumes one datagram and discards its sender address.
+// Go read errors, including EOF, become declared ReadError struct values.
 func (connection *nativeConnection) read(args ...object.Object) object.Object {
 	size, err := networkingBufferSize("Connection.read", args)
 	if err != nil {
@@ -304,6 +312,9 @@ func (connection *nativeConnection) readFrom(args ...object.Object) object.Objec
 	}
 }
 
+// close marks the shared handle closed before calling the OS. Repeated closes
+// fail even if the first OS close reported an error. Blocking I/O holds no state
+// lock, so closing the socket can release another operation waiting on it.
 func (connection *nativeConnection) close(args ...object.Object) object.Object {
 	if err := requireArgumentCount(args, 0); err != nil {
 		return err
@@ -394,6 +405,9 @@ func networkingError(name string, err error) *object.StructInstance {
 	return networkingErrorMessage(name, err.Error())
 }
 
+// networkingErrorMessage returns a normal nominal error struct. The builtin's
+// signature tells evaluator.applyFunction to wrap it as a propagating failure;
+// keeping that boundary in the evaluator also gives it the call-site traceback.
 func networkingErrorMessage(name, message string) *object.StructInstance {
 	definition, _ := object.BuiltinStructDefinitionByName(name)
 	return &object.StructInstance{

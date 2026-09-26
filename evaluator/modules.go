@@ -17,7 +17,9 @@ import (
 const importPathEnvironment = "SILVER_PATH"
 
 // EvalFile parses and evaluates path in env. It also sets env's source
-// directory for diagnostics and discovers its package operator scope.
+// directory and discovers its package operator scope. Unlike an import, this
+// executes in the caller's environment on every call; moduleStore caches only
+// imported module values. Package parsing may still reuse a prepared AST.
 func (e *Evaluator) EvalFile(path string, env *object.Environment) object.Object {
 	absolutePath, err := filepath.Abs(path)
 	if err != nil {
@@ -82,6 +84,9 @@ func (e *Evaluator) importModule(request string, env *object.Environment) object
 	})
 }
 
+// evaluateFileModule executes an imported file in an isolated top-level scope.
+// Its program drains module defers before exports are collected. The caller
+// publishes the resulting Module in moduleStore only after both steps succeed.
 func (e *Evaluator) evaluateFileModule(id source.ModuleID, absolutePath string, manifest *packages.Manifest) (*object.Module, *object.Error) {
 	program, parseError := e.parseFile(absolutePath, manifest)
 	if parseError != nil {
@@ -115,6 +120,9 @@ func (e *Evaluator) importSourceModule(module stdlib.SourceModule) object.Object
 	})
 }
 
+// evaluateSourceModule follows the file-module lifecycle using embedded source.
+// NativeBindings seed the entry environment so Silver code can wrap Go-backed
+// operations; the source's export declaration determines the resulting API.
 func (e *Evaluator) evaluateSourceModule(module stdlib.SourceModule) (*object.Module, *object.Error) {
 	state, parseError := e.prepareSourcePackage(module)
 	if parseError != nil {
@@ -144,6 +152,9 @@ func (e *Evaluator) evaluateSourceModule(module stdlib.SourceModule) (*object.Mo
 
 // moduleExports returns every top-level binding unless the program contains
 // an export declaration, in which case only its listed names are exposed.
+// Collection happens after execution, so declarations can export bindings
+// created later in the file. The map is copied, but exported objects retain
+// their identities and closures retain the module's private environment.
 func (e *Evaluator) moduleExports(program *ast.Program, env *object.Environment) (map[string]object.Object, *object.Error) {
 	bindings := env.Bindings()
 	var declaration *ast.ExportStatement

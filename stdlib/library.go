@@ -97,11 +97,16 @@ type emptyReader struct{}
 
 func (*emptyReader) Read([]byte) (int, error) { return 0, io.EOF }
 
+// newLibrary resolves native export signatures, then uses embedded manifests
+// to assemble the public library. Invalid definitions panic because they are
+// bundled implementation errors, not failures caused by a Silver program.
 func newLibrary(definitions map[string][]definition) *Library {
 	modules := make(map[string]*object.Module, len(definitions))
 	for name, moduleDefinitions := range definitions {
 		exports := make(map[string]object.Object, len(moduleDefinitions))
 		environment := object.NewEnvironment()
+		// Seed all type/value definitions first so signatures can refer to
+		// exports declared later in this list and retain their exact identities.
 		for _, definition := range moduleDefinitions {
 			if definition.value != nil {
 				environment.Set(definition.name, definition.value)
@@ -164,6 +169,8 @@ func loadPackageManifests(filesystem fs.FS, nativeModules map[string]*object.Mod
 			return nil
 		}
 		packageID := "stdlib:" + manifest.Path()
+		// Index every member for package-local imports and grammar discovery.
+		// Public visibility is added separately from manifest.Exports below.
 		for _, member := range manifest.Members() {
 			input, err := fs.ReadFile(filesystem, member.Path())
 			if err != nil {
@@ -176,6 +183,8 @@ func loadPackageManifests(filesystem fs.FS, nativeModules map[string]*object.Mod
 				PackageID:  packageID,
 			}
 			if native != nil && module.Name == manifest.Name() {
+				// Inject native bindings only into the package's entry file.
+				// Siblings use imports instead of inheriting this environment.
 				module.NativeBindings = native.Exports
 			}
 			if _, exists := library.sourceFiles[module.SourceName]; exists {
@@ -213,6 +222,9 @@ func loadPackageManifests(filesystem fs.FS, nativeModules map[string]*object.Mod
 	return library, nil
 }
 
+// sourceImportName collapses the conventional <package>.slv entry to its
+// package name; other members become <package>/<relative-path-without-extension>.
+// Public import requests prefix these names with core:.
 func sourceImportName(packageName, declared string) string {
 	entry := strings.TrimSuffix(declared, path.Ext(declared))
 	if entry == packageName {
@@ -240,6 +252,8 @@ func (l *Library) LookupSourceModule(name string) (source, sourceName string, ok
 	return module.Source, module.SourceName, true
 }
 
+// LookupSource returns a public embedded module for a core: qualified name.
+// Runtime imports use LookupSourceFrom to also allow package-local members.
 func (l *Library) LookupSource(name string) (SourceModule, bool) {
 	return l.LookupSourceFrom(name, "")
 }

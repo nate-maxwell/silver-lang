@@ -7,6 +7,9 @@ import (
 
 // applyFunction invokes either a Silver closure or native builtin. Silver calls
 // create a lexical child environment and a named traceback context.
+// Arguments are already evaluated and variadic packs expanded by the caller.
+// Native builtins validate their own inputs; their declared error alternatives
+// are converted here from ordinary struct values into propagating errors.
 func (e *Evaluator) applyFunction(fn object.Object, args []object.Object) object.Object {
 	switch fn := fn.(type) {
 	case *object.Function:
@@ -36,6 +39,9 @@ func (e *Evaluator) applyFunction(fn object.Object, args []object.Object) object
 	}
 }
 
+// applyStruct validates positional values against the declaration's captured
+// field contracts before publishing an instance. It is shared by brace syntax
+// and calls to struct constructors; field order follows definition.Fields.
 func (e *Evaluator) applyStruct(definition *object.Struct, values []object.Object) object.Object {
 	if len(values) != len(definition.Fields) {
 		return newError(object.RuntimeErrorKindType, "wrong number of arguments for struct %s. got=%d, want=%d", definition.Name, len(values), len(definition.Fields))
@@ -50,7 +56,9 @@ func (e *Evaluator) applyStruct(definition *object.Struct, values []object.Objec
 	return &object.StructInstance{Struct: definition, Values: fields}
 }
 
-// applyUserFunction validates and invokes a closure.
+// applyUserFunction owns a Silver invocation's lifetime: bind arguments, run
+// the body and defers, then validate the outgoing result or failure. Runtime
+// faults can always propagate; user error structs must occur in ErrorTypes.
 func (e *Evaluator) applyUserFunction(fn *object.Function, args []object.Object, contextName string) object.Object {
 	boundArgs, err := e.bindFunctionArguments(fn, args)
 	if err != nil {
@@ -63,6 +71,9 @@ func (e *Evaluator) applyUserFunction(fn *object.Function, args []object.Object,
 	e.pushContext(contextName)
 	defer e.popContext()
 	evaluated := e.Eval(fn.Body, extendedEnv)
+	// Unwind while the function context is still active. A failing defer can
+	// replace a pending return or error, and that replacement must pass through
+	// the same declared-error checks as a failure from the body.
 	evaluated = e.runDefers(extendedEnv, evaluated)
 	if error, ok := evaluated.(*object.Error); ok {
 		if error.IsRuntimeError() {
@@ -109,6 +120,9 @@ func (e *Evaluator) applyUserFunction(fn *object.Function, args []object.Object,
 // destructurable value does not satisfy the parameter at its position, its
 // named fields or exports are offered to the remaining parameters. A value
 // that satisfies its parameter is therefore kept intact.
+// The returned slice has one entry per parameter, with a VariadicArguments
+// pack in the final slot when needed. No call environment is mutated until
+// every argument and required parameter has passed validation.
 func (e *Evaluator) bindFunctionArguments(fn *object.Function, args []object.Object) ([]object.Object, *object.Error) {
 	variadicIndex := -1
 	if len(fn.Parameters) > 0 && fn.Parameters[len(fn.Parameters)-1].Variadic {
@@ -119,6 +133,8 @@ func (e *Evaluator) bindFunctionArguments(fn *object.Function, args []object.Obj
 	}
 
 	bound := make([]object.Object, len(fn.Parameters))
+	// Destructuring can fill later slots while leaving earlier ones vacant.
+	// Track occupancy separately so the next argument fills the first gap.
 	assigned := make([]bool, len(fn.Parameters))
 	boundCount := 0
 	variadicArguments := make([]object.Object, 0)
@@ -132,6 +148,8 @@ func (e *Evaluator) bindFunctionArguments(fn *object.Function, args []object.Obj
 		parameter := fn.Parameters[parameterIndex]
 		contract := fn.ParameterTypes[parameterIndex]
 		if parameter.Variadic {
+			// Leave this slot unassigned until all arguments have been visited,
+			// so each remaining positional value is checked as a pack element.
 			if !typeMatches(contract, argument) {
 				return nil, e.requireType(contract, argument, fmt.Sprintf("parameter %q", parameter.Value))
 			}
@@ -205,7 +223,7 @@ func nextUnassignedParameter(assigned []bool) int {
 
 // extendFunctionEnv binds evaluated arguments to parameters in a child of the
 // function's captured lexical environment with its own deferred-call lifetime.
-// Arity is validated by applyFunction.
+// args must be the complete parameter-aligned result of bindFunctionArguments.
 func extendFunctionEnv(fn *object.Function, args []object.Object) *object.Environment {
 	env := object.NewFunctionEnvironment(fn.Env)
 

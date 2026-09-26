@@ -156,6 +156,9 @@ func durationUnit(unit string) (int64, bool) {
 	}
 }
 
+// durationNanoseconds converts a numeric amount using a positive unit scale
+// from durationUnit. Integers are checked before multiplication; floats are
+// checked for finite int64 range and rounded to the nearest nanosecond.
 func durationNanoseconds(value object.Object, scale int64) (int64, *object.Error) {
 	switch value := value.(type) {
 	case *object.Integer:
@@ -242,6 +245,9 @@ func timeCompare(timeType *object.Struct, trueValue, falseValue *object.Boolean,
 	}
 }
 
+// newTimeValue exposes editable calendar fields while retaining location and
+// offset metadata. timeLocation can reuse that metadata when the public zone
+// label is unchanged, including abbreviations that are ambiguous on their own.
 func newTimeValue(timeType *object.Struct, value stdtime.Time) *object.StructInstance {
 	zone, offset := value.Zone()
 	if zone == "" {
@@ -273,6 +279,9 @@ func newDurationValue(durationType *object.Struct, value stdtime.Duration) *obje
 	}}
 }
 
+// requireTime reconstructs a Go time from the current fields of a nominal Time
+// instance. Validation is repeated at use because Silver can mutate the fields;
+// checking only the constructor would permit invalid dates later.
 func requireTime(name string, index int, value object.Object, timeType *object.Struct) (stdtime.Time, *object.Error) {
 	instance, ok := value.(*object.StructInstance)
 	if !ok || instance.Struct != timeType {
@@ -331,12 +340,18 @@ func requireTime(name string, index int, value object.Object, timeType *object.S
 		return stdtime.Time{}, newError(object.RuntimeErrorKindValue, "Time has an invalid date or clock value")
 	}
 	result := stdtime.Date(year, stdtime.Month(month), day, hour, minute, second, nanosecond, location)
+	// time.Date normalizes values such as February 30 and nonexistent local
+	// clock times. Compare the reconstructed components to reject that silent
+	// normalization after the simpler per-field range checks above.
 	if result.Year() != year || int(result.Month()) != month || result.Day() != day || result.Hour() != hour || result.Minute() != minute || result.Second() != second || result.Nanosecond() != nanosecond {
 		return stdtime.Time{}, newError(object.RuntimeErrorKindValue, "Time has an invalid date or clock value")
 	}
 	return result, nil
 }
 
+// timeLocation prefers preserved location rules, then a preserved fixed offset,
+// only while the visible timezone still matches its original label. An edited
+// label is instead resolved as a location name or numeric UTC offset.
 func timeLocation(instance *object.StructInstance, timezone string) (*stdtime.Location, error) {
 	storedTimezone, timezoneOK := instance.Get("_timezone")
 	storedName, nameOK := storedTimezone.(*object.String)
@@ -362,6 +377,8 @@ func timeLocation(instance *object.StructInstance, timezone string) (*stdtime.Lo
 	return nil, fmt.Errorf("unknown timezone")
 }
 
+// requireDuration treats nanoseconds as the authoritative field. The other
+// fields produced by newDurationValue are derived views, not independent inputs.
 func requireDuration(name string, index int, value object.Object, durationType *object.Struct) (stdtime.Duration, *object.Error) {
 	instance, ok := value.(*object.StructInstance)
 	if !ok || instance.Struct != durationType {
@@ -380,6 +397,8 @@ type timeFormatToken struct {
 	layout string
 }
 
+// Longer overlapping tokens precede their prefixes; both scanners take the
+// first match, so reordering SSS/SSSSSS or Z/ZZ changes format interpretation.
 var timeFormatTokens = []timeFormatToken{
 	{token: "SSSSSSSSS", layout: "000000000"},
 	{token: "SSSSSS", layout: "000000"},
@@ -396,6 +415,9 @@ var timeFormatTokens = []timeFormatToken{
 	{token: "z", layout: "MST"},
 }
 
+// timeLayout translates Silver format tokens into Go's reference-time layout
+// for parsing. Bracketed text bypasses Silver token recognition; all other
+// unmatched bytes pass through to the Go layout unchanged.
 func timeLayout(format string) (string, error) {
 	var layout strings.Builder
 	for index := 0; index < len(format); {
@@ -426,6 +448,9 @@ func timeLayout(format string) (string, error) {
 	return layout.String(), nil
 }
 
+// formatTime expands Silver tokens directly rather than formatting through a
+// Go layout. This keeps literal text literal even when it resembles Go's
+// reference date, while sharing token precedence with timeLayout.
 func formatTime(value stdtime.Time, format string) string {
 	zone, offset := value.Zone()
 	values := map[string]string{

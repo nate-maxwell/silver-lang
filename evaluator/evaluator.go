@@ -18,6 +18,8 @@ var NULL = &object.Null{}
 
 // Evaluator combines a shared interpreter session with its execution context.
 // Reuse one evaluator for a REPL or a group of related evaluations.
+// Eval dispatches nodes here; callables.go owns call boundaries, types.go checks
+// resolved contracts, and modules.go/package_runtime.go handle source loading.
 type Evaluator struct {
 	*evaluatorSession
 	constants *constantPool
@@ -69,6 +71,9 @@ func (e *Evaluator) InfixRegistry() *parser.InfixRegistry {
 	return e.operatorScope("").registry
 }
 
+// operatorScope pairs parse-time spellings with runtime implementations for one
+// package. The empty ID is the standalone/REPL scope. Knowing a spelling does
+// not imply its declaration has executed and installed a callable yet.
 func (e *Evaluator) operatorScope(packageID string) *operatorScope {
 	e.operatorScopes.mu.Lock()
 	defer e.operatorScopes.mu.Unlock()
@@ -185,6 +190,8 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 		return newError(object.RuntimeErrorKindAssertion, "%s", message)
 
 	case *ast.DeferStatement:
+		// Capture the callable and argument values now; only invocation waits
+		// for scope exit. Captured mutable objects still retain their identity.
 		function := e.evalValue(node.Call.Function, env)
 		if isError(function) {
 			return function
@@ -208,6 +215,8 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 		return e.evalTypeStatement(node, env)
 
 	case *ast.LetStatement:
+		// Resolve before evaluating the initializer: any rebinding it performs
+		// must not change the meaning of this declaration's annotation.
 		contract, err := object.ResolveContract(node.Name.Type, env)
 		if err != nil {
 			return err
@@ -306,6 +315,9 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 		if node.Operator == "&&" || node.Operator == "||" {
 			return nativeBoolToBooleanObject(isTruthy(right))
 		}
+		// Dispatch precedence is struct implementation, package operator, then
+		// built-in semantics. Both operands have already been evaluated once;
+		// only the logical operators above can skip the right operand.
 		if instance, ok := left.(*object.StructInstance); ok && e.structOperatorVisible(node.Operator, instance, env) {
 			if _, exists := instance.Get(node.Operator); exists {
 				return e.evalStructInfixExpression(node, instance, right)
@@ -331,6 +343,9 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 		return nativeBoolToBooleanObject(node.Value)
 
 	case *ast.FunctionLiteral:
+		// Freeze type identities at definition time while retaining a live
+		// lexical environment for the body. Parameter binding and later name
+		// reassignments must not reinterpret the captured signature.
 		parameterTypes := make([]*object.Contract, len(node.Parameters))
 		for index, parameter := range node.Parameters {
 			contract, err := object.ResolveContract(parameter.Type, env)
@@ -420,6 +435,9 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 	return nil
 }
 
+// registerInfix records a declaration and its live lexical environment without
+// resolving the function's annotations. infixCallable performs that work on
+// first use, allowing referenced types to be declared later in the source.
 func (e *Evaluator) registerInfix(node *ast.OperatorStatement, env *object.Environment) object.Object {
 	infix := e.operatorScope(env.PackageID()).infix
 	infix.mu.Lock()
@@ -431,6 +449,9 @@ func (e *Evaluator) registerInfix(node *ast.OperatorStatement, env *object.Envir
 	return NULL
 }
 
+// infixCallable lazily creates and caches a package operator's closure. A nil
+// function and nil error mean no implementation is registered in this scope;
+// failed initialization is returned without caching a callable.
 func (e *Evaluator) infixCallable(symbol, packageID string) (*object.Function, *object.Error) {
 	infix := e.operatorScope(packageID).infix
 	infix.mu.Lock()

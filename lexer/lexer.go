@@ -154,6 +154,8 @@ func (l *Lexer) NextToken() token.Token {
 	case '}':
 		tok = newToken(token.RBRACE, l.ch, position)
 		if l.templateMode == templateExpression {
+			// Braces inside an interpolation belong to ordinary Silver syntax.
+			// Only a brace at depth zero resumes literal template text.
 			if l.templateDepth == 0 {
 				l.templateMode = templateText
 			} else {
@@ -273,6 +275,8 @@ func (l *Lexer) startsTripleBacktick() bool {
 	return l.ch == '`' && l.peekChar() == '`' && l.peekSecondChar() == '`'
 }
 
+// beginTemplate saves the surrounding scanner mode so a template inside an
+// interpolation can finish and resume that outer expression at its old depth.
 func (l *Lexer) beginTemplate(position token.Position) {
 	l.templateStack = append(l.templateStack, templateContext{
 		mode:  l.templateMode,
@@ -284,6 +288,8 @@ func (l *Lexer) beginTemplate(position token.Position) {
 	l.templateOpen = position
 }
 
+// endTemplate restores the context paired with the most recent beginTemplate.
+// It is used for both a closing delimiter and an unterminated-template error.
 func (l *Lexer) endTemplate() {
 	last := len(l.templateStack) - 1
 	context := l.templateStack[last]
@@ -295,6 +301,8 @@ func (l *Lexer) endTemplate() {
 
 // nextTemplateToken preserves template text byte-for-byte, except for doubled
 // braces: {{ and }} spell literal braces without beginning interpolation.
+// When text precedes a delimiter, it returns the text without consuming that
+// delimiter. The next call emits the delimiter and changes scanner mode.
 func (l *Lexer) nextTemplateToken() token.Token {
 	position := l.currentPosition()
 	var literal strings.Builder

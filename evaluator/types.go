@@ -6,6 +6,9 @@ import (
 	"strings"
 )
 
+// evalTypeStatement binds a first-class type value. Structs and enums create
+// nominal definitions; aliases capture an existing resolved contract without
+// introducing a new nominal identity.
 func (e *Evaluator) evalTypeStatement(node *ast.TypeStatement, env *object.Environment) object.Object {
 	switch value := node.Value.(type) {
 	case *ast.StructTypeLiteral:
@@ -98,6 +101,9 @@ func returnTypesString(success *object.Contract, errorTypes []*object.Contract) 
 }
 
 // typeMatches checks resolved primitive, nominal, array, and callable contracts.
+// A nil contract is an unannotated boundary. Typed arrays are checked against
+// their current elements; matching does not attach a contract to the array or
+// constrain later mutation through other aliases.
 func typeMatches(contract *object.Contract, value object.Object) bool {
 	if contract == nil {
 		return true
@@ -163,6 +169,8 @@ func runtimeFunctionMatches(expected *object.Contract, actual *object.Function) 
 		if actualParameter == nil {
 			continue
 		}
+		// The supplied function must accept everything the expected signature
+		// permits callers to pass, so parameter assignability is reversed.
 		if !contractAssignable(actualParameter, expectedParameter) {
 			return false
 		}
@@ -214,7 +222,8 @@ func contractAssignable(target, source *object.Contract) bool {
 	return target.Definition == source.Definition
 }
 
-// Omitted callable results denote null, rather than an untyped boundary.
+// callReturnAssignable interprets omitted callable results as null, rather
+// than the unannotated boundary that nil represents for a parameter.
 func callReturnAssignable(target, source *object.Contract) bool {
 	if target == nil && source == nil {
 		return true
@@ -228,6 +237,9 @@ func callReturnAssignable(target, source *object.Contract) bool {
 	return contractAssignable(target, source)
 }
 
+// callReturnsAssignable requires a compatible success result and ensures every
+// failure the supplied callable can declare is allowed by the target. The
+// supplied callable may declare fewer failures; alternative order is irrelevant.
 func callReturnsAssignable(targetSuccess *object.Contract, targetErrors []*object.Contract, sourceSuccess *object.Contract, sourceErrors []*object.Contract) bool {
 	if !callReturnAssignable(targetSuccess, sourceSuccess) {
 		return false

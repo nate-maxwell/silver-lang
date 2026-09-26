@@ -242,6 +242,9 @@ func fullMatchRegex(compiled *regexp.Regexp) *regexp.Regexp {
 	return regexp.MustCompile(`\A(?:` + compiled.String() + `)\z`)
 }
 
+// regexFirstMatch implements search, or prefix matching when atStart is true.
+// Full matching passes an independently anchored pattern from fullMatchRegex;
+// atStart alone does not require consuming the entire input.
 func regexFirstMatch(compiled *regexp.Regexp, input string, matchType *object.Struct, null *object.Null, atStart bool) object.Object {
 	indices := compiled.FindStringSubmatchIndex(input)
 	if indices == nil || atStart && indices[0] != 0 {
@@ -250,6 +253,10 @@ func regexFirstMatch(compiled *regexp.Regexp, input string, matchType *object.St
 	return newRegexMatchObject(matchType, compiled, input, indices, null)
 }
 
+// newRegexMatchObject captures one successful match for all its method closures.
+// indices contains byte-offset pairs [start, end) for group zero (the whole
+// match), then each capture. Unmatched optional groups have offsets of -1;
+// offsets refer to UTF-8 bytes, not rune positions.
 func newRegexMatchObject(matchType *object.Struct, compiled *regexp.Regexp, input string, indices []int, null *object.Null) *object.StructInstance {
 	// FindStringSubmatchIndex returns a fresh slice. Copying it here also makes
 	// the match value independent from its producing operation.
@@ -345,6 +352,9 @@ func regexMatchSpan(compiled *regexp.Regexp, indices []int) object.BuiltinFuncti
 	}
 }
 
+// regexGroupArgument normalizes an omitted, numeric, or named capture selector
+// to a valid group index. Omitting it selects the whole match (group zero).
+// Existing but unmatched groups remain valid; callers interpret their -1 spans.
 func regexGroupArgument(method string, compiled *regexp.Regexp, args []object.Object) (int, *object.Error) {
 	if len(args) > 1 {
 		return 0, newError(object.RuntimeErrorKindType, "wrong number of arguments. got=%d, want=0 or 1", len(args))
@@ -369,6 +379,9 @@ func regexGroupArgument(method string, compiled *regexp.Regexp, args []object.Ob
 	}
 }
 
+// newRegexExpression binds methods to one compiled expression and precompiles
+// the fullmatch variant. Each invocation supplies only its input/replacement;
+// match results capture their own spans independently of later invocations.
 func newRegexExpression(expressionType, matchType *object.Struct, compiled *regexp.Regexp, null *object.Null) *object.StructInstance {
 	compiledFullMatch := fullMatchRegex(compiled)
 	patternAndInput := func(name string, operation func(string) object.Object) object.Object {

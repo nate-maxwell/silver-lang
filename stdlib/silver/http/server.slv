@@ -102,6 +102,9 @@ let _body_length = fn(raw: str) int | ServerError {
     }
 }
 
+# Accumulate headers and the declared Content-Length body across TCP reads.
+# A missing length is treated as zero; chunked framing is not decoded. This
+# server handles one request per connection and does not retain pipelined data.
 let _read_request = fn(connection: Connection) Request | ServerError | ReadError {
     let raw = ""
     let header_end = -1
@@ -153,6 +156,8 @@ let _close_connection_quietly = fn(connection: Connection) {
     } catch ConnectionError err {}
 }
 
+# Accept and handle one connection synchronously. Cleanup belongs to this call,
+# while the listener remains open for subsequent calls to serve_once or serve.
 let _serve_once = fn(self: Server) | ServerError {
     try {
         let connection = self.listener.accept()
@@ -183,6 +188,8 @@ let _close = fn(self: Server) | ConnectionError {
 
 let new = fn(address: str, handler: call(request: Request) Response) Server | ListenError {
     let listener = _net.listen(address)
+    # Callable struct fields receive self through method binding. Adapt the
+    # public handler(request) signature to that internal calling convention.
     let bound_handler = fn(self: Server, request: Request) Response {
         return handler(request)
     }

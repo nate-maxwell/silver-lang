@@ -325,6 +325,9 @@ func stringRFind(args ...object.Object) object.Object {
 	return stringIndex("rfind", strings.LastIndex, args)
 }
 
+// stringIndex shares find/rfind validation. The Go search operation returns a
+// byte offset (or -1), consistent with UTF-8 byte lengths but distinct from the
+// rune-based array returned by chars.
 func stringIndex(name string, operation func(string, string) int, args []object.Object) object.Object {
 	if err := requireArgumentCount(args, 2); err != nil {
 		return err
@@ -405,6 +408,8 @@ func stringRepeat(args ...object.Object) object.Object {
 		return &object.String{Value: ""}
 	}
 	const maximumStringBytes = 1_000_000
+	// Divide before multiplying to avoid overflowing while checking the result
+	// size. The empty-string path above also keeps these divisions nonzero.
 	if count.Value > int64(math.MaxInt/len(value)) || count.Value > maximumStringBytes/int64(len(value)) {
 		return newError(object.RuntimeErrorKindValue, "result of `repeat` exceeds %d bytes", maximumStringBytes)
 	}

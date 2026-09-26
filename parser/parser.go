@@ -35,6 +35,11 @@ type (
 
 // Parser implements a two-token-lookahead Pratt parser. Prefix and infix
 // parse-function tables keep syntax extension localized by token type.
+//
+// Parse helpers generally enter on the first token of their construct and
+// return on its last token, leaving the next construct in peekToken. The
+// enclosing statement or delimiter loop advances to that next construct.
+// Failed parses may leave partial nodes; Errors must be checked before use.
 type Parser struct {
 	l                *lexer.Lexer // token source
 	errors           []string     // accumulated diagnostics; parsing attempts to continue

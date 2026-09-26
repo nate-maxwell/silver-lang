@@ -28,6 +28,9 @@ func (e *Evaluator) evalStructType(name string, node *ast.StructTypeLiteral, env
 		FieldTypes:     fieldTypes,
 		EmbeddedFields: embeddedFields,
 	}
+	// Publish the identity before resolving fields so self-referential types
+	// and method signatures can name this exact definition. A resolution error
+	// propagates with the partially initialized binding still in the environment.
 	env.Set(name, definition)
 	for index, field := range node.Fields {
 		contract, err := object.ResolveContract(field.Type, env)

@@ -75,6 +75,9 @@ func decodeString(raw string) (string, string) {
 	return out.String(), ""
 }
 
+// decodeHexEscape consumes exactly digits hexadecimal bytes starting after the
+// escape marker. The returned index is exclusive; callers subtract one before
+// their loop increments. A nonempty diagnostic makes the value unusable.
 func decodeHexEscape(raw string, start, digits int, kind string) (uint32, int, string) {
 	if start+digits > len(raw) {
 		return 0, start, fmt.Sprintf("incomplete %s escape in string literal", kind)

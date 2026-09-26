@@ -39,6 +39,9 @@ func (index *Index) ResolveFrom(request, importerPackageID string) (string, *Man
 				return file.path, manifest, true, nil
 			}
 		}
+		// A matching package claims the whole name even when this module is
+		// absent or private. Falling through to a later same-named package
+		// would mix two packages' public APIs and ownership rules.
 		return "", nil, false, nil
 	}
 	return "", nil, false, nil

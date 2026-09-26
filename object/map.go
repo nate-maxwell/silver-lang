@@ -20,6 +20,9 @@ type MapPair struct {
 }
 
 // Map stores pairs by their normalized HashKey.
+// Use Get, Set, Len, and Snapshot after publishing a map; direct Pairs access
+// bypasses locking. HashKey is the complete lookup identity, so there is no
+// separate equality check after a matching hash.
 type Map struct {
 	Pairs map[HashKey]MapPair
 	mu    sync.RWMutex
@@ -78,6 +81,8 @@ func (m *Map) Set(key HashKey, pair MapPair) {
 
 // Snapshot returns a shallow copy suitable for iteration without holding a
 // lock while user code runs.
+// Later inserts, deletes, or replacements do not change the copied entries;
+// mutable key/value objects are still shared with the original map.
 func (m *Map) Snapshot() map[HashKey]MapPair {
 	m.mu.RLock()
 	defer m.mu.RUnlock()

@@ -7,8 +7,9 @@ import (
 )
 
 // InfixRegistry holds the symbolic operators known to an interpreter or
-// standalone parser session. Evaluators share one registry across files,
-// imports and REPL submissions.
+// standalone parser session. Files in a package share one registry; unrelated
+// packages have separate grammars. Standalone sources and REPL submissions
+// share the evaluator's registry for the empty package identity.
 type InfixRegistry struct {
 	definitions map[string]token.Position
 }
@@ -92,6 +93,9 @@ func DiscoverOperatorDeclarations(input, source string) []OperatorDeclaration {
 		}
 		var symbol string
 		var previous token.Token
+		// Discovery runs before the lexer knows custom spellings, so rebuild
+		// each symbol from contiguous punctuation just as declaration parsing
+		// does. Position checks keep whitespace-separated operators distinct.
 		for cursor < len(tokens) {
 			part := tokens[cursor]
 			if part.Type == token.ASSIGN && cursor+1 < len(tokens) && tokens[cursor+1].Type == token.FUNCTION {

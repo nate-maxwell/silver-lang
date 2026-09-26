@@ -116,6 +116,9 @@ func ReadManifestFS(filesystem fs.FS, filename string) (*Manifest, error) {
 	return readManifestFS(filesystem, filename, path.Clean)
 }
 
+// readManifestFS separates YAML schema validation from filesystem membership
+// validation. pathKey supplies the host or virtual filesystem's identity rules
+// for duplicate detection without changing stored diagnostic paths.
 func readManifestFS(filesystem fs.FS, filename string, pathKey func(string) string) (*Manifest, error) {
 	input, err := fs.ReadFile(filesystem, filename)
 	if err != nil {
@@ -133,6 +136,9 @@ func readManifestFS(filesystem fs.FS, filename string, pathKey func(string) stri
 		path:    filename,
 		root:    root,
 	}
+	// Reject repeats within each list, but allow an export to also be listed
+	// as a member. Exports are visited first and enter the combined membership
+	// list once, preserving the order promised by Members.
 	all := make(map[string]bool)
 	for _, list := range []struct {
 		kind  string

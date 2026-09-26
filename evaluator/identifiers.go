@@ -38,6 +38,9 @@ func (e *Evaluator) evalMemberAssignment(node *ast.MemberAssignmentStatement, en
 	}
 
 	member := node.Target.Member.Value
+	// Promotion resolves to the embedded instance that owns the declaration.
+	// Validate and write through that owner, rather than creating a shadowing
+	// field on the outer instance.
 	_, owner, fieldIndex, found := instance.ResolveField(member)
 	if !found || fieldIndex < 0 {
 		return newError(object.RuntimeErrorKindAttribute, "struct %q has no field %q", instance.Struct.Name, member)
@@ -56,6 +59,8 @@ func (e *Evaluator) evalMemberAssignment(node *ast.MemberAssignmentStatement, en
 
 // evalIndexAssignment mutates native arrays/maps directly or invokes set_item
 // on structs. Native collection mutations are visible through aliases.
+// Evaluation proceeds target, index, then value. Native index/hash validation
+// precedes the value expression, so an invalid destination skips its effects.
 func (e *Evaluator) evalIndexAssignment(node *ast.IndexAssignmentStatement, env *object.Environment) object.Object {
 	target := e.evalValue(node.Target.Left, env)
 	if isError(target) {
@@ -131,6 +136,9 @@ func (e *Evaluator) evalMember(value object.Object, member string) object.Object
 			return newError(object.RuntimeErrorKindAttribute, "struct %q has no field %q", value.Struct.Name, member)
 		}
 		if fieldIndex >= 0 {
+			// Only a declared callable signature gives a Silver function method
+			// semantics. Native fields already capture their receiver, and a
+			// function stored in a broad call/untyped field remains a plain value.
 			fieldType := owner.Struct.FieldTypes[fieldIndex]
 			if fieldType == nil || !fieldType.IsCallSignature() {
 				return field

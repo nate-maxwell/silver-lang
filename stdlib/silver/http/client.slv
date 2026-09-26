@@ -125,6 +125,9 @@ let _body_length = fn(raw: str) int | ClientError {
     }
 }
 
+# Buffer through the header terminator, then until Content-Length bytes are
+# available. Reads may split headers or include body bytes. This implements
+# length-based framing; it does not decode chunked or close-delimited bodies.
 let _read_response = fn(connection: Connection) Response | ClientError | ReadError {
     let raw = ""
     let header_end = -1
@@ -160,6 +163,8 @@ let _read_response = fn(connection: Connection) Response | ClientError | ReadErr
     let reason = _strings.join(reason_parts, " ")
     let headers = _parse_headers(lines, 1)
 
+    # Splitting the header also split any identical separators in the body.
+    # Join those remaining pieces back together to preserve body contents.
     let body_parts = []
     index = 1
     while index < _core.len(sections) {
@@ -176,6 +181,9 @@ let _close_quietly = fn(connection: Connection) {
     } catch ConnectionError err {}
 }
 
+# Send one request on a fresh connection and translate transport failures into
+# ClientError. Deferred cleanup suppresses close failures so they cannot replace
+# the response or the error that caused the exchange to stop.
 let send = fn(request: Request) Response | ClientError {
     try {
         let target = _target_from_url(request.url)

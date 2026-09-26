@@ -47,6 +47,9 @@ func builtinArrayContains(trueValue, falseValue *object.Boolean) object.BuiltinF
 	}
 }
 
+// objectsEqual supplies collection membership/removal equality without invoking
+// user code. Numbers compare across int/float, strings and booleans by value,
+// and other objects by identity. Struct operator overloads are not dispatched.
 func objectsEqual(left, right object.Object) bool {
 	if isNumber(left) && isNumber(right) {
 		if numberIsNaN(left) || numberIsNaN(right) {
@@ -103,8 +106,8 @@ func builtinLast(null *object.Null) object.BuiltinFunction {
 	}
 }
 
-// builtinRemove returns a copy without the element at index. Like array
-// indexing, an index outside the array produces null.
+// builtinRemove returns a shallow copy without the element at index. An index
+// outside the array produces null; bracket indexing instead raises IndexError.
 func builtinRemove(null *object.Null) object.BuiltinFunction {
 	return func(args ...object.Object) object.Object {
 		if err := requireArgumentCount(args, 2); err != nil {

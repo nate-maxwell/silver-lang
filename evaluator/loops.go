@@ -5,6 +5,9 @@ import (
 	"silver/object"
 )
 
+// evalForStatement evaluates the iterable once and consumes break/continue at
+// this loop boundary. Returns and errors propagate to the enclosing caller.
+// Arrays bind one element; maps bind a key and value from a shallow snapshot.
 func (e *Evaluator) evalForStatement(statement *ast.ForStatement, env *object.Environment) object.Object {
 	iterable := e.evalValue(statement.Iterable, env)
 	if isError(iterable) {
@@ -31,6 +34,8 @@ func (e *Evaluator) evalForStatement(statement *ast.ForStatement, env *object.En
 		if statement.Value == nil {
 			return newError(object.RuntimeErrorKindValue, "map for loop requires key and value bindings")
 		}
+		// Snapshot before running the body so inserts and deletes do not change
+		// which entries this iteration visits or require holding the map lock.
 		for _, pair := range collection.Snapshot() {
 			result := e.evalForIteration(statement, env, pair.Key, pair.Value)
 			switch result.(type) {
@@ -60,6 +65,9 @@ func (e *Evaluator) evalForIteration(statement *ast.ForStatement, env *object.En
 	return e.Eval(statement.Body, iterationEnv)
 }
 
+// evalWhileStatement rechecks the condition before every iteration and runs
+// the body in the supplied environment. Unlike for, it introduces no fresh
+// iteration bindings; break/continue stop here while returns/errors escape.
 func (e *Evaluator) evalWhileStatement(statement *ast.WhileStatement, env *object.Environment) object.Object {
 	for {
 		condition := e.evalValue(statement.Condition, env)

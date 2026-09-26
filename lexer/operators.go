@@ -21,6 +21,9 @@ func (l *Lexer) RegisterOperator(operator string) {
 	})
 }
 
+// registeredOperator returns the longest registered spelling at the cursor.
+// RegisterOperator maintains length order so a short prefix cannot consume
+// the start of a longer operator. NextToken performs the actual advancement.
 func (l *Lexer) registeredOperator() string {
 	remaining := l.input[l.position:]
 	for _, operator := range l.operators {

@@ -23,6 +23,9 @@ func (f TraceFrame) IsValid() bool {
 // Error is the one failure object used by the evaluator. Value is always an
 // error-struct instance: either a declared Silver error alternative or one of
 // the built-in runtime error structs.
+// The wrapper signals propagation and carries the traceback; the struct alone
+// is a normal value. Call boundaries wrap declared failures, and catch clauses
+// bind the carried struct after consuming the wrapper.
 type Error struct {
 	Value  *StructInstance
 	Frames []TraceFrame

@@ -19,6 +19,9 @@ type JSONDecodeError = struct {
     colno: int
 }
 
+# position is the next unread index in characters, an array of Unicode scalar
+# strings. JSON diagnostics therefore count characters rather than UTF-8 bytes;
+# document retains the original text for error reporting.
 type _Parser = struct {
     document: str
     characters: array
@@ -107,6 +110,8 @@ let _hex_value = fn(character: str) int {
     return _strings.find("0123456789abcdef", _strings.lower(character))
 }
 
+# Consume four digits after a Unicode escape marker. This returns a UTF-16 code
+# unit; _parse_string decides whether it must be combined with a surrogate.
 let _parse_hex4 = fn(parser: _Parser) int | JSONDecodeError {
     if parser.position + 4 > _len(parser.characters) {
         return _decode_error("Unexpected end of JSON input", parser, _len(parser.characters))
@@ -129,6 +134,8 @@ let _replacement_character = fn() str {
     return _strings.from_codepoint(65533)
 }
 
+# Enter on the opening quote and leave position after the closing quote. Raw
+# control characters are invalid; escaped ones are decoded into the result.
 let _parse_string = fn(parser: _Parser) str | JSONDecodeError {
     parser.position = parser.position + 1
     let result = ""
@@ -167,6 +174,9 @@ let _parse_string = fn(parser: _Parser) str | JSONDecodeError {
             result = result + "\t"
         } else if escape == "u" {
             let first = _parse_hex4(parser)
+            # JSON spells non-BMP characters as two UTF-16 surrogate escapes.
+            # Combine a valid pair; unpaired surrogates use replacement
+            # characters rather than reaching from_codepoint as invalid scalars.
             if first >= 55296 && first <= 56319 {
                 if parser.position + 2 <= _len(parser.characters) &&
                 parser.characters[parser.position] == "\\" &&
@@ -209,6 +219,9 @@ let _parse_literal = fn(parser: _Parser, literal: str, value) any | JSONDecodeEr
     return value
 }
 
+# Scan JSON's sign, integer, fraction, and exponent grammar before converting.
+# A fraction or exponent selects float conversion; plain integer syntax must
+# fit Silver's int range. Leave delimiters unread for the enclosing container.
 let _parse_number = fn(parser: _Parser) any | JSONDecodeError | ValueError {
     let start = parser.position
     if parser.characters[parser.position] == "-" {
@@ -283,6 +296,10 @@ let _parse_number = fn(parser: _Parser) any | JSONDecodeError | ValueError {
     }
 }
 
+# Parse one recursive value, leaving the cursor immediately after it. Container
+# branches own their separators and closing delimiters; loads checks for extra
+# top-level data after this returns. Object keys are strings and later duplicate
+# keys replace earlier values through ordinary map assignment.
 let _parse_value = fn(parser: _Parser) any | JSONDecodeError | ValueError {
     _skip_whitespace(parser)
     if parser.position >= _len(parser.characters) {
@@ -456,6 +473,9 @@ let _line_indent = fn(options: _EncodeOptions, level: int) str {
     return "\n" + _strings.repeat(options.indentation, level)
 }
 
+# active contains containers on this recursion path, compared by identity.
+# Extending a copied path for each child rejects cycles while allowing the same
+# container to occur in separate sibling branches. level controls indentation.
 let _encode = fn(value, options: _EncodeOptions, level: int, active: array) str | TypeError | ValueError {
     let kind = _type(value)
     if kind == null { return "null" }
@@ -498,6 +518,8 @@ let _encode = fn(value, options: _EncodeOptions, level: int, active: array) str 
             }
             keys = _append(keys, key)
         }
+        # Runtime maps have no stable iteration order. Sort validated string
+        # keys so compact and pretty output are deterministic.
         keys = _arrays.sort(keys)
         let nested_active = _append(active, value)
         let pieces = []

@@ -28,6 +28,8 @@ func (p *Parser) parseFunctionLiteral() ast.Expression {
 		return nil
 	}
 
+	// A closure declared inside a loop cannot break or continue that outer
+	// loop. Its body starts a new lexical context for loop-control validation.
 	previousLoopDepth := p.loopDepth
 	p.loopDepth = 0
 	lit.Body = p.parseBlockStatement()

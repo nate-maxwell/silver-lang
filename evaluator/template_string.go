@@ -9,6 +9,8 @@ import (
 // evalTemplateStringLiteral captures the declaration environment but leaves
 // every interpolation untouched until eval is called. Each invocation uses
 // a fresh execution context while retaining the interpreter's module store.
+// The environment is captured by reference, so repeated eval calls observe
+// current bindings and repeat interpolation side effects; text is not cached.
 func (e *Evaluator) evalTemplateStringLiteral(node *ast.TemplateStringLiteral, env *object.Environment) object.Object {
 	baseEvaluator := e.fork()
 	definition, _ := object.BuiltinStructDefinitionByName("TemplateString")

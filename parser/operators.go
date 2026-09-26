@@ -21,7 +21,7 @@ type OperatorDeclaration struct {
 }
 
 var definedLanguageInfixOperators = map[string]bool{
-	"=": true, ".": true, ":": true, "...": true,
+	"=": true, ":=": true, ".": true, ":": true, "...": true,
 	"||": true, "&&": true, "==": true, "!=": true,
 	"<": true, ">": true, "<=": true, ">=": true,
 	"+": true, "-": true, "*": true, "/": true,

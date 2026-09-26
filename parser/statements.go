@@ -266,7 +266,10 @@ func (p *Parser) parseLetStatement() *ast.LetStatement {
 		}
 	}
 
-	if !p.expectPeek(token.ASSIGN) {
+	if stmt.Name.Type == nil && p.peekTokenIs(token.INFER_ASSIGN) {
+		stmt.Inferred = true
+		p.nextToken()
+	} else if !p.expectPeek(token.ASSIGN) {
 		return nil
 	}
 

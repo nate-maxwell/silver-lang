@@ -177,11 +177,13 @@ labels[heading] # "north"
 
 ## Bindings and annotations
 
-`let` introduces a lexical binding:
+`let` introduces a lexical binding. Choose a dynamic contract, an explicit contract, or a contract inferred from the
+initial runtime value:
 
 ```silver
-let count = 0
-let name: str = "Silver"
+let count = 32       # Dynamic; equivalent to let count: any = 32
+let age: int = 32    # Explicitly restricted to int
+let score := 32      # Restricted to int, inferred during initialization
 ```
 
 Assignment updates the nearest existing binding and does not declare a new one:
@@ -196,6 +198,54 @@ An annotation remains attached to its binding, so later assignments are checked 
 let age: int = 36
 # age = "unknown" # TypeError
 ```
+
+With `:=`, the initializer runs once, and its successful result fixes the binding's type. Later assignments must
+satisfy that contract, including assignments from closures. The type is captured separately each time the declaration
+executes; it is not chosen by static analysis or by the first execution of the source code.
+
+```silver
+let score := 32
+score = 14             # Accepted
+# score = "unknown"    # TypeError
+
+let description = 32
+description = "unknown" # Accepted: an unannotated = binding uses any
+```
+
+For `try`/`catch`, the selected successful result determines an inferred binding's type:
+
+```silver
+type Missing = struct { message: str }
+let read = fn(found: bool) int | Missing {
+    if found { return 32 }
+    return Missing{"not found"}
+}
+
+let value := try {
+    read(False)
+} catch Missing err {
+    "fallback"
+}
+value = "updated" # Accepted: the handler initialized value as str
+# value = 14      # TypeError
+```
+
+If `read(True)` had succeeded, this declaration would instead create an `int` binding. A function returning `any`
+also supplies a concrete runtime value from which `:=` captures the type. An escaping error prevents the declaration
+from installing or replacing a binding.
+
+An explicit `let value: int = try ...` checks the selected result against `int`: a string fallback raises `TypeError`
+only when that handler runs. The binding check happens after the initializer, so an enclosing `try` can catch its
+failure. Plain `let value = try ...` keeps an `any` contract regardless of which path succeeds.
+
+Inference uses runtime types: arrays and maps retain the broad `array` and `map` contracts without inferring their
+contents; functions use `call` without inferring a signature. Struct and enum instances retain their exact nominal
+definitions, and a null result fixes the contract to `null`. Use an explicit annotation for a more detailed contract,
+such as `array[int]` or `call(int) str`.
+
+The `:=` form is a `let` declaration, not reassignment, and cannot be combined with an explicit annotation.
+Tooling can display `any` when the initializer's type is unknown before execution, but the runtime binding still has
+a fixed inferred contract.
 
 Contracts resolve their type names when declarations execute and retain those exact definitions. Rebinding or
 shadowing a type name does not change an existing contract:

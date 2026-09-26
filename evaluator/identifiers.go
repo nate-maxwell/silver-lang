@@ -6,8 +6,8 @@ import (
 	"silver/object"
 )
 
-// evalAssignment replaces the nearest existing lexical binding. Explicit type
-// annotations from the original declaration remain enforced.
+// evalAssignment replaces the nearest existing lexical binding. Explicit and
+// inferred contracts from the original declaration remain enforced.
 func (e *Evaluator) evalAssignment(node *ast.AssignmentStatement, env *object.Environment) object.Object {
 	contract, ok := env.AssignmentTarget(node.Name.Value)
 	if !ok {

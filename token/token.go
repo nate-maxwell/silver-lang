@@ -46,6 +46,7 @@ const (
 	// Operators
 	CUSTOM_OPERATOR = "CUSTOM_OPERATOR" // registered user-defined symbolic operator
 	ASSIGN          = "="
+	INFER_ASSIGN    = ":="
 	BANG            = "!"
 	PIPE            = "|"
 	AND             = "&&"

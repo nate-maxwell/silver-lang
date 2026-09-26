@@ -37,6 +37,8 @@ func lookupRegisteredOperator(literal string) token.TokenType {
 	switch literal {
 	case "=":
 		return token.ASSIGN
+	case ":=":
+		return token.INFER_ASSIGN
 	case "!":
 		return token.BANG
 	case "|":

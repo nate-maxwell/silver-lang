@@ -186,6 +186,8 @@ func (l *Lexer) NextToken() token.Token {
 	case ':':
 		if l.peekChar() == ':' {
 			tok = l.makeTwoCharToken(token.EMBED)
+		} else if l.peekChar() == '=' {
+			tok = l.makeTwoCharToken(token.INFER_ASSIGN)
 		} else {
 			tok = newToken(token.COLON, l.ch, position)
 		}

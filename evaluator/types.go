@@ -32,6 +32,28 @@ func (e *Evaluator) evalTypeAlias(annotation *ast.TypeAnnotation, env *object.En
 	return &object.TypeAlias{Contract: contract}
 }
 
+// inferredBindingContract captures the initializer's runtime type without
+// inspecting collection contents or callable signatures. Nominal values retain
+// their exact definition, independently of later changes to its lexical name.
+func inferredBindingContract(value object.Object) *object.Contract {
+	contract := &object.Contract{Name: runtimeTypeName(value)}
+	switch value := value.(type) {
+	case *object.StructInstance:
+		contract.Definition = value.Struct
+	case *object.EnumValue:
+		contract.Definition = value.Enum
+	default:
+		if definition, ok := object.TypeDefinitionByName(contract.Name); ok {
+			contract.Definition = definition
+		} else {
+			// Type definitions and other first-class values may have runtime
+			// categories without a corresponding source-level annotation.
+			contract.Definition = &object.TypeDefinition{Name: contract.Name, RuntimeType: value.Type()}
+		}
+	}
+	return contract
+}
+
 // requireType checks the contract captured by a declaration. No names are
 // resolved here, including when a parameter or captured binding is reassigned.
 func (e *Evaluator) requireType(contract *object.Contract, value object.Object, subject string) *object.Error {

@@ -216,6 +216,9 @@ func (e *Evaluator) eval(node ast.Node, env *object.Environment) object.Object {
 		if isError(val) {
 			return val
 		}
+		if node.Inferred {
+			contract = inferredBindingContract(val)
+		}
 		if err := e.requireType(contract, val, fmt.Sprintf("binding %q", node.Name.Value)); err != nil {
 			return err
 		}

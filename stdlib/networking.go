@@ -8,11 +8,10 @@ import (
 	"sync"
 )
 
-// networkingDefinitions contains the protocol-specific native operations
-// wrapped by the Silver-authored networking module. Connections themselves
-// are ordinary Silver structs whose call fields close over the native socket.
+// networkingDefinitions supplies the native bindings of import("networking").
+// Its Silver entry file adds the protocol enum and generic dial function.
 func networkingDefinitions(null *object.Null) []definition {
-	return []definition{
+	definitions := []definition{
 		{name: "dial_tcp", fn: builtinDialTCP(null), signature: callSignature(
 			[]string{"address"},
 			[]*ast.TypeAnnotation{namedType("str")},
@@ -32,6 +31,11 @@ func networkingDefinitions(null *object.Null) []definition {
 			"ListenError",
 		)},
 	}
+	for _, name := range []string{"Connection", "Listener", "ReadFromResult", "ConnectionError", "ListenError", "ReadError", "WriteError"} {
+		value, _ := object.BuiltinStructDefinitionByName(name)
+		definitions = append(definitions, definition{name: name, value: value})
+	}
+	return definitions
 }
 
 // nativeConnection is shared by the callable fields of a Connection value.
@@ -127,8 +131,8 @@ func builtinListen(null *object.Null) object.BuiltinFunction {
 			Struct: definition,
 			Values: map[string]object.Object{
 				"address": &object.String{Value: listener.Addr().String()},
-				"accept":  &object.Builtin{Fn: state.accept, Signature: listenerAcceptSignature()},
-				"close":   &object.Builtin{Fn: state.close, Signature: connectionCloseSignature()},
+				"accept":  &object.Builtin{Fn: state.accept, Signature: object.MustResolveContract(listenerAcceptSignature())},
+				"close":   &object.Builtin{Fn: state.close, Signature: object.MustResolveContract(connectionCloseSignature())},
 			},
 		}
 	}
@@ -180,11 +184,11 @@ func (connection *nativeConnection) value(address string) *object.StructInstance
 		Struct: definition,
 		Values: map[string]object.Object{
 			"address":   &object.String{Value: address},
-			"read":      &object.Builtin{Fn: connection.read, Signature: connectionReadSignature()},
-			"write":     &object.Builtin{Fn: connection.write, Signature: connectionWriteSignature()},
-			"write_to":  &object.Builtin{Fn: connection.writeTo, Signature: connectionWriteToSignature()},
-			"read_from": &object.Builtin{Fn: connection.readFrom, Signature: connectionReadFromSignature()},
-			"close":     &object.Builtin{Fn: connection.close, Signature: connectionCloseSignature()},
+			"read":      &object.Builtin{Fn: connection.read, Signature: object.MustResolveContract(connectionReadSignature())},
+			"write":     &object.Builtin{Fn: connection.write, Signature: object.MustResolveContract(connectionWriteSignature())},
+			"write_to":  &object.Builtin{Fn: connection.writeTo, Signature: object.MustResolveContract(connectionWriteToSignature())},
+			"read_from": &object.Builtin{Fn: connection.readFrom, Signature: object.MustResolveContract(connectionReadFromSignature())},
+			"close":     &object.Builtin{Fn: connection.close, Signature: object.MustResolveContract(connectionCloseSignature())},
 		},
 	}
 }

@@ -28,7 +28,7 @@ func (e *Evaluator) evalMapLiteral(node *ast.MapLiteral, env *object.Environment
 	pairs := make(map[object.HashKey]object.MapPair)
 
 	for keyNode, valueNode := range node.Pairs {
-		key := e.Eval(keyNode, env)
+		key := e.evalValue(keyNode, env)
 		if isError(key) {
 			return key
 		}
@@ -37,13 +37,17 @@ func (e *Evaluator) evalMapLiteral(node *ast.MapLiteral, env *object.Environment
 		if !ok {
 			return newError(object.RuntimeErrorKindType, "unusable as hash key: %s", key.Type())
 		}
+		hash := hashable.HashKey()
+		if _, exists := pairs[hash]; exists {
+			return newError(object.RuntimeErrorKindValue, "duplicate map key %s", key.Inspect())
+		}
 
-		value := e.Eval(valueNode, env)
+		value := e.evalValue(valueNode, env)
 		if isError(value) {
 			return value
 		}
 
-		pairs[hashable.HashKey()] = object.MapPair{Key: key, Value: value}
+		pairs[hash] = object.MapPair{Key: key, Value: value}
 	}
 	return &object.Map{Pairs: pairs}
 }

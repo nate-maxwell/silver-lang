@@ -103,3 +103,219 @@ run()`
 		t.Fatalf("output is %q, want %q", got, want)
 	}
 }
+
+func TestCatchDefersUseEnclosingScope(t *testing.T) {
+	for _, test := range []struct {
+		name, body, want string
+	}{
+		{
+			name: "catch bindings",
+			body: `try { 1 / 0 } catch ZeroDivisionError err {
+    let record = fn() { io.println(err.message) }
+    defer record()
+}`,
+			want: "body\nafter\ndivision by zero\nbefore\n",
+		},
+		{
+			name: "nested catches",
+			body: `try { 1 / 0 } catch ZeroDivisionError err {
+    defer io.println("outer")
+    try { 1 / 0 } catch ZeroDivisionError inner {
+        defer io.println("inner")
+    }
+}`,
+			want: "body\nafter\ninner\nouter\nbefore\n",
+		},
+		{
+			name: "catch inside loop",
+			body: `for value in [1, 2] {
+    try { 1 / 0 } catch ZeroDivisionError err {
+        defer io.println(value)
+    }
+}`,
+			want: "body\nafter\n2\n1\nbefore\n",
+		},
+		{
+			name: "loop inside catch",
+			body: `try { 1 / 0 } catch ZeroDivisionError err {
+    for value in [1, 2] {
+        defer io.println(value)
+    }
+}`,
+			want: "body\nafter\n2\n1\nbefore\n",
+		},
+	} {
+		for _, scope := range []string{"script", "function"} {
+			t.Run(test.name+"/"+scope, func(t *testing.T) {
+				var out bytes.Buffer
+				body := "defer io.println(\"before\")\n" + test.body + "\ndefer io.println(\"after\")\nio.println(\"body\")"
+				if scope == "function" {
+					body = "let run = fn() {\n" + body + "\n}\nrun()"
+				}
+				result := evalInput(t, NewWithOutput(&out), object.NewEnvironment(), "let io = import(\"io\")\n"+body)
+				testNullObject(t, result)
+				if got := out.String(); got != test.want {
+					t.Fatalf("output is %q, want %q", got, test.want)
+				}
+			})
+		}
+	}
+}
+
+func TestCatchDefersSurviveControlFlow(t *testing.T) {
+	for _, test := range []struct {
+		control, want string
+	}{
+		{"break", "body\n1\n"},
+		{"continue", "body\n2\n1\n"},
+		{"return 7", "1\n"},
+		{"missing_name", "1\n"},
+	} {
+		t.Run(test.control, func(t *testing.T) {
+			var out bytes.Buffer
+			input := `let io = import("io")
+let run = fn() int {
+    for value in [1, 2] {
+        try { 1 / 0 } catch ZeroDivisionError err {
+            defer io.println(value)
+            ` + test.control + `
+        }
+    }
+    io.println("body")
+    return 7
+}
+run()`
+			result := evalInput(t, NewWithOutput(&out), object.NewEnvironment(), input)
+			if test.control == "missing_name" {
+				err, ok := result.(*object.Error)
+				if !ok || err.MessageText() != "identifier not found: missing_name" {
+					t.Fatalf("result is %v, want missing_name error", result)
+				}
+			} else {
+				testIntegerObject(t, result, 7)
+			}
+			if got := out.String(); got != test.want {
+				t.Fatalf("output is %q, want %q", got, test.want)
+			}
+		})
+	}
+}
+
+func TestDeferredCallsAreIsolatedPerInvocation(t *testing.T) {
+	var out bytes.Buffer
+	input := `let io = import("io")
+let make = fn() call {
+    try { 1 / 0 } catch ZeroDivisionError err {
+        defer io.println("make")
+        return fn(value) {
+            defer io.println(value)
+            io.println(err.message)
+        }
+    }
+}
+let action = make()
+let run = fn(value) {
+    defer io.println(value)
+    if value > 0 { run(value - 1) }
+    io.println("body")
+}
+defer io.println("script")
+action("first")
+action("second")
+run(1)
+io.println("done")`
+
+	result := evalInput(t, NewWithOutput(&out), object.NewEnvironment(), input)
+	testNullObject(t, result)
+	want := "make\ndivision by zero\nfirst\ndivision by zero\nsecond\nbody\n0\nbody\n1\ndone\nscript\n"
+	if got := out.String(); got != want {
+		t.Fatalf("output is %q, want %q", got, want)
+	}
+}
+
+func TestForLoopDefersUseEnclosingScope(t *testing.T) {
+	for _, test := range []struct {
+		name, loop, want string
+	}{
+		{
+			name: "array closures",
+			loop: `for value in [1, 2] {
+    let record = fn() { io.println(value) }
+    defer record()
+    value = value + 10
+}`,
+			want: "body\n12\n11\nbefore\n",
+		},
+		{
+			name: "map",
+			loop: `let entries = {"key": "value"}
+for key, value in entries {
+    defer io.println(key)
+    defer io.println(value)
+}`,
+			want: "body\nvalue\nkey\nbefore\n",
+		},
+		{
+			name: "nested loops",
+			loop: `for outer in [1, 2] {
+    defer io.println(outer)
+    for inner in [3, 4] {
+        defer io.println(inner)
+    }
+}`,
+			want: "body\n4\n3\n2\n4\n3\n1\nbefore\n",
+		},
+	} {
+		for _, scope := range []string{"script", "function"} {
+			t.Run(test.name+"/"+scope, func(t *testing.T) {
+				var out bytes.Buffer
+				body := "defer io.println(\"before\")\n" + test.loop + "\nio.println(\"body\")"
+				if scope == "function" {
+					body = "let run = fn() {\n" + body + "\n}\nrun()"
+				}
+				input := "let io = import(\"io\")\n" + body
+				result := evalInput(t, NewWithOutput(&out), object.NewEnvironment(), input)
+				testNullObject(t, result)
+				if got := out.String(); got != test.want {
+					t.Fatalf("output is %q, want %q", got, test.want)
+				}
+			})
+		}
+	}
+}
+
+func TestForLoopDefersSurviveControlFlow(t *testing.T) {
+	for _, test := range []struct {
+		control, want string
+	}{
+		{"break", "body\n1\n"},
+		{"continue", "body\n2\n1\n"},
+		{"return", "1\n"},
+		{"missing_name", "1\n"},
+	} {
+		t.Run(test.control, func(t *testing.T) {
+			var out bytes.Buffer
+			input := `let io = import("io")
+let run = fn() {
+    for value in [1, 2] {
+        defer io.println(value)
+        ` + test.control + `
+    }
+    io.println("body")
+}
+run()`
+			result := evalInput(t, NewWithOutput(&out), object.NewEnvironment(), input)
+			if test.control == "missing_name" {
+				err, ok := result.(*object.Error)
+				if !ok || err.MessageText() != "identifier not found: missing_name" {
+					t.Fatalf("result is %v, want missing_name error", result)
+				}
+			} else {
+				testNullObject(t, result)
+			}
+			if got := out.String(); got != test.want {
+				t.Fatalf("output is %q, want %q", got, test.want)
+			}
+		})
+	}
+}

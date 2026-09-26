@@ -28,22 +28,20 @@ func regexDefinitions(null *object.Null) []definition {
 }
 
 func newRegexStructDefinitions() (*object.Struct, *object.Struct) {
-	environment := object.NewEnvironment()
 	matchType := &object.Struct{
 		Name: "MatchObject",
 		Fields: []string{
 			"group", "groups", "groupmap", "start", "end", "span", "string",
 		},
-		FieldTypes: []*ast.TypeAnnotation{
+		FieldTypes: []*object.Contract{
 			nil,
-			callSignature(nil, nil, namedType("array")),
-			callSignature(nil, nil, namedType("map")),
+			object.MustResolveContract(callSignature(nil, nil, namedType("array"))),
+			object.MustResolveContract(callSignature(nil, nil, namedType("map"))),
 			nil,
 			nil,
 			nil,
-			namedType("str"),
+			object.MustResolveContract(namedType("str")),
 		},
-		Env: environment,
 	}
 
 	strType := namedType("str")
@@ -52,21 +50,18 @@ func newRegexStructDefinitions() (*object.Struct, *object.Struct) {
 		Fields: []string{
 			"match", "search", "findall", "findlist", "sub", "subn", "split", "fullmatch", "escape",
 		},
-		FieldTypes: []*ast.TypeAnnotation{
+		FieldTypes: []*object.Contract{
 			nil,
 			nil,
-			callSignature([]string{"string"}, []*ast.TypeAnnotation{strType}, namedType("array")),
-			callSignature([]string{"string"}, []*ast.TypeAnnotation{strType}, namedType("array")),
-			callSignature([]string{"replacement", "string"}, []*ast.TypeAnnotation{strType, strType}, strType),
-			callSignature([]string{"replacement", "string"}, []*ast.TypeAnnotation{strType, strType}, namedType("array")),
-			callSignature([]string{"string"}, []*ast.TypeAnnotation{strType}, namedType("array")),
+			object.MustResolveContract(callSignature([]string{"string"}, []*ast.TypeAnnotation{strType}, namedType("array"))),
+			object.MustResolveContract(callSignature([]string{"string"}, []*ast.TypeAnnotation{strType}, namedType("array"))),
+			object.MustResolveContract(callSignature([]string{"replacement", "string"}, []*ast.TypeAnnotation{strType, strType}, strType)),
+			object.MustResolveContract(callSignature([]string{"replacement", "string"}, []*ast.TypeAnnotation{strType, strType}, namedType("array"))),
+			object.MustResolveContract(callSignature([]string{"string"}, []*ast.TypeAnnotation{strType}, namedType("array"))),
 			nil,
-			callSignature([]string{"string"}, []*ast.TypeAnnotation{strType}, strType),
+			object.MustResolveContract(callSignature([]string{"string"}, []*ast.TypeAnnotation{strType}, strType)),
 		},
-		Env: environment,
 	}
-	environment.Set("MatchObject", matchType)
-	environment.Set("Expression", expressionType)
 	return matchType, expressionType
 }
 

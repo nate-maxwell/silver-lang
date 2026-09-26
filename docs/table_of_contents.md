@@ -7,7 +7,7 @@
 
 ## Command-line interface
 
-- [CLI reference](cli.md) — run files and the REPL, format source, generate caches, initialize packages, and inspect
+- [CLI reference](cli.md) — run files and the REPL, initialize packages, and inspect
   the version.
 
 ## Standard library

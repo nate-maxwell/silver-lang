@@ -80,6 +80,7 @@ func TestTypeDefinitionsAreIdempotent(t *testing.T) {
 
 func TestTypeBuiltinReturnsModuleType(t *testing.T) {
 	dir := t.TempDir()
+	writePackageManifest(t, dir, "library.slv")
 	libraryPath := filepath.Join(dir, "library.slv")
 	mainPath := filepath.Join(dir, "main.slv")
 	writeSilverFile(t, libraryPath, `let answer = 42`)

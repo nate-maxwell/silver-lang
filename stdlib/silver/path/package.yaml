@@ -1,0 +1,4 @@
+package: path
+members: []
+export:
+  - ./path.slv

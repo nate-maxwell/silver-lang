@@ -102,6 +102,7 @@ func TestTypeDeclarationFailures(t *testing.T) {
 
 func TestExportedTypeDeclarations(t *testing.T) {
 	dir := t.TempDir()
+	writePackageManifest(t, dir, "library.slv")
 	libraryPath, mainPath := filepath.Join(dir, "library.slv"), filepath.Join(dir, "main.slv")
 	writeSilverFile(t, libraryPath, `export { Point, Direction, Names, Transform, Read }
 type Point = struct { x: float, y: float }
@@ -119,9 +120,7 @@ let transform: library.Transform = fn(p: library.Point) library.Point { return p
 let read: library.Read = fn() array[library.Point] { return [point] }
 names[0] == "Ada" && heading == library.Direction.North && transform(point).x == read()[0].x
 `)
-	for range 2 { // Source parsing and cached AST evaluation must agree.
-		testBooleanObject(t, New().EvalFile(mainPath, object.NewEnvironment()), true)
-	}
+	testBooleanObject(t, New().EvalFile(mainPath, object.NewEnvironment()), true)
 }
 
 func TestTypeInspectionMember(t *testing.T) {

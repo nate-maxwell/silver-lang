@@ -142,6 +142,7 @@ Point{1}.y
 
 func TestStructExportedFromModule(t *testing.T) {
 	dir := t.TempDir()
+	writePackageManifest(t, dir, "library.slv")
 	libraryPath := filepath.Join(dir, "library.slv")
 	mainPath := filepath.Join(dir, "main.slv")
 	writeSilverFile(t, libraryPath, `

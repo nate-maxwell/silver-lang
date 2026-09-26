@@ -8,7 +8,7 @@ import (
 
 // evalTemplateStringLiteral captures the declaration environment but leaves
 // every interpolation untouched until eval is called. Each invocation uses
-// a fresh copy of the evaluator state captured at declaration.
+// a fresh execution context while retaining the interpreter's module store.
 func (e *Evaluator) evalTemplateStringLiteral(node *ast.TemplateStringLiteral, env *object.Environment) object.Object {
 	baseEvaluator := e.fork()
 	definition, _ := object.BuiltinStructDefinitionByName("TemplateString")
@@ -25,12 +25,9 @@ func (e *Evaluator) evalTemplateStringLiteral(node *ast.TemplateStringLiteral, e
 				result.WriteString(part.Text)
 				continue
 			}
-			value := invocationEvaluator.Eval(part.Expression, env)
+			value := invocationEvaluator.evalValue(part.Expression, env)
 			if isError(value) {
 				return value
-			}
-			if value == nil {
-				return newError(object.RuntimeErrorKindRuntime, "template interpolation produced no value")
 			}
 			result.WriteString(value.Inspect())
 		}
@@ -40,7 +37,7 @@ func (e *Evaluator) evalTemplateStringLiteral(node *ast.TemplateStringLiteral, e
 	return &object.StructInstance{
 		Struct: definition,
 		Values: map[string]object.Object{
-			"eval": &object.Builtin{Fn: evaluate, Signature: templateStringEvalSignature()},
+			"eval": &object.Builtin{Fn: evaluate, Signature: object.MustResolveContract(templateStringEvalSignature())},
 		},
 	}
 }

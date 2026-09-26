@@ -158,6 +158,7 @@ func TestArrayCallableCompatibility(t *testing.T) {
 
 func TestExportedTypeAlias(t *testing.T) {
 	dir := t.TempDir()
+	writePackageManifest(t, dir, "library.slv")
 	libraryPath, mainPath := filepath.Join(dir, "library.slv"), filepath.Join(dir, "main.slv")
 	writeSilverFile(t, libraryPath, `export { Read, make }
 type Item = struct { value: int }
@@ -170,9 +171,7 @@ type Reader = library.Read
 let read: Reader = library.make
 read()[0].value
 `)
-	for range 2 { // Exercise both source parsing and cached AST evaluation.
-		testIntegerObject(t, New().EvalFile(mainPath, object.NewEnvironment()), 42)
-	}
+	testIntegerObject(t, New().EvalFile(mainPath, object.NewEnvironment()), 42)
 }
 
 func TestTypeAliasIsATypeValue(t *testing.T) {

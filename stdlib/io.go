@@ -55,9 +55,9 @@ func newIOStream(name string, reader io.Reader, writer io.Writer, null *object.N
 		Struct: definition,
 		Values: map[string]object.Object{
 			"name":      &object.String{Value: name},
-			"read":      &object.Builtin{Fn: stream.read, Signature: streamReadSignature()},
-			"read_line": &object.Builtin{Fn: stream.readLine, Signature: streamReadLineSignature()},
-			"write":     &object.Builtin{Fn: stream.write, Signature: streamWriteSignature()},
+			"read":      &object.Builtin{Fn: stream.read, Signature: object.MustResolveContract(streamReadSignature())},
+			"read_line": &object.Builtin{Fn: stream.readLine, Signature: object.MustResolveContract(streamReadLineSignature())},
+			"write":     &object.Builtin{Fn: stream.write, Signature: object.MustResolveContract(streamWriteSignature())},
 		},
 	}
 }
@@ -154,9 +154,9 @@ func builtinOpen(null *object.Null) object.BuiltinFunction {
 			Struct: definition,
 			Values: map[string]object.Object{
 				"path":  path,
-				"read":  &object.Builtin{Fn: state.read, Signature: fileReadSignature()},
-				"write": &object.Builtin{Fn: state.write, Signature: fileWriteSignature()},
-				"close": &object.Builtin{Fn: state.close, Signature: fileCloseSignature()},
+				"read":  &object.Builtin{Fn: state.read, Signature: object.MustResolveContract(fileReadSignature())},
+				"write": &object.Builtin{Fn: state.write, Signature: object.MustResolveContract(fileWriteSignature())},
+				"close": &object.Builtin{Fn: state.close, Signature: object.MustResolveContract(fileCloseSignature())},
 			},
 		}
 	}

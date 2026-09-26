@@ -14,7 +14,7 @@ Silver exists to maximize code reuse without the drawbacks of inheritance, while
 - users can define custom operators that are accessible package-wide;
 - structs can overload builtin and custom operators.
 
-The implementation is written in Go and includes a REPL, source modules, cached ASTs, tracebacks, and a standard
+The implementation is written in Go and includes a REPL, source modules, tracebacks, and a standard
 library implemented in both Go and Silver. Silver is currently a young language: it is a good place to experiment
 and learn, but its syntax and APIs may still evolve.
 
@@ -220,8 +220,7 @@ go build -o silver .
 ```
 
 Run a source file with `./silver program.slv` (or `silver.exe program.slv` on Windows). During development,
-`go run . program.slv` works too. Format one source file in place with `./silver frmt program.slv`; like `go fmt`,
-the command prints the filepath when it changes the file. Initialize a package manifest in the current directory with
+`go run . program.slv` works too. Initialize a package manifest in the current directory with
 `./silver package init <package_name>`.
 
 ## Project status and contributing

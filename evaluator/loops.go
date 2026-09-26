@@ -6,7 +6,7 @@ import (
 )
 
 func (e *Evaluator) evalForStatement(statement *ast.ForStatement, env *object.Environment) object.Object {
-	iterable := e.Eval(statement.Iterable, env)
+	iterable := e.evalValue(statement.Iterable, env)
 	if isError(iterable) {
 		return iterable
 	}
@@ -17,8 +17,7 @@ func (e *Evaluator) evalForStatement(statement *ast.ForStatement, env *object.En
 			return newError(object.RuntimeErrorKindValue, "array for loop requires one binding")
 		}
 		for _, element := range collection.Elements {
-			env.Set(statement.Key.Value, element)
-			result := e.Eval(statement.Body, env)
+			result := e.evalForIteration(statement, env, element, nil)
 			switch result.(type) {
 			case *object.Break:
 				return NULL
@@ -33,9 +32,7 @@ func (e *Evaluator) evalForStatement(statement *ast.ForStatement, env *object.En
 			return newError(object.RuntimeErrorKindValue, "map for loop requires key and value bindings")
 		}
 		for _, pair := range collection.Snapshot() {
-			env.Set(statement.Key.Value, pair.Key)
-			env.Set(statement.Value.Value, pair.Value)
-			result := e.Eval(statement.Body, env)
+			result := e.evalForIteration(statement, env, pair.Key, pair.Value)
 			switch result.(type) {
 			case *object.Break:
 				return NULL
@@ -52,9 +49,20 @@ func (e *Evaluator) evalForStatement(statement *ast.ForStatement, env *object.En
 	return NULL
 }
 
+// evalForIteration gives each iteration fresh lexical bindings for its loop
+// variables and body declarations, including those captured by closures.
+func (e *Evaluator) evalForIteration(statement *ast.ForStatement, env *object.Environment, key, value object.Object) object.Object {
+	iterationEnv := object.NewEnclosedEnvironment(env)
+	iterationEnv.Set(statement.Key.Value, key)
+	if statement.Value != nil {
+		iterationEnv.Set(statement.Value.Value, value)
+	}
+	return e.Eval(statement.Body, iterationEnv)
+}
+
 func (e *Evaluator) evalWhileStatement(statement *ast.WhileStatement, env *object.Environment) object.Object {
 	for {
-		condition := e.Eval(statement.Condition, env)
+		condition := e.evalValue(statement.Condition, env)
 		if isError(condition) {
 			return condition
 		}

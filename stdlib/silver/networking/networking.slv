@@ -1,6 +1,19 @@
-# Public networking API. The Silver wrapper provides a nominal protocol enum
-# while the native module owns the underlying sockets.
-let _native = import("_networking")
+# Public networking API. The package supplies socket functions and types from
+# Go; this entry file adds the protocol enum and the generic dial function.
+export {
+    Network,
+    dial,
+    dial_tcp,
+    dial_udp,
+    listen,
+    Connection,
+    Listener,
+    ReadFromResult,
+    ConnectionError,
+    ListenError,
+    ReadError,
+    WriteError,
+}
 
 type Network = enum {
     TCP,
@@ -9,11 +22,7 @@ type Network = enum {
 
 let dial = fn(network: Network, address: str) Connection | ConnectionError {
     if network == Network.TCP {
-        return _native.dial_tcp(address)
+        return dial_tcp(address)
     }
-    return _native.dial_udp(address)
-}
-
-let listen = fn(address: str) Listener | ListenError {
-    return _native.listen(address)
+    return dial_udp(address)
 }

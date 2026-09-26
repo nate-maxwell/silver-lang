@@ -13,20 +13,17 @@ import (
 // DefaultMap is a standard-library-owned map-like struct. Its get_item method
 // is a Silver closure so it can invoke a user-supplied Silver factory.
 func newDefaultMapStructDefinition() *object.Struct {
-	environment := object.NewEnvironment()
 	definition := &object.Struct{
 		Name: "DefaultMap",
 		Fields: []string{
 			"values",
 			"factory",
 		},
-		FieldTypes: []*ast.TypeAnnotation{
-			namedType("map"),
-			namedType("call"),
+		FieldTypes: []*object.Contract{
+			object.MustResolveContract(namedType("map")),
+			object.MustResolveContract(namedType("call")),
 		},
-		Env: environment,
 	}
-	environment.Set("DefaultMap", definition)
 	return definition
 }
 
@@ -52,12 +49,13 @@ func newDefaultMap(definition *object.Struct, null *object.Null) object.BuiltinF
 		}
 		instance := &object.StructInstance{Struct: definition, Values: values}
 		getter := &object.Function{
-			Name:       "get_item",
-			Parameters: defaultMapGetTemplate.Parameters,
-			ReturnType: returnType,
-			ErrorTypes: errorTypes,
-			Body:       defaultMapGetTemplate.Body,
-			Env:        factoryEnvironment,
+			Name:           "get_item",
+			Parameters:     defaultMapGetTemplate.Parameters,
+			ParameterTypes: make([]*object.Contract, len(defaultMapGetTemplate.Parameters)),
+			ReturnType:     returnType,
+			ErrorTypes:     errorTypes,
+			Body:           defaultMapGetTemplate.Body,
+			Env:            factoryEnvironment,
 		}
 		values["get_item"] = &object.BoundMethod{Method: getter, Receiver: instance, Name: "get_item"}
 		values["set_item"] = &object.Builtin{Fn: func(setArgs ...object.Object) object.Object {
@@ -75,7 +73,7 @@ func newDefaultMap(definition *object.Struct, null *object.Null) object.BuiltinF
 	}
 }
 
-func defaultFactoryResult(factory object.Object) (*ast.TypeAnnotation, []*ast.TypeAnnotation, *object.Environment, bool) {
+func defaultFactoryResult(factory object.Object) (*object.Contract, []*object.Contract, *object.Environment, bool) {
 	switch factory := factory.(type) {
 	case *object.Function:
 		return factory.ReturnType, factory.ErrorTypes, factory.Env, true

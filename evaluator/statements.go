@@ -5,8 +5,8 @@ import (
 	"silver/object"
 )
 
-// evalBlockStatement evaluates a block until completion or until return/error
-// control flow must propagate to an enclosing evaluator.
+// evalBlockStatement evaluates a block until completion or abrupt control flow.
+// A successful block with no final value produces Silver's null singleton.
 func (e *Evaluator) evalBlockStatement(block *ast.BlockStatement, env *object.Environment) object.Object {
 	var result object.Object
 
@@ -19,6 +19,9 @@ func (e *Evaluator) evalBlockStatement(block *ast.BlockStatement, env *object.En
 		}
 	}
 
+	if result == nil {
+		return NULL
+	}
 	return result
 }
 

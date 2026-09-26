@@ -9,7 +9,7 @@ import (
 // the current environment.
 func (e *Evaluator) evalStructType(name string, node *ast.StructTypeLiteral, env *object.Environment) object.Object {
 	fields := make([]string, 0, len(node.Fields))
-	fieldTypes := make([]*ast.TypeAnnotation, 0, len(node.Fields))
+	fieldTypes := make([]*object.Contract, len(node.Fields))
 	embeddedFields := make([]bool, 0, len(node.Fields))
 	seen := make(map[string]bool, len(node.Fields))
 	for _, field := range node.Fields {
@@ -18,7 +18,6 @@ func (e *Evaluator) evalStructType(name string, node *ast.StructTypeLiteral, env
 		}
 		seen[field.Value] = true
 		fields = append(fields, field.Value)
-		fieldTypes = append(fieldTypes, field.Type)
 		embeddedFields = append(embeddedFields, field.Embedded)
 	}
 
@@ -28,29 +27,19 @@ func (e *Evaluator) evalStructType(name string, node *ast.StructTypeLiteral, env
 		Fields:         fields,
 		FieldTypes:     fieldTypes,
 		EmbeddedFields: embeddedFields,
-		Env:            env,
 	}
 	env.Set(name, definition)
-	for index, fieldType := range fieldTypes {
-		if err := e.validateTypeAnnotation(fieldType, env); err != nil {
+	for index, field := range node.Fields {
+		contract, err := object.ResolveContract(field.Type, env)
+		if err != nil {
 			return err
 		}
+		fieldTypes[index] = contract
 		if embeddedFields[index] {
-			resolvedField, fieldEnv, resolutionError := expandTypeAlias(fieldType, env)
-			if resolutionError != "" {
-				return newError(object.RuntimeErrorKindName, "%s", resolutionError)
+			if contract == nil {
+				return newError(object.RuntimeErrorKindType, "embedded field %q must have a struct type", name+"."+fields[index])
 			}
-			fieldType = resolvedField
-			if len(fieldType.Parts) == 1 {
-				if _, isPrimitive := object.TypeDefinitionByName(fieldType.Parts[0]); isPrimitive {
-					return newError(object.RuntimeErrorKindType, "embedded field %q must have a struct type", name+"."+fields[index])
-				}
-			}
-			fieldTypeValue, resolutionError := resolveNamedType(fieldType, fieldEnv)
-			if resolutionError != "" {
-				return newError(object.RuntimeErrorKindName, "%s", resolutionError)
-			}
-			if _, ok := fieldTypeValue.(*object.Struct); !ok {
+			if _, ok := contract.Definition.(*object.Struct); !ok {
 				return newError(object.RuntimeErrorKindType, "embedded field %q must have a struct type", name+"."+fields[index])
 			}
 		}

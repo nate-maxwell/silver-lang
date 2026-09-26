@@ -34,11 +34,6 @@ func NewInfixRegistry() *InfixRegistry {
 	}
 }
 
-// HasUserOperators reports whether this session's grammar has been extended.
-func (r *InfixRegistry) HasUserOperators() bool {
-	return len(r.definitions) != 0
-}
-
 // Has reports whether symbol is a user-defined operator in this registry.
 // Evaluators use this to distinguish package-local operator identities from
 // the operators built into the language.

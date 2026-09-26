@@ -3,6 +3,7 @@ package object
 import (
 	"bytes"
 	"silver/ast"
+	"silver/source"
 	"strings"
 )
 
@@ -48,8 +49,10 @@ type Destructurable interface {
 }
 
 // Module represents one evaluated source file and its exported top-level
-// bindings. Path is the canonical path used by the evaluator's module cache.
+// bindings. ID is its canonical identity; Path retains a readable source path
+// or bundled name for diagnostics.
 type Module struct {
+	ID      source.ModuleID
 	Path    string
 	Exports map[string]Object
 }
@@ -71,16 +74,18 @@ func (m *Module) Get(name string) (Object, bool) {
 // Go errors so they propagate through normal evaluation.
 type BuiltinFunction func(args ...Object) Object
 
-// Function is a Silver closure. Env captures the lexical environment active at
-// declaration time, and Name is assigned when the closure is bound by let.
+// Function is a Silver closure. Env supplies lexical bindings for the body;
+// parameter and result contracts are resolved independently at creation time.
+// Name is assigned when the closure is bound by let.
 type Function struct {
-	Name       string
-	Parameters []*ast.Identifier
-	ReturnType *ast.TypeAnnotation
-	ErrorTypes []*ast.TypeAnnotation
-	Body       *ast.BlockStatement
-	Env        *Environment
-	Operator   bool // unannotated operator functions preserve explicitly returned results
+	Name           string
+	Parameters     []*ast.Identifier
+	ParameterTypes []*Contract
+	ReturnType     *Contract
+	ErrorTypes     []*Contract
+	Body           *ast.BlockStatement
+	Env            *Environment
+	Operator       bool // unannotated operator functions preserve explicitly returned results
 }
 
 // Type returns the user-defined function runtime tag.
@@ -118,7 +123,7 @@ func (f *Function) Inspect() string {
 // Builtin wraps a Go function so it can participate in Silver calls.
 type Builtin struct {
 	Fn        BuiltinFunction
-	Signature *ast.TypeAnnotation
+	Signature *Contract
 }
 
 // Type returns the native function runtime tag.

@@ -5,8 +5,6 @@ The examples below use `silver` as if the executable is on `PATH`. When running 
 
 ```text
 silver [file]
-silver astgen <path>
-silver frmt <file>
 silver package init <package_name>
 silver version
 ```
@@ -28,27 +26,8 @@ silver program.slv
 
 A single argument that is not a command name is treated as a source path. Silver evaluates the file and writes only
 output requested by the program to standard output. Uncaught errors and tracebacks are written to standard error.
-
-## Generate AST caches
-
-```console
-silver astgen <path>
-```
-
-`astgen` parses a source file and writes a sibling `.astc` cache. If `<path>` is a directory, Silver recursively
-generates caches for every `.slv` file below it. The command prints the path of each generated cache.
-
-AST caches are implementation details and can be safely regenerated. Normal file execution also creates or refreshes
-a cache when needed.
-
-## Format a source file
-
-```console
-silver frmt <file>
-```
-
-`frmt` formats one source file in place. It prints the file path when the file changes and produces no output when the
-file is already formatted.
+The entry script can run on its own, but every file it imports must be listed in a package YAML manifest's `members`
+or `export` list. Missing manifests cause `ImportError` and a nonzero exit status.
 
 ## Initialize a package
 
@@ -63,12 +42,14 @@ For example, `silver package init my_library` creates:
 
 ```yaml
 package: my_library
+members: []
 export: []
 ```
 
-Add relative `.slv` paths to the `export` list to expose modules from the package. See
+Add relative `.slv` paths to `export` for public entry points and to `members` for internal files that share the package's
+operators. Exported files are automatically members. See
 [Modules and imports](language_guide/modules.md#packages-and-yaml-manifests) for manifest rules and the
-[package example](../examples/packages/package_b/demo.slv) for a complete consumer.
+[package example](../examples/packages/README.md) for runnable consumers.
 
 ## Print the version
 

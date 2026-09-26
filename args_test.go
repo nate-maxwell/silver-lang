@@ -60,6 +60,43 @@ func TestRunFileReportsErrors(t *testing.T) {
 	}
 }
 
+func TestRunFileFailsAfterImportedPackageManifestIsMoved(t *testing.T) {
+	t.Setenv("SILVER_PATH", "")
+	dir := t.TempDir()
+	libraryDir := filepath.Join(dir, "library")
+	backup := filepath.Join(libraryDir, "bck")
+	if err := os.MkdirAll(backup, 0755); err != nil {
+		t.Fatal(err)
+	}
+	for name, contents := range map[string]string{
+		"main.slv": `let library = import("./library/api.slv")
+import("io").println(library.answer())`,
+		"library/package.yaml": "package: library\nmembers: [helper.slv]\nexport: [api.slv, ops.slv]\n",
+		"library/ops.slv":      `operator @@ = fn(left: int, right: int) int { return left + right }`,
+		"library/helper.slv":   `let answer = fn() int { return 20 @@ 22 }`,
+		"library/api.slv": `let ops = import("./ops.slv")
+let helper = import("./helper.slv")
+let answer = helper.answer`,
+	} {
+		if err := os.WriteFile(filepath.Join(dir, filepath.FromSlash(name)), []byte(contents), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var stdout, stderr bytes.Buffer
+	args := []string{filepath.Join(dir, "main.slv")}
+	if code := run(args, strings.NewReader(""), &stdout, &stderr); code != 0 || stdout.String() != "42\n" {
+		t.Fatalf("valid package run returned %d, stdout=%q, stderr=%q", code, stdout.String(), stderr.String())
+	}
+	if err := os.Rename(filepath.Join(libraryDir, "package.yaml"), filepath.Join(backup, "package.yaml")); err != nil {
+		t.Fatal(err)
+	}
+	stdout.Reset()
+	stderr.Reset()
+	if code := run(args, strings.NewReader(""), &stdout, &stderr); code != 1 || stdout.Len() != 0 || !strings.Contains(stderr.String(), "package YAML manifest is required") {
+		t.Fatalf("missing manifest run returned %d, stdout=%q, stderr=%q", code, stdout.String(), stderr.String())
+	}
+}
+
 func TestRunFileReportsTraceback(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "main.slv")
 	if err := os.WriteFile(path, []byte(`let fail = fn() {
@@ -110,41 +147,6 @@ read()
 	}
 }
 
-func TestRunFormatFormatsOneFile(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "main.slv")
-	if err := os.WriteFile(path, []byte("let answer=40+2"), 0644); err != nil {
-		t.Fatal(err)
-	}
-
-	var stdout, stderr bytes.Buffer
-	code := run([]string{"frmt", path}, strings.NewReader(""), &stdout, &stderr)
-	if code != 0 {
-		t.Fatalf("run returned %d; stderr: %s", code, stderr.String())
-	}
-	if got, want := stdout.String(), path+"\n"; got != want {
-		t.Fatalf("stdout is %q, want %q", got, want)
-	}
-	formatted, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got, want := string(formatted), "let answer = 40 + 2\n"; got != want {
-		t.Fatalf("formatted file is %q, want %q", got, want)
-	}
-}
-
-func TestRunFormatRequiresExactlyOneFile(t *testing.T) {
-	for _, args := range [][]string{{"frmt"}, {"frmt", "one.slv", "two.slv"}} {
-		var stdout, stderr bytes.Buffer
-		if code := run(args, strings.NewReader(""), &stdout, &stderr); code != 2 {
-			t.Fatalf("run(%q) returned %d, want 2", args, code)
-		}
-		if got, want := stderr.String(), "usage: silver frmt <file>\n"; got != want {
-			t.Fatalf("stderr is %q, want %q", got, want)
-		}
-	}
-}
-
 func TestRunPackageInit(t *testing.T) {
 	directory := t.TempDir()
 	t.Chdir(directory)
@@ -161,7 +163,7 @@ func TestRunPackageInit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got, want := string(contents), "package: example_2\nexport: []\n"; got != want {
+	if got, want := string(contents), "package: example_2\nmembers: []\nexport: []\n"; got != want {
 		t.Fatalf("package.yaml is %q, want %q", got, want)
 	}
 }

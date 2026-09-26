@@ -2,15 +2,14 @@ package packages
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
+	"silver/source"
 )
 
-// Resolve searches for explicit source entries and package exports in search-path
+// Resolve searches for package exports in search-path
 // order. An exported file may be addressed by its declared path or basename.
 //
-// The returned Manifest is nil for an individual source-file entry or a file
-// found through a legacy directory. If no entry matches, Resolve returns an
+// A successful lookup always has a manifest. If no entry matches, Resolve returns an
 // empty path, a nil Manifest, false, and a nil error. Resolve returns an error
 // when the index has not been refreshed or its latest refresh failed.
 func (index *Index) Resolve(request string) (string, *Manifest, bool, error) {
@@ -25,19 +24,10 @@ func (index *Index) Resolve(request string) (string, *Manifest, bool, error) {
 
 	wanted := cleanImportName(request)
 	for _, entry := range index.entries {
-		if entry.legacy {
-			candidate := filepath.Clean(filepath.Join(entry.directory, request))
-			if importCandidateExists(candidate) {
-				return candidate, index.byFile[pathKey(candidate)], true, nil
-			}
-		}
-		if entry.file != "" && matchesExposedFile(wanted, filepath.Base(entry.file), "") {
-			return entry.file, nil, true, nil
-		}
 		for _, manifest := range entry.manifests {
 			for _, exported := range manifest.exports {
 				if matchesExposedFile(wanted, filepath.Base(exported.path), exported.declared) {
-					return exported.path, manifest, true, nil
+					return exported.path, index.byFile[source.FileID(exported.path)], true, nil
 				}
 			}
 		}
@@ -48,12 +38,6 @@ func (index *Index) Resolve(request string) (string, *Manifest, bool, error) {
 // matchesExposedFile reports whether an import request matches an exposed
 // file's basename or its manifest-declared relative path.
 func matchesExposedFile(wanted, base, declared string) bool {
-	return wanted == cleanImportName(base) || declared != "" && wanted == cleanImportName(declared)
-}
-
-// importCandidateExists reports whether a legacy import candidate exists. It
-// preserves non-not-found filesystem errors for the later module read.
-func importCandidateExists(path string) bool {
-	_, err := os.Stat(path)
-	return err == nil || !os.IsNotExist(err)
+	wantedKey := source.PathKey(wanted)
+	return wantedKey == source.PathKey(base) || declared != "" && wantedKey == source.PathKey(declared)
 }

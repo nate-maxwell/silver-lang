@@ -1,0 +1,4 @@
+package: json
+members: []
+export:
+  - ./json.slv

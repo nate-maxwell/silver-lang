@@ -33,6 +33,14 @@ let label = if score >= 90 {
 ```
 
 Only the selected branch runs. When an `if` expression has no `else` and its condition is falsey, its value is null.
+An empty selected block, or one ending in a declaration without a value, also produces null. This applies to `switch`
+and `try`/`catch` blocks as well.
+
+When a block expression supplies a value (for example, a binding initializer, argument, operand, or condition),
+`return`, `break`, and `continue` cannot escape it to an enclosing function or loop. An attempted escape raises a
+catchable `RuntimeError`. Functions called and loops executed inside the expression can still use their own control
+flow, and errors propagate normally. A standalone `if`, `switch`, or `try` statement can return from its enclosing
+function or control its enclosing loop.
 
 Additional conditions may be chained with `else if`:
 
@@ -129,8 +137,22 @@ for key, value in entries {
 Map iteration order is unspecified. The iterable is evaluated before iteration, and its shape is checked at runtime.
 Array iteration requires one loop variable; map iteration requires two.
 
-Loop variables live in the loop's execution scope. Assignment inside a loop can update bindings from an enclosing scope,
-as the `total` examples do.
+Each iteration creates a new lexical scope for the loop variables and declarations in its body. Loop variables shadow
+enclosing bindings without changing their values or type annotations, and are not visible after the loop. Closures
+created in the body capture that iteration's bindings, including any assignments made to them during the iteration.
+Assignment to other names can still update bindings from an enclosing scope, as the `total` examples do.
+
+```silver
+let n: int = 1
+for n in ["oops"] {
+    # This n is a separate, untyped binding.
+    n = False
+}
+n # 1
+# n = False # TypeError: the outer n still requires int
+```
+
+Deferred calls registered inside a loop still run at the end of the surrounding function, module, or script.
 
 ## `while` loops
 
@@ -199,5 +221,7 @@ example() # prints "first value"
 ```
 
 Only a call expression may follow `defer`. Deferred calls still run when a return or propagated error leaves the scope.
+Calls deferred inside a catch body or loop wait until the surrounding function, module, or script exits.
+Each function invocation has its own deferred calls, including recursive calls.
 
 [Documentation index](../table_of_contents.md)

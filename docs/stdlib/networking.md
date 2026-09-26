@@ -1,12 +1,15 @@
 # `networking`
 
 `networking` provides blocking TCP/UDP connections and TCP listeners. Native sockets are wrapped in ordinary Silver
-structs with typed callable fields.
+structs with typed callable fields. All functions and types on this page are
+available from `import("networking")`.
+
+Existing `import("_networking")` calls resolve to this same module as a compatibility alias.
 
 ```silver
 let net = import("networking")
 
-let connection = net.dial(net.Network.TCP, "example.com:80")
+let connection: net.Connection = net.dial_tcp("example.com:80")
 defer connection.close()
 connection.write("GET / HTTP/1.0\r\nHost: example.com\r\n\r\n")
 let response = connection.read(4096)
@@ -17,9 +20,25 @@ let response = connection.read(4096)
 | Function                                                            | Description                             |
 | ------------------------------------------------------------------- | --------------------------------------- |
 | `dial(network: Network, address: str) Connection \| ConnectionError` | Connect using `Network.TCP` or `Network.UDP`. |
+| `dial_tcp(address: str) Connection \| ConnectionError`              | Connect over TCP.                      |
+| `dial_udp(address: str) Connection \| ConnectionError`              | Create a UDP socket with a default peer. |
 | `listen(address: str) Listener \| ListenError`                       | Create a TCP listener.                  |
 
-`Network` is an enum with `TCP` and `UDP` members.
+`net.Network` is an enum with `TCP` and `UDP` members. `net.dial(net.Network.TCP, address)` is equivalent to
+`net.dial_tcp(address)`, and `net.dial(net.Network.UDP, address)` is equivalent to `net.dial_udp(address)`.
+
+The module also exports `net.Connection`, `net.Listener`, `net.ReadFromResult`, `net.ConnectionError`,
+`net.ListenError`, `net.ReadError`, and `net.WriteError`. Use these names in type annotations and catch clauses:
+
+```silver
+let net = import("networking")
+let message = try {
+    net.dial_tcp("not-an-address")
+    "connected"
+} catch net.ConnectionError err {
+    err.message
+}
+```
 
 ## `Connection`
 

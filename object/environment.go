@@ -7,14 +7,17 @@ import (
 
 // Environment is a lexical scope. outer links closures and nested calls to
 // their parent scope, while sourceDir supplies the base for relative imports.
+// Function calls, modules, and scripts own deferred calls; their lexical child
+// scopes share that owner through deferOwner.
 type Environment struct {
-	mu        sync.RWMutex
-	store     map[string]Object // bindings defined directly in this scope
-	types     map[string]*ast.TypeAnnotation
-	outer     *Environment // enclosing lexical scope, if any
-	sourceDir string       // directory of the source file being evaluated
-	packageID string       // manifest identity owning this source, if any
-	defers    []DeferredCall
+	mu         sync.RWMutex
+	store      map[string]Object // bindings defined directly in this scope
+	types      map[string]*Contract
+	outer      *Environment // enclosing lexical scope, if any
+	sourceDir  string       // directory of the source file being evaluated
+	packageID  string       // manifest identity owning this source, if any
+	deferOwner *Environment // nil when this environment owns its deferred calls
+	defers     []DeferredCall
 }
 
 // DeferredCall holds a callable and the argument values captured when a
@@ -29,7 +32,7 @@ type DeferredCall struct {
 func NewEnvironment() *Environment {
 	return &Environment{
 		store: make(map[string]Object),
-		types: make(map[string]*ast.TypeAnnotation),
+		types: make(map[string]*Contract),
 	}
 }
 
@@ -54,33 +57,33 @@ func (e *Environment) Set(name string, val Object) {
 	delete(e.types, name)
 }
 
-// SetTyped creates or replaces a binding and records its explicit type, if
+// SetTyped creates or replaces a binding and records its resolved contract, if
 // any, for later assignment checks.
-func (e *Environment) SetTyped(name string, val Object, annotation *ast.TypeAnnotation) {
+func (e *Environment) SetTyped(name string, val Object, contract *Contract) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	e.store[name] = val
-	if annotation == nil {
+	if contract == nil {
 		delete(e.types, name)
 	} else {
-		e.types[name] = annotation
+		e.types[name] = contract
 	}
 }
 
 // AssignmentTarget finds the nearest lexical binding and its declared type.
-func (e *Environment) AssignmentTarget(name string) (*ast.TypeAnnotation, *Environment, bool) {
+func (e *Environment) AssignmentTarget(name string) (*Contract, bool) {
 	e.mu.RLock()
 	if _, ok := e.store[name]; ok {
-		annotation := e.types[name]
+		contract := e.types[name]
 		e.mu.RUnlock()
-		return annotation, e, true
+		return contract, true
 	}
 	outer := e.outer
 	e.mu.RUnlock()
 	if outer != nil {
 		return outer.AssignmentTarget(name)
 	}
-	return nil, nil, false
+	return nil, false
 }
 
 // Assign replaces the nearest existing lexical binding. Callers resolve the
@@ -160,16 +163,23 @@ func (e *Environment) PackageID() string {
 	return ""
 }
 
-// RegisterDefer schedules a captured call for this scope's exit.
+// RegisterDefer schedules a captured call for the enclosing function, module,
+// or script's exit, regardless of the current lexical scope.
 func (e *Environment) RegisterDefer(call DeferredCall) {
+	if e.deferOwner != nil {
+		e = e.deferOwner
+	}
 	e.mu.Lock()
 	e.defers = append(e.defers, call)
 	e.mu.Unlock()
 }
 
-// TakeDefers removes and returns the scope's deferred calls in declaration
-// order. The evaluator invokes the returned calls in reverse order.
+// TakeDefers removes and returns the owner's deferred calls in declaration
+// order. The evaluator invokes them in reverse order when that lifetime ends.
 func (e *Environment) TakeDefers() []DeferredCall {
+	if e.deferOwner != nil {
+		e = e.deferOwner
+	}
 	e.mu.Lock()
 	deferred := append([]DeferredCall(nil), e.defers...)
 	e.defers = nil
@@ -177,8 +187,22 @@ func (e *Environment) TakeDefers() []DeferredCall {
 	return deferred
 }
 
-// NewEnclosedEnvironment constructs a child lexical scope linked to outer.
+// NewEnclosedEnvironment constructs a child lexical scope linked to outer,
+// sharing its deferred-call owner.
 func NewEnclosedEnvironment(outer *Environment) *Environment {
+	env := NewFunctionEnvironment(outer)
+	if outer != nil {
+		env.deferOwner = outer
+		if outer.deferOwner != nil {
+			env.deferOwner = outer.deferOwner
+		}
+	}
+	return env
+}
+
+// NewFunctionEnvironment constructs a function invocation's lexical scope.
+// It captures outer's bindings but owns a fresh list of deferred calls.
+func NewFunctionEnvironment(outer *Environment) *Environment {
 	env := NewEnvironment()
 	env.outer = outer
 	return env

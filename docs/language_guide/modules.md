@@ -171,7 +171,7 @@ Module members cannot be replaced through member assignment. Member assignment i
 # geometry.origin = geometry.Point{1, 1} # TypeError
 ```
 
-## Evaluation, caching, and state
+## Evaluation and state
 
 A successful module is evaluated once per interpreter session and cached by its bundled name or canonical absolute
 path. Repeated imports return the same module object:

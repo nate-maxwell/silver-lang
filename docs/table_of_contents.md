@@ -12,6 +12,9 @@
 
 ## Standard library
 
+Import these modules through the `core` package, for example `import("core:io")` or
+`import("core:http/cookiejar")`. The `core` utilities module is `import("core:core")`.
+
 - [`http`](stdlib/http.md) - HTTP methods, status codes, descriptions, and status classes.
 - [`http/client`](stdlib/http_client.md) - blocking HTTP/1.1 requests and responses.
 - [`http/cookiejar`](stdlib/http_cookiejar.md) - in-memory cookie storage and URL matching.

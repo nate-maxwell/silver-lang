@@ -90,6 +90,8 @@ func (p *Parser) parseTypeAnnotationFromCurrent() *ast.TypeAnnotation {
 		}
 	}
 	if len(annotation.Parts) == 1 && annotation.Parts[0] == "call" && p.peekTokenIs(token.LPAREN) {
+		// A non-nil, empty slice encodes call(). Leaving this nil would turn
+		// the annotation into the broad call type and discard its signature.
 		annotation.ParameterTypes = make([]*ast.TypeAnnotation, 0)
 		annotation.ParameterNames = make([]string, 0)
 		p.nextToken()
@@ -105,6 +107,9 @@ func (p *Parser) parseTypeAnnotationFromCurrent() *ast.TypeAnnotation {
 
 				parameterName := ""
 				var parameterType *ast.TypeAnnotation
+				// The first identifier can be a name or a type. Only a following
+				// colon commits it to being a name; otherwise parse the type
+				// from the current token so qualified names remain intact.
 				if p.peekTokenIs(token.COLON) {
 					parameterName = p.curToken.Literal
 					p.nextToken()

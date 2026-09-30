@@ -1,6 +1,8 @@
 # Silver Standard Library
 
 The standard library contains modules implemented in both Go and Silver.
+Public imports use the `core` package: `import("core:io")`, `import("core:logging")`,
+and `import("core:http/cookiejar")`. Standard-library modules are always available.
 Go modules primarily support Silver primitives, or lower-level implementation details
 that silver primitives cannot produce themselves (like sockets, io streams, etc.).
 
@@ -29,9 +31,11 @@ export:
 
 Exported files automatically belong to the package. Add internal `.slv` files to
 `members` to share the package's operator grammar without creating public import
-names. Embedded members may import each other by relative file path. An exported
-`<package>.slv` supplies the bare package name; other exported paths supply
-`<package>/<path-without-extension>`, such as `http/client`.
+names. Embedded members import each other with qualified `core:` names. Within this
+internal layout, an exported `<package>.slv` supplies `core:<package>`; other exported
+paths supply `core:<package>/<path-without-extension>`, such as `core:http/client`.
+The manifest names identify implementation groups and operator scopes inside the
+public `core` namespace. All imports require a package-qualified name.
 
 Packages implemented entirely in Go have empty file lists. Their `package` name
 selects the Go implementation, which supplies the module's bindings. A package

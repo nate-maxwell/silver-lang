@@ -9,13 +9,13 @@ import (
 func TestCollectionModuleNamesArePlural(t *testing.T) {
 	library := New(io.Discard, &object.Null{}, &object.Boolean{Value: true}, &object.Boolean{Value: false})
 	for _, name := range []string{"arrays", "maps"} {
-		module, ok := library.LookupModule(name)
+		module, ok := library.LookupModule("core:" + name)
 		if !ok || module.Path != name {
 			t.Errorf("LookupModule(%q) = %#v, %t", name, module, ok)
 		}
 	}
 	for _, name := range []string{"array", "map"} {
-		if module, ok := library.LookupModule(name); ok {
+		if module, ok := library.LookupModule("core:" + name); ok {
 			t.Errorf("singular module %q is still registered as %#v", name, module)
 		}
 	}

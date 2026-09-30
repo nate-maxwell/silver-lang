@@ -4,7 +4,7 @@
 and prints progress through `io.println`.
 
 ```silver
-let testing = import("testing")
+let testing = import("core:testing")
 
 testing.suite("math", fn() {
     testing.run("addition", fn() {

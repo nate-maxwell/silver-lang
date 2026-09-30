@@ -4,7 +4,7 @@
 deterministic and testable. The current CLI does not yet expose process arguments automatically.
 
 ```silver
-let args = import("args")
+let args = import("core:args")
 
 let parser = args.new("backup", "Copy a source to a destination")
 parser.add(args.positional("source", "File to copy"))

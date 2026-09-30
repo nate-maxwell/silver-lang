@@ -8,6 +8,9 @@ import (
 
 // MapLiteral stores key/value expression pairs. Evaluation later validates
 // that each key produces a hashable runtime object.
+// Keys use AST node identity, not Silver equality, and pair order is unspecified.
+// parser.literalMapKey catches equal scalar literals; the evaluator must also
+// reject duplicates whose keys become equal only after evaluation.
 type MapLiteral struct {
 	Token token.Token // the '{' token
 	Pairs map[Expression]Expression

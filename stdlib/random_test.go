@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-const randomImport = `let random = import("random")
+const randomImport = `let random = import("core:random")
 `
 
 func TestRandomAndSeed(t *testing.T) {

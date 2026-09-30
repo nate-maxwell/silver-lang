@@ -1,4 +1,4 @@
-# Editor stub for import("maps").
+# Editor stub for import("core:maps").
 #
 # Pure map helpers that complement map-literal syntax and index access
 # (mapping[key]). Every function here returns a new map or value and leaves

@@ -10,12 +10,12 @@ import (
 	"time"
 )
 
-const loggingImport = `let logging = import("logging")
+const loggingImport = `let logging = import("core:logging")
 `
 
 func TestLoggingStreamNullAndLogger(t *testing.T) {
 	var stdout, stderr bytes.Buffer
-	input := loggingImport + `let io = import("io")
+	input := loggingImport + `let io = import("core:io")
 let stream = logging.new_stream_handler(io.stdout)
 stream.handle("direct")
 let discard = logging.new_null_handler()
@@ -34,7 +34,7 @@ True`
 
 func TestLoggingFileHandlerAppends(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "app.log")
-	input := loggingImport + `let path = import("path")
+	input := loggingImport + `let path = import("core:path")
 let handler = logging.new_file_handler(path.new(` + silverString(path) + `))
 handler.handle("first")
 handler.handle("second")`
@@ -51,7 +51,7 @@ handler.handle("second")`
 func TestLoggingRotatingFileHandler(t *testing.T) {
 	directory := t.TempDir()
 	path := filepath.Join(directory, "app.log")
-	input := loggingImport + `let path = import("path")
+	input := loggingImport + `let path = import("core:path")
 let handler = logging.new_rotating_file_handler(path.new(` + silverString(path) + `), 0)
 handler.handle("first")
 handler.handle("second")`

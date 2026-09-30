@@ -1,4 +1,4 @@
-# Editor stub for import("io").
+# Editor stub for import("core:io").
 #
 # print, println, and the stdin/stdout/stderr streams are the only functions that talk
 # to the process's actual console; open and File work with arbitrary paths

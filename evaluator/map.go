@@ -23,7 +23,9 @@ func evalMapIndexExpression(mapping, index object.Object) object.Object {
 }
 
 // evalMapLiteral evaluates key/value pairs and rejects keys that do not
-// implement object.Hashable.
+// implement object.Hashable or collide after normalization. Unlike the parser's
+// literal-only check, this catches equal computed keys. Pair traversal follows
+// the AST's unordered map; within a pair the key is checked before its value.
 func (e *Evaluator) evalMapLiteral(node *ast.MapLiteral, env *object.Environment) object.Object {
 	pairs := make(map[object.HashKey]object.MapPair)
 

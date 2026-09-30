@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-const mathImport = "let math = import(\"math\")\n"
+const mathImport = "let math = import(\"core:math\")\n"
 
 func TestAbs(t *testing.T) {
 	tests := []struct {

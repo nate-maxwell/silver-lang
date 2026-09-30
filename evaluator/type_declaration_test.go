@@ -17,7 +17,7 @@ let origin: Point = Point{0.0, 0.0}
 let heading: Direction = Direction.North
 let names: Names = ["Ada"]
 let transform: Transform = fn(point: Point) Point { return point }
-let core = import("core")
+let core = import("core:core")
 transform(origin).x == origin.x && heading == Direction.North && names[0] == "Ada" && core.type(origin) == Point && core.type(heading) == Direction
 `), true)
 }
@@ -111,7 +111,7 @@ type Names = array[str]
 type Transform = call(Point) Point
 type Read = call() array[Point]
 `)
-	writeSilverFile(t, mainPath, `let library = import("./library.slv")
+	writeSilverFile(t, mainPath, `let library = import("fixture:library")
 type Names = library.Names
 let names: Names = ["Ada"]
 let point: library.Point = library.Point{0.0, 0.0}
@@ -124,7 +124,7 @@ names[0] == "Ada" && heading == library.Direction.North && transform(point).x ==
 }
 
 func TestTypeInspectionMember(t *testing.T) {
-	testBooleanObject(t, testEval(`let core = import("core")
+	testBooleanObject(t, testEval(`let core = import("core:core")
 let inspect_type = core.type
 inspect_type(42) == int
 `), true)

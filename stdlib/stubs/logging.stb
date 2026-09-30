@@ -1,4 +1,4 @@
-# Editor stub for import("logging").
+# Editor stub for import("core:logging").
 #
 # A small structured-logging layer implemented in Silver on top of io, path,
 # networking, and time. A Logger renders each message through a lazy
@@ -7,7 +7,7 @@
 # socket). Logger.level and Level exist for callers to label and branch on
 # severity; new_logger does not filter records by level itself.
 
-let pathlib = import("path")
+let pathlib = import("core:path")
 
 # Level names the severity of a log record, from least to most severe.
 # Nothing in this module compares levels automatically; use it to label

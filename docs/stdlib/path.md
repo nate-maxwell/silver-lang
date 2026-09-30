@@ -6,11 +6,11 @@ Path construction, lexical operations, matching, and traversal are implemented i
 delegated to low-level `io` operations.
 
 ```silver
-let path = import("path")
+let path = import("core:path")
 
 let config = path.home().joinpath(".silver").joinpath("config.json")
 if config.exists() {
-    import("io").print(config.read_text())
+    import("core:io").print(config.read_text())
 }
 ```
 

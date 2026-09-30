@@ -1,4 +1,4 @@
-# Editor stub for import("system").
+# Editor stub for import("core:system").
 #
 # Host, process, and environment-variable information. Every query function
 # is a snapshot taken at call time; none of them watch for later changes
@@ -20,11 +20,11 @@ let get_path_sep = fn() str {
 }
 
 let append_path = fn(path: str) {
-    # Append path to the SILVER_PATH environment variable (named by
+    # Append a package.yaml path to the SILVER_PATH environment variable (named by
     # ENV_SILVER_PATH) for this process, joined with get_path_sep, and
-    # return null. Silver's module resolver consults SILVER_PATH when an
-    # import(...) path does not resolve relative to the importing file, so
-    # this extends where later imports are found. The change is visible to
+    # return null. Later imports such as import("my_library:that_module")
+    # resolve the named package's exported .slv files through SILVER_PATH.
+    # Relative manifest paths use the working directory. The change is visible to
     # this process and any processes it spawns afterward, but not to
     # already-running processes.
 }

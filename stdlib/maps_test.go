@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-const mapImport = "let maps = import(\"maps\")\n"
+const mapImport = "let maps = import(\"core:maps\")\n"
 
 func TestMapModuleFunctions(t *testing.T) {
 	tests := []struct {

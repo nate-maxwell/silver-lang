@@ -3,14 +3,14 @@
 `system` reports host information and reads or changes the current process environment.
 
 ```silver
-let system = import("system")
-let io = import("io")
+let system = import("core:system")
+let io = import("core:io")
 
 io.println(system.system(), system.release(), system.machine())
 io.println("Silver " + system.VERSION)
 io.println(system.getenv("PATH"))
 
-system.append_path("./modules")
+system.append_path("./my_library/package.yaml")
 io.println(system.getenv(system.ENV_SILVER_PATH))
 ```
 
@@ -22,7 +22,7 @@ io.println(system.getenv(system.ENV_SILVER_PATH))
 | `VERSION`             | Silver's version string in `MAJOR.MINOR.PATCH` form.                     |
 | `ENV_SILVER_PATH`     | The string `"SILVER_PATH"`, Silver's source-module search-path variable. |
 | `get_path_sep()`      | Platform path-list separator: `";"` on Windows and `":"` otherwise.      |
-| `append_path(path)`   | Append an entry to `SILVER_PATH` and return null.                        |
+| `append_path(path)`   | Register a package YAML path on `SILVER_PATH` and return null.           |
 | `system()`            | Friendly OS name such as `"Windows"`, `"Linux"`, or `"Darwin"`.          |
 | `release()`           | OS/kernel release when available.                                        |
 | `machine()`           | Machine architecture.                                                    |
@@ -35,5 +35,9 @@ io.println(system.getenv(system.ENV_SILVER_PATH))
 Host-information queries return an empty string when the platform cannot provide a value. Changes made by `setenv`
 or `append_path` affect later code and child processes, not the parent shell. When `SILVER_PATH` is empty,
 `append_path` sets it directly rather than adding a leading separator.
+
+Later imports use the manifest's package name, for example `import("my_library:that_module")`
+for an exported `that_module.slv`. Relative entries resolve from the process working directory.
+See [Modules and imports](../language_guide/modules.md) for manifest and namespace rules.
 
 [Standard library index](../table_of_contents.md#standard-library)

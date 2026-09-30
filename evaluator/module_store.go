@@ -26,6 +26,8 @@ func (store *moduleStore) load(id source.ModuleID, path string, evaluate func() 
 		}
 		return module
 	}
+	// Install the sentinel before evaluating: recursive imports must detect
+	// a cycle rather than see a partially initialized module and its types.
 	store.entries[id] = nil
 	defer func() {
 		if store.entries[id] == nil {

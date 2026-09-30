@@ -3,7 +3,7 @@
 `time` supplies nominal `Time` and `Duration` values backed by the host clock.
 
 ```silver
-let time = import("time")
+let time = import("core:time")
 
 let started = time.now()
 time.sleep(time.duration(50, "ms"))

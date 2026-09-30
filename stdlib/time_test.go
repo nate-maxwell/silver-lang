@@ -7,7 +7,7 @@ import (
 	stdtime "time"
 )
 
-const timeImport = `let times = import("time")
+const timeImport = `let times = import("core:time")
 `
 
 func TestTimeTypesAndFields(t *testing.T) {

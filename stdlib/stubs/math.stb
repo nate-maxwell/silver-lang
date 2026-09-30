@@ -1,4 +1,4 @@
-# Editor stub for import("math").
+# Editor stub for import("core:math").
 #
 # Numeric helpers beyond the built-in arithmetic operators. Functions that
 # take a single numeric argument accept either int or float unless noted;

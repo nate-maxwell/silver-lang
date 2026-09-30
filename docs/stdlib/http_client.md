@@ -4,8 +4,8 @@
 response, and closes the connection.
 
 ```silver
-let client = import("http/client")
-let println = import("io").println
+let client = import("core:http/client")
+let println = import("core:io").println
 
 try {
     let response = client.get("http://127.0.0.1:8080/")
@@ -33,8 +33,8 @@ See the runnable [client example](../../examples/std_lib/std_client.slv), which 
 Use constants from `http` when selecting a method:
 
 ```silver
-let http = import("http")
-let client = import("http/client")
+let http = import("core:http")
+let client = import("core:http/client")
 
 let response = client.request(
     http.MethodPost,

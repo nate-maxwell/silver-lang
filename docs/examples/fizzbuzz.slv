@@ -2,9 +2,9 @@
 # "Fizz" for multiples of three, "Buzz" for multiples of five, and both for
 # multiples of fifteen.
 
-let core = import("core")
-let io = import("io")
-let math = import("math")
+let core = import("core:core")
+let io = import("core:io")
+let math = import("core:math")
 
 let fizzbuzz = fn(n: int) {
     let answer = ""

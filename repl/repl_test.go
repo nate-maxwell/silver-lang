@@ -7,7 +7,7 @@ import (
 )
 
 func TestStandardStreamsShareREPLInputAndOutput(t *testing.T) {
-	input := "import(\"io\").stdin.read()\npayload\n"
+	input := "import(\"core:io\").stdin.read()\npayload\n"
 	var output bytes.Buffer
 	Start(strings.NewReader(input), &output)
 
@@ -17,7 +17,7 @@ func TestStandardStreamsShareREPLInputAndOutput(t *testing.T) {
 }
 
 func TestStandardStreamReadLineSharesREPLInput(t *testing.T) {
-	input := "import(\"io\").stdin.read_line()\npayload\n"
+	input := "import(\"core:io\").stdin.read_line()\npayload\n"
 	var output bytes.Buffer
 	Start(strings.NewReader(input), &output)
 
@@ -27,7 +27,7 @@ func TestStandardStreamReadLineSharesREPLInput(t *testing.T) {
 }
 
 func TestStandardErrorUsesREPLOutput(t *testing.T) {
-	input := "import(\"io\").stderr.write(\"error output\")\n"
+	input := "import(\"core:io\").stderr.write(\"error output\")\n"
 	var output bytes.Buffer
 	Start(strings.NewReader(input), &output)
 

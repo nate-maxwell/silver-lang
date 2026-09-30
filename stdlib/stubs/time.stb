@@ -1,4 +1,4 @@
-# Editor stub for import("time").
+# Editor stub for import("core:time").
 #
 # Time and Duration are nominal struct types with plain numeric fields, so
 # they can be constructed, compared field-by-field, or passed around like

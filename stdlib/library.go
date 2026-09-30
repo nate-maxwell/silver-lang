@@ -8,7 +8,6 @@ import (
 	"io"
 	"io/fs"
 	"path"
-	"path/filepath"
 	"silver/ast"
 	"silver/object"
 	"silver/packages"
@@ -98,11 +97,16 @@ type emptyReader struct{}
 
 func (*emptyReader) Read([]byte) (int, error) { return 0, io.EOF }
 
+// newLibrary resolves native export signatures, then uses embedded manifests
+// to assemble the public library. Invalid definitions panic because they are
+// bundled implementation errors, not failures caused by a Silver program.
 func newLibrary(definitions map[string][]definition) *Library {
 	modules := make(map[string]*object.Module, len(definitions))
 	for name, moduleDefinitions := range definitions {
 		exports := make(map[string]object.Object, len(moduleDefinitions))
 		environment := object.NewEnvironment()
+		// Seed all type/value definitions first so signatures can refer to
+		// exports declared later in this list and retain their exact identities.
 		for _, definition := range moduleDefinitions {
 			if definition.value != nil {
 				environment.Set(definition.name, definition.value)
@@ -165,6 +169,8 @@ func loadPackageManifests(filesystem fs.FS, nativeModules map[string]*object.Mod
 			return nil
 		}
 		packageID := "stdlib:" + manifest.Path()
+		// Index every member for package-local imports and grammar discovery.
+		// Public visibility is added separately from manifest.Exports below.
 		for _, member := range manifest.Members() {
 			input, err := fs.ReadFile(filesystem, member.Path())
 			if err != nil {
@@ -177,6 +183,8 @@ func loadPackageManifests(filesystem fs.FS, nativeModules map[string]*object.Mod
 				PackageID:  packageID,
 			}
 			if native != nil && module.Name == manifest.Name() {
+				// Inject native bindings only into the package's entry file.
+				// Siblings use imports instead of inheriting this environment.
 				module.NativeBindings = native.Exports
 			}
 			if _, exists := library.sourceFiles[module.SourceName]; exists {
@@ -214,6 +222,9 @@ func loadPackageManifests(filesystem fs.FS, nativeModules map[string]*object.Mod
 	return library, nil
 }
 
+// sourceImportName collapses the conventional <package>.slv entry to its
+// package name; other members become <package>/<relative-path-without-extension>.
+// Public import requests prefix these names with core:.
 func sourceImportName(packageName, declared string) string {
 	entry := strings.TrimSuffix(declared, path.Ext(declared))
 	if entry == packageName {
@@ -222,15 +233,17 @@ func sourceImportName(packageName, declared string) string {
 	return path.Join(packageName, entry)
 }
 
-// LookupModule returns the standard-library module with the given bare import
-// name, such as "math".
+// LookupModule returns a native module using its core: qualified import name.
 func (l *Library) LookupModule(name string) (*object.Module, bool) {
-	module, ok := l.modules[name]
+	pkg, moduleName, err := packages.ParseImport(name)
+	if err != nil || pkg != "core" {
+		return nil, false
+	}
+	module, ok := l.modules[moduleName]
 	return module, ok
 }
 
-// LookupSourceModule returns an embedded Silver implementation registered for
-// the bare import name. Evaluation remains the evaluator's responsibility.
+// LookupSourceModule returns a public embedded Silver implementation.
 func (l *Library) LookupSourceModule(name string) (source, sourceName string, ok bool) {
 	module, ok := l.LookupSource(name)
 	if !ok {
@@ -239,25 +252,27 @@ func (l *Library) LookupSourceModule(name string) (source, sourceName string, ok
 	return module.Source, module.SourceName, true
 }
 
-// LookupSource returns a public entry declared by a bundled package manifest.
+// LookupSource returns a public embedded module for a core: qualified name.
+// Runtime imports use LookupSourceFrom to also allow package-local members.
 func (l *Library) LookupSource(name string) (SourceModule, bool) {
-	// Keep the former native import as an alias of the complete public module.
-	// Returning its canonical Name also preserves evaluator cache/type identity.
-	if name == "_networking" {
-		name = "networking"
-	}
-	module, ok := l.sourceModules[name]
-	return module, ok
+	return l.LookupSourceFrom(name, "")
 }
 
-// LookupRelativeSource permits embedded members, including internal helpers,
-// to be imported relative to another embedded source's directory.
-func (l *Library) LookupRelativeSource(request, sourceDir string) (SourceModule, bool) {
-	if path.IsAbs(request) || filepath.IsAbs(request) {
+// LookupSourceFrom permits qualified internal imports within their owning group.
+func (l *Library) LookupSourceFrom(name, importerPackageID string) (SourceModule, bool) {
+	pkg, moduleName, err := packages.ParseImport(name)
+	if err != nil || pkg != "core" {
 		return SourceModule{}, false
 	}
-	module, ok := l.sourceFiles[path.Join(sourceDir, request)]
-	return module, ok
+	if module, ok := l.sourceModules[moduleName]; ok {
+		return module, true
+	}
+	for _, member := range l.sourcePackages[importerPackageID] {
+		if member.Name == moduleName {
+			return member, true
+		}
+	}
+	return SourceModule{}, false
 }
 
 // SourceMembers returns every source sharing the bundled package's grammar.

@@ -3,7 +3,7 @@
 `collections` provides three mutable structures: `Deque`, `Stack`, and `DefaultMap`.
 
 ```silver
-let collections = import("collections")
+let collections = import("core:collections")
 ```
 
 ## `Deque`

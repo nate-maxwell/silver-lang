@@ -1,4 +1,4 @@
-# Editor stub for import("terminal").
+# Editor stub for import("core:terminal").
 #
 # Terminal coordinates are zero-based (x, y). Output functions write without
 # a trailing newline. ANSI/VT control sequences require a compatible terminal.

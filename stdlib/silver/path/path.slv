@@ -1,11 +1,11 @@
 # Platform-native paths implemented in Silver. Only host filesystem access is
 # delegated to low-level operations in io.
 
-let _arrays = import("arrays")
-let _core = import("core")
-let _io = import("io")
-let _maps = import("maps")
-let _strings = import("string")
+let _arrays = import("core:arrays")
+let _core = import("core:core")
+let _io = import("core:io")
+let _maps = import("core:maps")
+let _strings = import("core:string")
 
 let _append = _arrays.append
 let _len = _core.len

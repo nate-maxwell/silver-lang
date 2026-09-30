@@ -17,7 +17,7 @@ func TestIndexResolvesOnlyManifestExports(t *testing.T) {
 	hidden := filepath.Join(directory, "hidden.slv")
 	writeTestFile(t, exposed, "let value = 42")
 	writeTestFile(t, hidden, "let value = 99")
-	writeTestFile(t, filepath.Join(directory, "example.yaml"), `
+	writeTestFile(t, filepath.Join(directory, "package.yaml"), `
 package: example
 members:
   - hidden.slv
@@ -26,10 +26,10 @@ export:
 `)
 
 	index := NewIndex()
-	if err := index.Refresh(directory); err != nil {
+	if err := index.Refresh(filepath.Join(directory, "package.yaml")); err != nil {
 		t.Fatal(err)
 	}
-	for _, request := range []string{"nested/library.slv", "library.slv"} {
+	for _, request := range []string{"example:nested/library"} {
 		path, manifest, found, err := index.Resolve(request)
 		if err != nil {
 			t.Fatal(err)
@@ -41,7 +41,7 @@ export:
 	if manifest := index.ManifestFor(exposed); manifest == nil || manifest.Name() != "example" {
 		t.Fatalf("ManifestFor(exposed) = %#v, want example manifest", manifest)
 	}
-	if _, _, found, err := index.Resolve("hidden.slv"); err != nil || found {
+	if _, _, found, err := index.Resolve("example:hidden"); err != nil || found {
 		t.Fatalf("hidden file resolved: found=%v, err=%v", found, err)
 	}
 	if index.ManifestFor(hidden) != index.ManifestFor(exposed) {
@@ -51,12 +51,17 @@ export:
 
 func TestIndexRejectsConflictingMembership(t *testing.T) {
 	dir := t.TempDir()
-	writeTestFile(t, filepath.Join(dir, "shared.slv"), "let value = 42")
-	writeTestFile(t, filepath.Join(dir, "first.yaml"), "package: first\nexport: [shared.slv]\n")
-	writeTestFile(t, filepath.Join(dir, "second.yaml"), "package: second\nexport: []\nmembers: [shared.slv]\n")
-	index := NewIndex()
-	if err := index.Refresh(dir); err == nil || !strings.Contains(err.Error(), "belongs to both") {
-		t.Fatalf("conflicting package membership accepted: %v", err)
+	nested := filepath.Join(dir, "nested")
+	if err := os.Mkdir(nested, 0755); err != nil {
+		t.Fatal(err)
+	}
+	writeTestFile(t, filepath.Join(nested, "shared.slv"), "let value = 42")
+	first := filepath.Join(dir, "package.yaml")
+	second := filepath.Join(nested, "package.yaml")
+	writeTestFile(t, first, "package: first\nexport: [nested/shared.slv]\n")
+	writeTestFile(t, second, "package: second\nexport: []\nmembers: [shared.slv]\n")
+	if err := NewIndex().Refresh(first + string(os.PathListSeparator) + second); err == nil || !strings.Contains(err.Error(), "belongs to both") {
+		t.Fatalf("conflicting ownership: %v", err)
 	}
 }
 
@@ -76,7 +81,7 @@ func TestDiscoverForFindsLocalMembersWithoutExposingThem(t *testing.T) {
 	if err != nil || owner == nil || owner.Name() != "library" {
 		t.Fatalf("DiscoverFor = %v, %v", owner, err)
 	}
-	if _, _, found, err := index.Resolve("helper.slv"); err != nil || found {
+	if _, _, found, err := index.Resolve("library:nested/helper"); err != nil || found {
 		t.Fatalf("internal helper exposed: %v, %v", found, err)
 	}
 	writeTestFile(t, filepath.Join(dir, "nested", "package.yaml"), "package: nested\nexport: []\n")
@@ -87,47 +92,31 @@ func TestDiscoverForFindsLocalMembersWithoutExposingThem(t *testing.T) {
 	}
 }
 
-func TestIndexAcceptsYAMLManifestSuffixes(t *testing.T) {
-	for _, suffix := range []string{".yaml", ".yml"} {
-		t.Run(suffix, func(t *testing.T) {
-			directory := t.TempDir()
-			source := filepath.Join(directory, "library.slv")
-			writeTestFile(t, source, "let value = 42")
-			manifestPath := filepath.Join(directory, "example"+suffix)
-			writeTestFile(t, manifestPath, "package: example\nexport:\n  - library.slv\n")
-
-			index := NewIndex()
-			if err := index.Refresh(manifestPath); err != nil {
-				t.Fatal(err)
-			}
-			path, manifest, found, err := index.Resolve("library.slv")
-			if err != nil || !found || path != source || manifest == nil {
-				t.Fatalf("Resolve(library.slv) = %q, %#v, %v, %v; want %q", path, manifest, found, err, source)
+func TestIndexRequiresPackageYAMLFilename(t *testing.T) {
+	for _, name := range []string{"other.yaml", "package.yml", "package.slv"} {
+		t.Run(name, func(t *testing.T) {
+			filename := filepath.Join(t.TempDir(), name)
+			writeTestFile(t, filename, "package: example\nexport: []\n")
+			if err := NewIndex().Refresh(filename); err == nil {
+				t.Fatalf("accepted %s", name)
 			}
 		})
 	}
 }
 
 func TestIndexRequiresManifests(t *testing.T) {
-	legacyDirectory := t.TempDir()
-	legacyFile := filepath.Join(legacyDirectory, "legacy.slv")
-	writeTestFile(t, legacyFile, "let value = 1")
-	explicitDirectory := t.TempDir()
-	explicitFile := filepath.Join(explicitDirectory, "explicit.slv")
-	writeTestFile(t, explicitFile, "let value = 2")
-
-	index := NewIndex()
-	if err := index.Refresh(legacyDirectory); err != nil {
-		t.Fatal(err)
-	}
-	if _, _, found, err := index.Resolve("legacy.slv"); err != nil || found {
-		t.Fatalf("manifest-free directory exposed a file: found=%v, err=%v", found, err)
-	}
-	if err := index.Refresh(explicitFile); err == nil || !strings.Contains(err.Error(), "package YAML manifest") {
-		t.Fatalf("source-file search entry was accepted: %v", err)
-	}
-	if _, _, _, err := index.Resolve("explicit.slv"); err == nil {
-		t.Fatal("Resolve ignored failed refresh")
+	dir := t.TempDir()
+	writeTestFile(t, filepath.Join(dir, "library.slv"), "let value = 42")
+	// A directory is invalid even when it contains a valid manifest.
+	writeTestFile(t, filepath.Join(dir, "package.yaml"), "package: example\nexport: [library.slv]\n")
+	for _, entry := range []string{dir, t.TempDir(), filepath.Join(dir, "library.slv"), filepath.Join(t.TempDir(), "package.yaml")} {
+		index := NewIndex()
+		if err := index.Refresh(entry); err == nil {
+			t.Fatalf("accepted entry %q", entry)
+		}
+		if _, _, _, err := index.Resolve("example:library"); err == nil {
+			t.Fatal("Resolve ignored failed refresh")
+		}
 	}
 }
 
@@ -142,19 +131,19 @@ func TestIndexRefreshesWhenSearchPathChanges(t *testing.T) {
 	writeTestFile(t, filepath.Join(secondDirectory, "package.yaml"), "package: second\nexport: [second.slv]\n")
 
 	index := NewIndex()
-	if err := index.Refresh(firstDirectory); err != nil {
+	if err := index.Refresh(filepath.Join(firstDirectory, "package.yaml")); err != nil {
 		t.Fatal(err)
 	}
-	if _, _, found, _ := index.Resolve("first.slv"); !found {
+	if _, _, found, _ := index.Resolve("first:first"); !found {
 		t.Fatal("first search path did not resolve")
 	}
-	if err := index.Refresh(secondDirectory); err != nil {
+	if err := index.Refresh(filepath.Join(secondDirectory, "package.yaml")); err != nil {
 		t.Fatal(err)
 	}
-	if _, _, found, _ := index.Resolve("first.slv"); found {
+	if _, _, found, _ := index.Resolve("first:first"); found {
 		t.Fatal("stale first search path still resolves")
 	}
-	if path, _, found, err := index.Resolve("second.slv"); err != nil || !found || path != second {
+	if path, _, found, err := index.Resolve("second:second"); err != nil || !found || path != second {
 		t.Fatalf("second search path resolved as %q, %v, %v", path, found, err)
 	}
 }
@@ -179,7 +168,7 @@ func TestWindowsPackagePathIdentity(t *testing.T) {
 	if owner == nil || index.ManifestFor(strings.ToUpper(exposed)) != owner {
 		t.Fatal("case variant lost its package owner")
 	}
-	for _, request := range []string{"identity.slv", "NESTED/IDENTITY.SLV", `nested\identity.slv`} {
+	for _, request := range []string{"example:Nested/Identity"} {
 		path, manifest, found, err := index.Resolve(request)
 		if err != nil || !found || path != exposed || manifest != owner {
 			t.Fatalf("Resolve(%q) = %q, %v, %v, %v; want canonical package export", request, path, manifest, found, err)

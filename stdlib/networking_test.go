@@ -6,11 +6,11 @@ import (
 	"testing"
 )
 
-const networkingImport = `let net = import("networking")
+const networkingImport = `let net = import("core:networking")
 `
 
 func TestNetworkingExportsDocumentedTypes(t *testing.T) {
-	evaluated := testEval(`import("networking")`)
+	evaluated := testEval(`import("core:networking")`)
 	module, ok := evaluated.(*object.Module)
 	if !ok {
 		t.Fatalf("import failed: %s", evaluated.Inspect())
@@ -25,12 +25,8 @@ func TestNetworkingExportsDocumentedTypes(t *testing.T) {
 		t.Fatal("implementation module leaked into public exports")
 	}
 	testBooleanObject(t, testEval(networkingImport+`
-let same_module = import("networking")
+let same_module = import("core:networking")
 assert net == same_module
-let legacy = import("_networking")
-assert legacy == net
-assert legacy.Network == net.Network
-assert legacy.dial_tcp == net.dial_tcp
 try {
     net.dial_tcp("not-an-address")
     False

@@ -74,7 +74,7 @@ func TestModuleTypeAnnotationAcceptsImportedModules(t *testing.T) {
 	mainPath := filepath.Join(dir, "main.slv")
 	writeSilverFile(t, libraryPath, `let double = fn(value: int) int { return value * 2 }`)
 	writeSilverFile(t, mainPath, `
-let load = fn() module { return import("./library.slv") }
+let load = fn() module { return import("fixture:library") }
 let process = fn(lib: module) int { return lib.double(21) }
 let library: module = load()
 process(library)

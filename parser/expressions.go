@@ -41,6 +41,8 @@ func (p *Parser) parseTryExpression() ast.Expression {
 
 // parseExpression is the Pratt parser core. It parses one prefix expression,
 // then repeatedly consumes tighter-binding infix expressions.
+// The caller's precedence is the stopping threshold: equal binding power is
+// left for the caller, making operators at the same power left-associative.
 func (p *Parser) parseExpression(precedence int) ast.Expression {
 	prefix := p.prefixParseFns[p.curToken.Type]
 	if prefix == nil {
@@ -49,6 +51,10 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
 	}
 	leftExp := prefix()
 
+	// A brace can start a struct initializer or an if/switch body. The caller
+	// marks the latter context explicitly; nested delimiters temporarily lift
+	// that restriction in parseNestedExpression. Physical newlines also stop
+	// extension here even though the lexer discards whitespace.
 	for !(p.stopAtBlockBrace && p.peekTokenIs(token.LBRACE)) &&
 		!p.lineBreakBeforePeek() && precedence < p.peekPrecedence() {
 		infix := p.infixParseFns[p.peekToken.Type]
@@ -78,6 +84,8 @@ func (p *Parser) parseExpressionStatement() ast.Statement {
 	firstToken := p.curToken
 	expression := p.parseExpression(LOWEST)
 
+	// Assignment is a statement form, so it is recognized after parsing the
+	// entire target expression rather than as another Pratt infix operator.
 	if p.peekTokenIs(token.ASSIGN) {
 		p.nextToken()
 		assignmentToken := p.curToken

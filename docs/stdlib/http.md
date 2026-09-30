@@ -4,7 +4,7 @@
 [`http/client`](http_client.md) and [`http/server`](http_server.md).
 
 ```silver
-let http = import("http")
+let http = import("core:http")
 
 http.MethodGet
 http.StatusNotFound

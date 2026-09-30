@@ -3,7 +3,7 @@ package stdlib_test
 import "testing"
 
 func TestHTTPCookiesParseAndSerialize(t *testing.T) {
-	input := `let cookies = import("http/cookies")
+	input := `let cookies = import("core:http/cookies")
 let cookie = cookies.parse_set_cookie(
     "session=abc==; Path=/app; Domain=Example.com; Max-Age=60; Secure; HttpOnly; SameSite=Lax"
 )
@@ -24,7 +24,7 @@ cookies.to_cookie_header(request_cookies) == "theme=dark; session=abc=="`
 }
 
 func TestHTTPCookieJarMatchesAndRemovesCookies(t *testing.T) {
-	input := `let jar_module = import("http/cookiejar")
+	input := `let jar_module = import("core:http/cookiejar")
 let jar = jar_module.new()
 jar.set_from_header("http://example.com/app/login", "session=one; Path=/app; HttpOnly")
 jar.set_from_header("https://example.com/", "secure=yes; Secure")
@@ -44,7 +44,7 @@ jar.header("http://example.com/") == ""`
 }
 
 func TestHTTPCookieErrorsAreTyped(t *testing.T) {
-	input := `let cookies = import("http/cookies")
+	input := `let cookies = import("core:http/cookies")
 try {
     cookies.parse_set_cookie("invalid")
     False

@@ -66,6 +66,8 @@ func (s *StructInstance) Get(name string) (Object, bool) {
 // embedded struct values. Direct fields take precedence over promoted fields.
 // Owner and index identify the instance and declaration that actually contain
 // the value, which lets callers apply method binding and assignment correctly.
+// An index of -1 denotes a value with no declared field, such as a native method.
+// Embedded fields are searched in declaration order; the first match wins.
 func (s *StructInstance) ResolveField(name string) (value Object, owner *StructInstance, index int, ok bool) {
 	s.mu.RLock()
 	value, exists := s.Values[name]
@@ -80,12 +82,15 @@ func (s *StructInstance) ResolveField(name string) (value Object, owner *StructI
 		s.mu.RUnlock()
 		return value, s, fieldIndex, true
 	}
+	// Even an unpopulated direct declaration shadows promoted fields.
 	for fieldIndex, fieldName := range s.Struct.Fields {
 		if fieldName == name {
 			s.mu.RUnlock()
 			return nil, s, fieldIndex, false
 		}
 	}
+	// Copy references under the lock, then release it before recursive lookup.
+	// Traversal never needs to hold both the parent and child instance locks.
 	embedded := make([]Object, 0, len(s.Struct.EmbeddedFields))
 	for fieldIndex, isEmbedded := range s.Struct.EmbeddedFields {
 		if isEmbedded && fieldIndex < len(s.Struct.Fields) {

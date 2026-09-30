@@ -2,7 +2,7 @@ package stdlib
 
 import "silver/object"
 
-// coreDefinitions contains the functions exported by import("core").
+// coreDefinitions contains the functions exported by import("core:core").
 func coreDefinitions() []definition {
 	return []definition{
 		{name: "len", fn: builtinLen},

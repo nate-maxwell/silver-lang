@@ -7,6 +7,8 @@ import (
 
 // evalBlockStatement evaluates a block until completion or abrupt control flow.
 // A successful block with no final value produces Silver's null singleton.
+// This helper neither creates a lexical scope nor drains defers. Its caller
+// chooses the environment, and the enclosing function or program owns cleanup.
 func (e *Evaluator) evalBlockStatement(block *ast.BlockStatement, env *object.Environment) object.Object {
 	var result object.Object
 
@@ -30,6 +32,9 @@ func (e *Evaluator) evalBlockStatement(block *ast.BlockStatement, env *object.En
 // later failure while unwinding replaces the result seen so far.
 func (e *Evaluator) runDefers(env *object.Environment, result object.Object) object.Object {
 	deferred := env.TakeDefers()
+	// Drain before invoking user code so these calls cannot be run twice.
+	// Successful cleanup never replaces the body result; among failures, the
+	// last one encountered in reverse declaration order wins.
 	var deferredFailure *object.Error
 	for index := len(deferred) - 1; index >= 0; index-- {
 		call := deferred[index]

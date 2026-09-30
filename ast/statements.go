@@ -192,9 +192,10 @@ Let statements
 
 // LetStatement binds the evaluated Value to Name in the current environment.
 type LetStatement struct {
-	Token token.Token // the token.LET token
-	Name  *Identifier
-	Value Expression
+	Token    token.Token // the token.LET token
+	Name     *Identifier
+	Value    Expression
+	Inferred bool // := fixes the binding's contract from its initial runtime value
 }
 
 /* ----------------------------------------------------------------------------------------------------------
@@ -242,7 +243,11 @@ func (ls *LetStatement) String() string {
 	var out bytes.Buffer
 	out.WriteString(ls.TokenLiteral() + " ")
 	out.WriteString(ls.Name.DeclarationString())
-	out.WriteString(" = ")
+	if ls.Inferred {
+		out.WriteString(" := ")
+	} else {
+		out.WriteString(" = ")
+	}
 
 	if ls.Value != nil {
 		out.WriteString(ls.Value.String())

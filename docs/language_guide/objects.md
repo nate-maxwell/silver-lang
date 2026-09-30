@@ -66,13 +66,15 @@ given a `Profile` that embeds `Details`, a parameter named `name` can bind to th
 layers:
 
 ```silver
+let println = import("core:io").println
+
 type Profile = struct {
     details:: Details
 }
 
 let profile = Profile{details}
 let declare = fn(name: str) {
-    import("io").println(name)
+    println(name)
 }
 
 declare(profile) # binds name from profile.details.person.name
@@ -82,6 +84,8 @@ Methods are promoted through embedded fields in the same way. A method declared 
 through the outermost struct, and it remains bound to the inner instance that owns the callable field:
 
 ```silver
+let println = import("core:io").println
+
 type Person = struct {
     name: str
     shout: call(str)
@@ -96,7 +100,7 @@ type Profile = struct {
 }
 
 let shout = fn(name: str) {
-    import("io").println(import("string").upper(name))
+    println(import("core:string").upper(name))
 }
 
 let profile = Profile{Details{Person{"Ada", shout}}}
@@ -164,7 +168,7 @@ encode(100, Point{2, 3}) # 123
 It can also combine several objects. Extra fields are ignored; missing parameters eventually produce an arity error. A
 field with the right name but wrong type produces a type error for that parameter.
 
-Modules implement the same named-value interface. Passing `import("io")` to a function with a `print` parameter injects
+Modules implement the same named-value interface. Passing `import("core:io")` to a function with a `print` parameter injects
 the matching module member:
 
 ```silver
@@ -172,7 +176,7 @@ let announce = fn(print: call) {
     print("ready")
 }
 
-announce(import("io"))
+announce(import("core:io"))
 ```
 
 A parameter annotated `module` accepts the module intact and therefore does not destructure it.

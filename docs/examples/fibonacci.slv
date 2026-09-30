@@ -1,7 +1,7 @@
 # Classic fibonacci example
 
-let print = import("io").print
-let core = import("core")
+let print = import("core:io").print
+let core = import("core:core")
 
 let fib = fn(n: int) int {
     if n <= 1 {

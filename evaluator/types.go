@@ -6,6 +6,9 @@ import (
 	"strings"
 )
 
+// evalTypeStatement binds a first-class type value. Structs and enums create
+// nominal definitions; aliases capture an existing resolved contract without
+// introducing a new nominal identity.
 func (e *Evaluator) evalTypeStatement(node *ast.TypeStatement, env *object.Environment) object.Object {
 	switch value := node.Value.(type) {
 	case *ast.StructTypeLiteral:
@@ -30,6 +33,28 @@ func (e *Evaluator) evalTypeAlias(annotation *ast.TypeAnnotation, env *object.En
 		return err
 	}
 	return &object.TypeAlias{Contract: contract}
+}
+
+// inferredBindingContract captures the initializer's runtime type without
+// inspecting collection contents or callable signatures. Nominal values retain
+// their exact definition, independently of later changes to its lexical name.
+func inferredBindingContract(value object.Object) *object.Contract {
+	contract := &object.Contract{Name: runtimeTypeName(value)}
+	switch value := value.(type) {
+	case *object.StructInstance:
+		contract.Definition = value.Struct
+	case *object.EnumValue:
+		contract.Definition = value.Enum
+	default:
+		if definition, ok := object.TypeDefinitionByName(contract.Name); ok {
+			contract.Definition = definition
+		} else {
+			// Type definitions and other first-class values may have runtime
+			// categories without a corresponding source-level annotation.
+			contract.Definition = &object.TypeDefinition{Name: contract.Name, RuntimeType: value.Type()}
+		}
+	}
+	return contract
 }
 
 // requireType checks the contract captured by a declaration. No names are
@@ -76,6 +101,9 @@ func returnTypesString(success *object.Contract, errorTypes []*object.Contract) 
 }
 
 // typeMatches checks resolved primitive, nominal, array, and callable contracts.
+// A nil contract is an unannotated boundary. Typed arrays are checked against
+// their current elements; matching does not attach a contract to the array or
+// constrain later mutation through other aliases.
 func typeMatches(contract *object.Contract, value object.Object) bool {
 	if contract == nil {
 		return true
@@ -141,6 +169,8 @@ func runtimeFunctionMatches(expected *object.Contract, actual *object.Function) 
 		if actualParameter == nil {
 			continue
 		}
+		// The supplied function must accept everything the expected signature
+		// permits callers to pass, so parameter assignability is reversed.
 		if !contractAssignable(actualParameter, expectedParameter) {
 			return false
 		}
@@ -192,7 +222,8 @@ func contractAssignable(target, source *object.Contract) bool {
 	return target.Definition == source.Definition
 }
 
-// Omitted callable results denote null, rather than an untyped boundary.
+// callReturnAssignable interprets omitted callable results as null, rather
+// than the unannotated boundary that nil represents for a parameter.
 func callReturnAssignable(target, source *object.Contract) bool {
 	if target == nil && source == nil {
 		return true
@@ -206,6 +237,9 @@ func callReturnAssignable(target, source *object.Contract) bool {
 	return contractAssignable(target, source)
 }
 
+// callReturnsAssignable requires a compatible success result and ensures every
+// failure the supplied callable can declare is allowed by the target. The
+// supplied callable may declare fewer failures; alternative order is irrelevant.
 func callReturnsAssignable(targetSuccess *object.Contract, targetErrors []*object.Contract, sourceSuccess *object.Contract, sourceErrors []*object.Contract) bool {
 	if !callReturnAssignable(targetSuccess, sourceSuccess) {
 		return false

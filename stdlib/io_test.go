@@ -11,7 +11,7 @@ import (
 	"testing"
 )
 
-const ioImport = "let io = import(\"io\")\n"
+const ioImport = "let io = import(\"core:io\")\n"
 
 func TestOpenReturnsReadableFileStruct(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "message.txt")

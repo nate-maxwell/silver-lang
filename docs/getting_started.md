@@ -25,7 +25,7 @@ silver [file]
 Silver also provides package initialization and version commands. See the
 [command-line interface reference](cli.md) for the complete list.
 
-Initialize a `package.yaml` manifest in the current directory with a package name and empty membership and export lists:
+Initialize a `package.yaml` manifest in the current directory with a package name and empty author, membership, and export lists:
 
 ```text
 silver package init <package_name>
@@ -42,7 +42,7 @@ Start Silver without a file:
 Then evaluate expressions and statements one line at a time:
 
 ```silver
-let io = import("io")
+let io = import("core:io")
 let square = fn(value: int) int { return value * value }
 io.println(square(9))
 ```
@@ -55,7 +55,7 @@ Windows).
 Create `hello.slv`:
 
 ```silver
-let io = import("io")
+let io = import("core:io")
 
 type Person = struct {
     name: str
@@ -92,27 +92,27 @@ Create `package.yaml` in the same directory to declare the imported module:
 
 ```yaml
 package: math_example
-members:
+authors: []
+export:
   - ./math_helpers.slv
-export: []
 ```
 
-Then import it from a file in that directory:
+Then register the manifest and import the module. Run this example from the directory containing `package.yaml`:
 
 ```silver
-let helpers = import("./math_helpers.slv")
-let io = import("io")
+let system = import("core:system")
+system.append_path("./package.yaml")
+let helpers = import("math_example:math_helpers")
+let io = import("core:io")
 
 io.println(helpers.double(helpers.answer))
 ```
 
-Relative imports resolve from the importing file. A non-relative file import first
-checks the importing file's directory and then package exports in the platform-separated
-`SILVER_PATH` environment variable. Every imported file requires a package YAML
-manifest, including relative and absolute imports. Only `export` files are discoverable
-through `SILVER_PATH`. The optional `members` list adds
-internal files that share the package's operators. Bare standard-library names such
-as `"io"` and `"arrays"` resolve to embedded modules.
+Imports use `<package>:<module>`, with `/` for nested modules and no `.slv` extension.
+Register package YAML paths in `SILVER_PATH` or add them at runtime with `system.append_path`.
+Only `export` files are public modules; the optional `members` list adds internal files that share
+the package's operators. Standard-library imports use the `core` package, such as `core:io`
+and `core:arrays`, and need no path registration.
 
 Imports are evaluated once per interpreter session and then cached. Circular imports
 are reported as errors.
@@ -124,8 +124,8 @@ and module-member rules.
 Standard-library modules are ordinary values returned by `import`:
 
 ```silver
-let arrays = import("arrays")
-let print = import("io").print
+let arrays = import("core:arrays")
+let print = import("core:io").print
 
 let values = arrays.sort([3, 1, 2])
 print(values) # [1, 2, 3]

@@ -4,7 +4,7 @@
 returned arrays are fresh copies.
 
 ```silver
-let arrays = import("arrays")
+let arrays = import("core:arrays")
 let values = [3, 1, 2]
 
 arrays.append(values, 4) # [3, 1, 2, 4]

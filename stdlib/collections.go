@@ -74,6 +74,8 @@ func newStack(definition *object.Struct, null *object.Null) object.BuiltinFuncti
 
 // newSequenceInstance supplies the operations shared by deque and stack
 // instances. A deque always carries its required maximum length.
+// Method closures capture the supplied array object. Copies must rebuild these
+// closures around their new array rather than copy the original method values.
 func newSequenceInstance(definition *object.Struct, values *object.Array, maxLength *object.Integer, null *object.Null) *object.StructInstance {
 	instance := &object.StructInstance{
 		Struct: definition,
@@ -188,6 +190,9 @@ func collectionClear(null *object.Null) object.BuiltinFunction {
 	}
 }
 
+// collectionCopy copies the element slice, preserving element identities.
+// Deque/Stack copies also preserve their nominal definition and rebuild methods
+// against the new backing array; plain arrays remain arrays.
 func collectionCopy(null *object.Null) object.BuiltinFunction {
 	return func(args ...object.Object) object.Object {
 		values, err := collectionAndArity("copy", args, 1)
@@ -239,6 +244,9 @@ func collectionExtend(null *object.Null) object.BuiltinFunction {
 	}
 }
 
+// collectionExtendLeft behaves like repeated appendleft calls: added elements
+// appear in reverse order. Snapshotting the source also permits self-extension;
+// bounded deques apply their eviction rule to each individual insertion.
 func collectionExtendLeft(null *object.Null) object.BuiltinFunction {
 	return func(args ...object.Object) object.Object {
 		values, other, err := twoCollections("extendleft", args)
@@ -302,6 +310,8 @@ func popCollection(values *object.Array) object.Object {
 	}
 	last := len(values.Elements) - 1
 	value := values.Elements[last]
+	// Clear the unused backing slot before shortening the slice so it does
+	// not keep the removed object alive through the remaining collection.
 	values.Elements[last] = nil
 	values.Elements = values.Elements[:last]
 	return value
@@ -356,6 +366,8 @@ func collectionReverse(null *object.Null) object.BuiltinFunction {
 	}
 }
 
+// collectionRotate rotates in place from the caller's perspective. Positive
+// counts move the tail to the front; negative counts move the head to the end.
 func collectionRotate(null *object.Null) object.BuiltinFunction {
 	return func(args ...object.Object) object.Object {
 		values, err := collectionAndArity("rotate", args, 2)
@@ -370,6 +382,8 @@ func collectionRotate(null *object.Null) object.BuiltinFunction {
 		if length == 0 {
 			return null
 		}
+		// Reduce before converting to int, then normalize Go's signed remainder
+		// to one rightward shift in [0, length), including large negative counts.
 		shift := int(amount.Value % int64(length))
 		if shift < 0 {
 			shift += length
@@ -391,6 +405,9 @@ func collectionAndArity(name string, args []object.Object, want int) (*object.Ar
 	return requireCollectionArray(name, args[0])
 }
 
+// requireCollectionArray accepts arrays or any struct exposing an array-valued
+// values field, including promoted fields. It returns the original array so
+// generic collection operations mutate the caller's backing storage.
 func requireCollectionArray(name string, value object.Object) (*object.Array, *object.Error) {
 	if array, ok := value.(*object.Array); ok {
 		return array, nil
@@ -421,6 +438,9 @@ func copyArray(values *object.Array) *object.Array {
 	return &object.Array{Elements: append([]object.Object(nil), values.Elements...)}
 }
 
+// normalizedInsertIndex interprets negatives relative to the end, then clamps
+// to [0, length]. Insertion permits the end position and out-of-range clamping,
+// unlike collectionArrayIndex's strict element-access checks.
 func normalizedInsertIndex(index int64, length int) int {
 	if index < 0 {
 		index += int64(length)
@@ -448,6 +468,8 @@ func dequeMaxLength(value object.Object) (int64, bool) {
 
 const dequeMaxLengthField = "<max_len>"
 
+// appendDeque inserts at the right, evicting the leftmost element when full.
+// A zero-capacity deque discards insertions; maxLength must be nonnegative.
 func appendDeque(values *object.Array, value object.Object, maxLength int64) {
 	if maxLength == 0 {
 		return
@@ -460,6 +482,7 @@ func appendDeque(values *object.Array, value object.Object, maxLength int64) {
 	values.Elements = append(values.Elements, value)
 }
 
+// appendLeftDeque mirrors appendDeque, evicting the rightmost element when full.
 func appendLeftDeque(values *object.Array, value object.Object, maxLength int64) {
 	if maxLength == 0 {
 		return

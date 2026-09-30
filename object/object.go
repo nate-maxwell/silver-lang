@@ -70,8 +70,9 @@ func (m *Module) Get(name string) (Object, bool) {
 }
 
 // BuiltinFunction is the Go calling convention used by native Silver
-// functions. Language failures are returned as Error objects rather than
-// Go errors so they propagate through normal evaluation.
+// functions. Runtime faults return Error wrappers directly. A builtin may also
+// return a struct listed in its Signature.ErrorTypes; evaluator.applyFunction
+// wraps that declared failure for propagation through Silver code.
 type BuiltinFunction func(args ...Object) Object
 
 // Function is a Silver closure. Env supplies lexical bindings for the body;

@@ -40,6 +40,9 @@ type nativeIOStream struct {
 	null   *object.Null
 }
 
+// newIOStream wraps injected handles in one shared state object. Reusing an
+// existing bufio.Reader preserves bytes already buffered by the REPL when it
+// hands stdin to Silver code; creating a second buffer could strand those bytes.
 func newIOStream(name string, reader io.Reader, writer io.Writer, null *object.Null) *object.StructInstance {
 	var bufferedReader *bufio.Reader
 	if reader != nil {
@@ -78,6 +81,8 @@ func (stream *nativeIOStream) read(args ...object.Object) object.Object {
 	return &object.String{Value: string(contents)}
 }
 
+// readLine removes one LF or CRLF ending. EOF still returns any final partial
+// line, or an empty string when exhausted, rather than a Silver error.
 func (stream *nativeIOStream) readLine(args ...object.Object) object.Object {
 	if err := requireArgumentCount(args, 0); err != nil {
 		return err
@@ -162,6 +167,8 @@ func builtinOpen(null *object.Null) object.BuiltinFunction {
 	}
 }
 
+// read rewinds before reading the complete file. Repeated calls therefore
+// return the contents again rather than consume from the current file offset.
 func (file *nativeFile) read(args ...object.Object) object.Object {
 	if err := requireArgumentCount(args, 0); err != nil {
 		return err
@@ -181,6 +188,9 @@ func (file *nativeFile) read(args ...object.Object) object.Object {
 	return &object.String{Value: string(contents)}
 }
 
+// write replaces the complete contents under the handle lock. Truncation and
+// writing are separate OS operations, so a write failure can leave an empty or
+// partially written file; this is not an atomic filesystem replacement.
 func (file *nativeFile) write(args ...object.Object) object.Object {
 	if err := requireArgumentCount(args, 1); err != nil {
 		return err
@@ -246,6 +256,9 @@ func namedType(name string) *ast.TypeAnnotation {
 	return &ast.TypeAnnotation{Parts: []string{name}}
 }
 
+// callSignature builds a native callable annotation for later contract
+// resolution. Empty parameter slices must be non-nil to distinguish call()
+// from the broad call type; a nil returnType denotes null success.
 func callSignature(parameterNames []string, parameterTypes []*ast.TypeAnnotation, returnType *ast.TypeAnnotation, errorNames ...string) *ast.TypeAnnotation {
 	callErrors := make([]*ast.TypeAnnotation, len(errorNames))
 	for index, name := range errorNames {

@@ -17,12 +17,16 @@ const prompt = ">> "
 func Start(in io.Reader, out io.Writer) {
 	reader := bufio.NewReader(in)
 	env := object.NewEnvironment()
+	// Share this exact buffer with core:io.stdin: the REPL may already have
+	// read ahead into input that a Silver read_line call needs to consume.
 	engine := evaluator.NewWithStreams(reader, out, out)
 	operators := engine.InfixRegistry()
 
 	for {
 		io.WriteString(out, prompt)
 		line, err := reader.ReadString('\n')
+		// EOF can accompany a final unterminated line. Evaluate that line once
+		// before stopping on the next read with no remaining bytes.
 		if err != nil && len(line) == 0 {
 			return
 		}

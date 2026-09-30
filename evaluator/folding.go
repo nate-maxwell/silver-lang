@@ -60,6 +60,9 @@ func foldStatementConstants(statement ast.Statement) ast.Statement {
 	return statement
 }
 
+// foldExpressionConstants walks children before attempting a scalar fold, so
+// nested arithmetic can collapse from the leaves upward. Calls, imports, and
+// control-flow nodes are traversed but never executed by this pass.
 func foldExpressionConstants(expression ast.Expression) ast.Expression {
 	if expression == nil {
 		return nil
@@ -126,6 +129,8 @@ func foldExpressionConstants(expression ast.Expression) ast.Expression {
 		node.Index = foldExpressionConstants(node.Index)
 
 	case *ast.MapLiteral:
+		// Folding can replace the key AST node itself. Rebuild the Go map so
+		// its keys refer to the new nodes; runtime equality is checked later.
 		pairs := make(map[ast.Expression]ast.Expression, len(node.Pairs))
 		for key, value := range node.Pairs {
 			pairs[foldExpressionConstants(key)] = foldExpressionConstants(value)
@@ -172,6 +177,9 @@ func literalObject(expression ast.Expression) (object.Object, bool) {
 	}
 }
 
+// foldedLiteralOrOriginal keeps the original expression's diagnostic position.
+// Only scalar successes become literals; errors and unsupported results leave
+// the expression intact, preserving when and whether a runtime fault occurs.
 func foldedLiteralOrOriginal(result object.Object, original ast.Expression) ast.Expression {
 	position := original.Position()
 	switch value := result.(type) {

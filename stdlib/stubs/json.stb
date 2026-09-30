@@ -1,4 +1,4 @@
-# Editor stub for import("json").
+# Editor stub for import("core:json").
 #
 # Encoding and decoding mirror Python's json module: objects become maps,
 # arrays become arrays, and numbers become int or float depending on whether

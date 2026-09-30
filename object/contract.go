@@ -67,6 +67,8 @@ func ResolveContract(annotation *ast.TypeAnnotation, env *Environment) (*Contrac
 		return contract, nil
 	}
 	if len(annotation.Parts) == 1 {
+		// Primitive spellings are resolved independently of value bindings.
+		// Qualified and nominal names below use the declaration environment.
 		if definition, ok := TypeDefinitionByName(annotation.Parts[0]); ok {
 			contract.Definition = definition
 			return contract, nil
@@ -114,6 +116,9 @@ func MustResolveContract(annotation *ast.TypeAnnotation) *Contract {
 	return contract
 }
 
+// resolveContractName looks up the first component lexically, then falls back
+// to built-in structs. Further components traverse module exports only; type
+// annotations do not evaluate arbitrary member-access expressions.
 func resolveContractName(annotation *ast.TypeAnnotation, env *Environment) (Object, *Error) {
 	if len(annotation.Parts) == 0 {
 		return nil, NewError(RuntimeErrorKindName, "empty type annotation")

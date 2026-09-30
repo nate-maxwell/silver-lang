@@ -1,4 +1,4 @@
-# Editor stub for import("path").
+# Editor stub for import("core:path").
 #
 
 type Path = struct {

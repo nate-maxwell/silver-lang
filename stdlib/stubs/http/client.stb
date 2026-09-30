@@ -1,4 +1,4 @@
-# Editor stub for import("http/client").
+# Editor stub for import("core:http/client").
 #
 # The client implements one blocking HTTP/1.1 exchange per TCP connection.
 # It supports plain http:// URLs, sends Content-Length and Connection: close,

@@ -3,7 +3,7 @@
 `core` contains the small set of general-purpose operations that Silver keeps out of the global namespace.
 
 ```silver
-let core = import("core")
+let core = import("core:core")
 
 core.len([10, 20, 30]) # 3
 core.range(2, 5)       # [2, 3, 4]

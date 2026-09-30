@@ -4,8 +4,8 @@
 record to one handler.
 
 ```silver
-let logging = import("logging")
-let io = import("io")
+let logging = import("core:logging")
+let io = import("core:io")
 
 let handler = logging.new_stream_handler(io.stdout)
 let logger = logging.new_logger(

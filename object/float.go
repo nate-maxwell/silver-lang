@@ -34,6 +34,8 @@ func (f *Float) Inspect() string {
 // Other floats use their canonical IEEE-754 bits; both positive and negative
 // zero normalize to the integer zero key.
 func (f *Float) HashKey() HashKey {
+	// The upper bound must be exclusive: float64 rounds MaxInt64 up to 2^63,
+	// which cannot be converted to int64 as an equal integer key.
 	if f.Value >= minInt64AsFloat && f.Value < maxInt64ExclusiveFloat && math.Trunc(f.Value) == f.Value {
 		return HashKey{Type: INTEGER_OBJ, Value: uint64(int64(f.Value))}
 	}

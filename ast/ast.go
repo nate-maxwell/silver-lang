@@ -5,6 +5,9 @@ import (
 )
 
 // Node is the common interface implemented by every syntax-tree node.
+// Position identifies the construct's representative token for diagnostics.
+// String reconstructs a readable form for debugging; it does not preserve
+// source whitespace, comments, or all original spelling.
 type Node interface {
 	TokenLiteral() string
 	Position() token.Position

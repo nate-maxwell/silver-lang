@@ -2,7 +2,6 @@ package stdlib
 
 import (
 	"io"
-	"path"
 	"silver/object"
 	"strings"
 	"testing"
@@ -22,22 +21,22 @@ func TestBundledManifestControlsMembershipAndExports(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	main, ok := library.LookupSource("example")
+	main, ok := library.LookupSource("core:example")
 	if !ok {
 		t.Fatal("missing package entry")
 	}
-	entry, ok := library.LookupSource("example/nested/entry")
+	entry, ok := library.LookupSource("core:example/nested/entry")
 	if !ok || entry.PackageID != main.PackageID {
 		t.Fatal("nested entry lost package identity")
 	}
 	for _, name := range []string{"example/helper", "example/unlisted", "unpackaged"} {
-		if _, ok := library.LookupSource(name); ok {
+		if _, ok := library.LookupSource("core:" + name); ok {
 			t.Fatalf("undeclared export %q is importable", name)
 		}
 	}
-	helper, ok := library.LookupRelativeSource("../helper.slv", path.Dir(entry.SourceName))
+	helper, ok := library.LookupSourceFrom("core:example/helper", entry.PackageID)
 	if !ok || helper.PackageID != main.PackageID {
-		t.Fatal("relative internal import lost package identity")
+		t.Fatal("qualified internal import lost package identity")
 	}
 	if members := library.SourceMembers(main.PackageID); len(members) != 3 {
 		t.Fatalf("got %d members, want 3", len(members))
@@ -47,7 +46,7 @@ func TestBundledManifestControlsMembershipAndExports(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, ok := library.LookupSource("example"); ok {
+	if _, ok := library.LookupSource("core:example"); ok {
 		t.Fatal("module remained importable without its manifest")
 	}
 }
@@ -63,7 +62,7 @@ func TestNativeModulesRequireManifests(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if module, ok := library.LookupModule("example"); !ok || module != native["example"] {
+	if module, ok := library.LookupModule("core:example"); !ok || module != native["example"] {
 		t.Fatal("native manifest did not expose its implementation")
 	}
 }
@@ -81,14 +80,14 @@ func TestPackageCombinesNativeBindingsWithSilverEntry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, ok := library.LookupModule("example"); ok {
+	if _, ok := library.LookupModule("core:example"); ok {
 		t.Fatal("native bindings bypass the Silver entry")
 	}
-	entry, ok := library.LookupSource("example")
+	entry, ok := library.LookupSource("core:example")
 	if !ok || entry.NativeBindings["native_value"] != native["example"].Exports["native_value"] {
 		t.Fatal("native bindings missing from the public entry")
 	}
-	helper, ok := library.LookupRelativeSource("./helper.slv", path.Dir(entry.SourceName))
+	helper, ok := library.LookupSourceFrom("core:example/helper", entry.PackageID)
 	if !ok || len(helper.NativeBindings) != 0 {
 		t.Fatal("entry bindings leaked into a separate member")
 	}
@@ -101,12 +100,12 @@ func TestPackageCombinesNativeBindingsWithSilverEntry(t *testing.T) {
 func TestStandardLibraryManifestEntryPoints(t *testing.T) {
 	library := New(io.Discard, &object.Null{}, &object.Boolean{Value: true}, &object.Boolean{Value: false})
 	for _, name := range []string{"args", "http", "http/client", "http/cookiejar", "http/cookies", "http/server", "json", "logging", "networking", "path", "testing"} {
-		if _, ok := library.LookupSource(name); !ok {
+		if _, ok := library.LookupSource("core:" + name); !ok {
 			t.Errorf("manifest migration lost %q", name)
 		}
 	}
 	for _, name := range []string{"arrays", "collections", "core", "io", "maps", "math", "random", "regex", "string", "system", "terminal", "time"} {
-		if _, ok := library.LookupModule(name); !ok {
+		if _, ok := library.LookupModule("core:" + name); !ok {
 			t.Errorf("manifest migration lost %q", name)
 		}
 	}

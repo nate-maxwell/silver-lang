@@ -3,7 +3,7 @@
 `http/cookiejar` stores cookies in memory and selects the cookies applicable to an HTTP or HTTPS URL.
 
 ```silver
-let cookiejar = import("http/cookiejar")
+let cookiejar = import("core:http/cookiejar")
 
 let jar = cookiejar.new()
 jar.set_from_header(

@@ -8,7 +8,7 @@ import (
 
 func TestDeferredCallsRunLIFOOnReturn(t *testing.T) {
 	var out bytes.Buffer
-	input := `let io = import("io")
+	input := `let io = import("core:io")
 let record = fn(value: str) { io.println(value) }
 let run = fn() int {
     defer record("first")
@@ -26,7 +26,7 @@ run()`
 
 func TestDeferCapturesArgumentsAndCallableImmediately(t *testing.T) {
 	var out bytes.Buffer
-	input := `let io = import("io")
+	input := `let io = import("core:io")
 let value = "before"
 let action = fn(text: str) { io.println("old " + text) }
 defer action(value)
@@ -42,7 +42,7 @@ action = fn(text: str) { io.println("new " + text) }`
 
 func TestDeferredCallsRunWhileUnwindingError(t *testing.T) {
 	var out bytes.Buffer
-	input := `let io = import("io")
+	input := `let io = import("core:io")
 let run = fn() {
     defer io.println("cleanup")
     missing_name
@@ -60,7 +60,7 @@ run()`
 
 func TestAllDeferredCallsRunAndLaterFailureWins(t *testing.T) {
 	var out bytes.Buffer
-	input := `let io = import("io")
+	input := `let io = import("core:io")
 let fail_first = fn() {
     io.println("first")
     missing_first
@@ -90,7 +90,7 @@ run()`
 
 func TestDeferredCallsUseFunctionScope(t *testing.T) {
 	var out bytes.Buffer
-	input := `let io = import("io")
+	input := `let io = import("core:io")
 let run = fn() {
     if True { defer io.println("cleanup") }
     io.println("body")
@@ -152,7 +152,7 @@ func TestCatchDefersUseEnclosingScope(t *testing.T) {
 				if scope == "function" {
 					body = "let run = fn() {\n" + body + "\n}\nrun()"
 				}
-				result := evalInput(t, NewWithOutput(&out), object.NewEnvironment(), "let io = import(\"io\")\n"+body)
+				result := evalInput(t, NewWithOutput(&out), object.NewEnvironment(), "let io = import(\"core:io\")\n"+body)
 				testNullObject(t, result)
 				if got := out.String(); got != test.want {
 					t.Fatalf("output is %q, want %q", got, test.want)
@@ -173,7 +173,7 @@ func TestCatchDefersSurviveControlFlow(t *testing.T) {
 	} {
 		t.Run(test.control, func(t *testing.T) {
 			var out bytes.Buffer
-			input := `let io = import("io")
+			input := `let io = import("core:io")
 let run = fn() int {
     for value in [1, 2] {
         try { 1 / 0 } catch ZeroDivisionError err {
@@ -203,7 +203,7 @@ run()`
 
 func TestDeferredCallsAreIsolatedPerInvocation(t *testing.T) {
 	var out bytes.Buffer
-	input := `let io = import("io")
+	input := `let io = import("core:io")
 let make = fn() call {
     try { 1 / 0 } catch ZeroDivisionError err {
         defer io.println("make")
@@ -273,7 +273,7 @@ for key, value in entries {
 				if scope == "function" {
 					body = "let run = fn() {\n" + body + "\n}\nrun()"
 				}
-				input := "let io = import(\"io\")\n" + body
+				input := "let io = import(\"core:io\")\n" + body
 				result := evalInput(t, NewWithOutput(&out), object.NewEnvironment(), input)
 				testNullObject(t, result)
 				if got := out.String(); got != test.want {
@@ -295,7 +295,7 @@ func TestForLoopDefersSurviveControlFlow(t *testing.T) {
 	} {
 		t.Run(test.control, func(t *testing.T) {
 			var out bytes.Buffer
-			input := `let io = import("io")
+			input := `let io = import("core:io")
 let run = fn() {
     for value in [1, 2] {
         defer io.println(value)
